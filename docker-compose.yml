@@ -1,0 +1,50 @@
+version: '3.8'
+services:
+  nextjs-app:
+    build: .
+    ports:
+      - '3000:3000'
+    env_file: .env
+    depends_on:
+      - cctv-service
+      - hardware-bridge
+    volumes:
+      - ./src:/app/src:ro
+    networks:
+      - gymerp-network
+
+  cctv-service:
+    build: ./cctv-service
+    ports:
+      - '5001:5001'
+    env_file: ./cctv-service/.env
+    devices:
+      - /dev/video0:/dev/video0  # for USB webcam
+    network_mode: host  # needed for RTSP/ONVIF LAN access
+    volumes:
+      - cctv-models:/app/models
+
+  hardware-bridge:
+    build: ./hardware-bridge
+    ports:
+      - '5002:5002'
+    env_file: ./hardware-bridge/.env
+    network_mode: host  # needed for ZKTeco LAN access
+    privileged: true  # needed for USB HID access
+    volumes:
+      - /dev:/dev  # USB device access
+
+  # Optional: Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    networks:
+      - gymerp-network
+
+volumes:
+  cctv-models:
+
+networks:
+  gymerp-network:
+    driver: bridge

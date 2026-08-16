@@ -1,0 +1,13 @@
+{
+  "crons": [
+    { "path": "/api/cron/due-reminders", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/expiry-alerts", "schedule": "0 9 * * *" },
+    { "path": "/api/cron/whatsapp-log-cleanup", "schedule": "0 2 * * 0" },
+    { "path": "/api/cron?job=birthday_wish", "schedule": "0 8 * * *" },
+    { "path": "/api/cron?job=anniversary_wish", "schedule": "0 8 * * *" },
+    { "path": "/api/cron?job=inactive_followup", "schedule": "0 23 * * *" },
+    { "path": "/api/cron?job=expiry_followup", "schedule": "0 23 * * *" },
+    { "path": "/api/cron?job=review_request", "schedule": "0 11 * * *" },
+    { "path": "/api/cron?job=admin_summary", "schedule": "0 20 * * *" }
+  ]
+}
