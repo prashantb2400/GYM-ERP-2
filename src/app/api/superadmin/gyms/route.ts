@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 
     // Get member counts for these gyms
     const gymIds = gyms.map(g => g.id);
-    let memberCounts: Record<string, number> = {};
+    const memberCounts: Record<string, number> = {};
     
     if (gymIds.length > 0) {
       const { data: memberData, error: memberError } = await supabaseAdmin

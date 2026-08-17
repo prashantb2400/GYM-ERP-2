@@ -50,7 +50,7 @@ export default function SuperAdminSubscriptionsPage() {
     try {
       setLoading(true);
       
-      let query = supabase
+      const query = supabase
         .from('platform_subscriptions')
         .select(`
           *,

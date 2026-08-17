@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const fetchStatuses = searchParams.get('fetch_statuses') === 'true';
 
-    let templates: any = { ...WA_TEMPLATES };
+    const templates: any = { ...WA_TEMPLATES };
 
     if (fetchStatuses) {
       // Fetch statuses from Meta API

@@ -57,7 +57,7 @@ export default function DueCollectionPage() {
     try {
       setLoading(true);
       // Fetch members who have total_due > 0
-      let query = supabase
+      const query = supabase
         .from('members')
         .select('*, plans(name)')
         .eq('gym_id', user.gymId)

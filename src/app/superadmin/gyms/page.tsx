@@ -50,7 +50,7 @@ export default function SuperAdminGymsPage() {
     try {
       setLoading(true);
       // Detailed fetch for gyms with subscriptions and owner
-      let query = supabase
+      const query = supabase
         .from('gyms')
         .select(`
           *,

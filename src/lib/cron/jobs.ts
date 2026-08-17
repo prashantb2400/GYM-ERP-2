@@ -352,7 +352,7 @@ export async function runReviewRequest(supabase: SupabaseClient): Promise<CronRe
 export async function runAdminDailySummary(supabase: SupabaseClient): Promise<CronResult> {
   const startTime = Date.now();
   let processed = 0;
-  let errors = 0;
+  const errors = 0;
 
   try {
     const today = new Date().toISOString().split('T')[0];
