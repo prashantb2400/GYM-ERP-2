@@ -124,7 +124,7 @@ export default function StaffLoginPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="password font-medium" className="text-zinc-300 text-sm">Password</Label>
+                    <Label htmlFor="password" className="text-zinc-300 text-sm">Password</Label>
                     <Input
                       id="password"
                       type="password"
