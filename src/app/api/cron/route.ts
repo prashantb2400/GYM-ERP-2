@@ -1,21 +1,10 @@
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { CRON_JOBS, executeCronJob } from '@/lib/cron/scheduler';
-
-/** Verify the request is from Vercel Cron or an authorized admin call */
-function isCronAuthorized(authHeader: string | null): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false; // Must be set in production
-  return authHeader === `Bearer ${secret}`;
-}
+import { isCronAuthorized } from '@/lib/server/cronAuth';
 
 export async function GET(request: Request) {
-  const headersList = await headers();
-  const authHeader = headersList.get('authorization') ||
-    new URL(request.url).searchParams.get('cron_secret');
-
-  if (!isCronAuthorized(authHeader)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -23,7 +12,7 @@ export async function GET(request: Request) {
     const { data: logs } = await supabaseAdmin
       .from('cron_logs')
       .select('*')
-      .order('started_at', { ascending: false })
+      .order('run_at', { ascending: false })
       .limit(50);
 
     return NextResponse.json({
@@ -36,10 +25,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const headersList = await headers();
-  const authHeader = headersList.get('authorization');
-
-  if (!isCronAuthorized(authHeader)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

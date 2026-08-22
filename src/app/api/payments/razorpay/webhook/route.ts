@@ -1,10 +1,30 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { formatInvoiceNumber } from '@/lib/utils/format';
+import crypto from 'crypto';
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json();
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const signatureHeader = request.headers.get('x-razorpay-signature');
+    const rawBody = await request.text();
+
+    if (!webhookSecret || !signatureHeader) {
+      return NextResponse.json({ error: 'Invalid webhook configuration' }, { status: 401 });
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(rawBody)
+      .digest('hex');
+    const provided = Buffer.from(signatureHeader);
+    const expected = Buffer.from(expectedSignature);
+
+    if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
+      return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+    }
+
+    const payload = JSON.parse(rawBody);
     const event = payload.event;
     
     // We expect the payload structure of 'payment.captured'
@@ -12,7 +32,7 @@ export async function POST(request: Request) {
       const paymentEntity = payload.payload.payment.entity;
       const orderId = paymentEntity.order_id;
       const paymentId = paymentEntity.id;
-      const signature = paymentEntity.signature || 'webhook_signature_verified';
+      const signature = signatureHeader;
       
       const notes = paymentEntity.notes || {};
       const { memberId, planId, gymId } = notes;

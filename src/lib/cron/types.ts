@@ -21,10 +21,9 @@ export interface CronLog {
   gym_id?: string;
   job_name: string;
   status: 'success' | 'failed';
-  started_at: string;
-  completed_at?: string;
-  members_processed: number;
-  errors?: number;
-  duration_ms: number;
-  details?: string;
+  members_notified: number;
+  channel?: string;
+  error?: string;
+  duration_ms?: number;
+  run_at: string;
 }

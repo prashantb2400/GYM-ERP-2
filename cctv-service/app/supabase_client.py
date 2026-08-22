@@ -15,19 +15,26 @@ def save_attendance(member_id: str, camera_id: str, confidence: float, snapshot_
     try:
         sb = get_supabase()
         today = datetime.now(timezone.utc).date().isoformat()
+
+        member = sb.table("members").select("gym_id, name, status").eq("id", member_id).single().execute()
+        if not member.data or member.data.get("status") != "active":
+            return False
         
         # Deduplication check
-        existing = sb.table("attendance").select("id").eq("member_id", member_id).gte("created_at", today).execute()
+        existing = sb.table("attendance").select("id").eq("member_id", member_id).eq("date", today).execute()
         if existing.data and len(existing.data) > 0:
             return False  # Already recorded today
             
         # Insert
         sb.table("attendance").insert({
+            "gym_id": member.data["gym_id"],
             "member_id": member_id,
-            "camera_id": camera_id,
+            "member_name": member.data["name"],
+            "date": today,
+            "device_id": camera_id,
             "confidence": confidence,
             "snapshot_url": snapshot_url,
-            "method": "cctv"
+            "method": "face_recognition"
         }).execute()
         return True
     except Exception as e:

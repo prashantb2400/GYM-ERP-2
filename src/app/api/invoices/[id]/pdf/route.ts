@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { generateInvoiceHTML } from '@/lib/pdf/invoice-template';
+import { generateInvoicePdf } from '@/lib/pdf/generator';
 import { InvoiceData, InvoiceItem } from '@/lib/pdf/types';
 
 export async function GET(
@@ -24,12 +24,11 @@ export async function GET(
       return new NextResponse('Invoice not found', { status: 404 });
     }
 
-    // Fetch gym profile (assuming a single gym setup or fetching by gym_id if multitenant)
-    // Here we'll just try to fetch the first gym profile or a default one
+    // Fetch the invoice's gym, never an arbitrary first profile.
     const { data: gymProfile } = await supabase
-      .from('gym_profiles')
+      .from('gyms')
       .select('*')
-      .limit(1)
+      .eq('id', invoice.gym_id)
       .single();
 
     const gymData = gymProfile || {
@@ -74,11 +73,11 @@ export async function GET(
       amountInWords: 'Amount generated electronically', // In a real app, use a library to convert number to words
     };
 
-    const html = generateInvoiceHTML(templateData);
+    const pdf = generateInvoicePdf(templateData);
 
-    return new NextResponse(html, {
+    return new NextResponse(pdf, {
       headers: {
-        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="invoice-${templateData.invoiceNo}.pdf"`,
       },
     });

@@ -9,7 +9,7 @@ export function createAttendanceRouter() {
       const { data, error } = await supabase
         .from('attendance')
         .select('*')
-        .order('timestamp', { ascending: false })
+        .order('check_in_time', { ascending: false })
         .limit(100);
         
       if (error) throw error;
@@ -26,7 +26,7 @@ export function createAttendanceRouter() {
         .from('attendance')
         .select('*')
         .eq('device_id', deviceId)
-        .order('timestamp', { ascending: false })
+        .order('check_in_time', { ascending: false })
         .limit(100);
         
       if (error) throw error;

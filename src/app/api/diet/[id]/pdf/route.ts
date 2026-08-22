@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { generateDietChartHTML } from '@/lib/pdf/diet-template';
+import { generateTextPdf } from '@/lib/pdf/generator';
 import { DietChartData } from '@/lib/pdf/types';
 
 export async function GET(
@@ -18,7 +18,7 @@ export async function GET(
     
     // We'll fetch gym profile
     const { data: gymProfile } = await supabase
-      .from('gym_profiles')
+      .from('gyms')
       .select('*')
       .limit(1)
       .single();
@@ -82,11 +82,16 @@ export async function GET(
       totalFats: 24,
     };
 
-    const html = generateDietChartHTML(templateData);
+    const pdf = generateTextPdf([
+      `${templateData.gym.name} - Diet Chart`,
+      `Member: ${templateData.member.name}`,
+      `Issued: ${templateData.dateIssued}`,
+      ...templateData.meals.map((meal) => `${meal.name}: ${meal.items.join(', ')}`),
+    ]);
 
-    return new NextResponse(html, {
+    return new NextResponse(pdf, {
       headers: {
-        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="diet-chart-${dietId}.pdf"`,
       },
     });

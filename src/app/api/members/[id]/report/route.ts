@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { generateMemberReportHTML } from '@/lib/pdf/member-report-template';
+import { generateTextPdf } from '@/lib/pdf/generator';
 import { MemberReportData } from '@/lib/pdf/types';
 
 export async function GET(
@@ -26,7 +26,7 @@ export async function GET(
 
     // Fetch gym profile
     const { data: gymProfile } = await supabase
-      .from('gym_profiles')
+      .from('gyms')
       .select('*')
       .limit(1)
       .single();
@@ -81,11 +81,16 @@ export async function GET(
       }
     };
 
-    const html = generateMemberReportHTML(templateData);
+    const pdf = generateTextPdf([
+      `${templateData.gym.name} - Member Report`,
+      `Member: ${templateData.member.name}`,
+      `Status: ${templateData.member.status}`,
+      `Report date: ${templateData.reportDate}`,
+    ]);
 
-    return new NextResponse(html, {
+    return new NextResponse(pdf, {
       headers: {
-        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="member-report-${member.id}.pdf"`,
       },
     });

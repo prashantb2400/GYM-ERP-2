@@ -14,13 +14,11 @@ async function logJobRun(
 
   await supabase.from('cron_logs').insert({
     job_name: jobName,
-    started_at: new Date(startTime).toISOString(),
-    completed_at: new Date(endTime).toISOString(),
+    run_at: new Date(startTime).toISOString(),
     status: result.success ? 'success' : 'failed',
-    members_processed: result.processed,
-    errors: result.errors,
+    members_notified: result.processed,
     duration_ms: duration,
-    details: result.details,
+    error: result.details || (result.errors ? `${result.errors} member(s) failed` : null),
   });
 
   return { ...result, duration };

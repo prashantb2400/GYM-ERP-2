@@ -96,7 +96,7 @@ export async function updateSession(request: NextRequest) {
     if (userData?.role === 'owner' || userData?.role === 'receptionist') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     } else if (userData?.role === 'trainer') {
-      return NextResponse.redirect(new URL('/dashboard/trainers', request.url));
+      return NextResponse.redirect(new URL('/trainer/dashboard', request.url));
     } else {
       // Check if it's a gym member
       return NextResponse.redirect(new URL('/member/dashboard', request.url));
@@ -107,7 +107,8 @@ export async function updateSession(request: NextRequest) {
   if (path.startsWith('/api/') && 
       !path.startsWith('/api/auth/') && 
       !path.startsWith('/api/whatsapp/webhook') &&
-      !path.startsWith('/api/razorpay/webhook') &&
+      !path.startsWith('/api/payments/razorpay/webhook') &&
+      !path.startsWith('/api/attendance/face-mark') &&
       !path.startsWith('/api/cron/')) {
     
     if (!user) {

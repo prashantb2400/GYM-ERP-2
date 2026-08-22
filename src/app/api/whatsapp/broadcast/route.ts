@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { waClient } from '@/lib/whatsapp/client';
 import { TemplateParam } from '@/lib/whatsapp/types';
+import { requireGymStaff } from '@/lib/server/requireGymStaff';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
-
-    if (authError || !session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const staff = await requireGymStaff();
+    if (staff instanceof Response) return staff;
 
     const body = await request.json();
-    const { phones, templateName, paramsPerPhone, gymId } = body;
+    const { phones, templateName, paramsPerPhone } = body;
 
     if (!phones || !Array.isArray(phones) || phones.length === 0) {
       return NextResponse.json({ error: 'Missing or invalid phones array' }, { status: 400 });
@@ -31,7 +27,7 @@ export async function POST(request: Request) {
     // after response, we must await it if not using a queue like Inngest/BullMQ.
     
     // We await for now, but client should handle large lists properly.
-    const results = await waClient.broadcastTemplate(phones, templateName, paramsPerPhone as TemplateParam[][], gymId);
+    const results = await waClient.broadcastTemplate(phones, templateName, paramsPerPhone as TemplateParam[][], staff.gymId);
 
     return NextResponse.json({ success: true, results });
   } catch (error: any) {

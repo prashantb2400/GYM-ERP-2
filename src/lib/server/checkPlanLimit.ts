@@ -28,7 +28,7 @@ export async function checkMemberLimit(gymId: string): Promise<{ allowed: boolea
     .neq('status', 'cancelled');
 
   return {
-    allowed: (count || 0) < maxMembers,
+    allowed: maxMembers === -1 || (count || 0) < maxMembers,
     current: count || 0,
     max: maxMembers,
     planName,

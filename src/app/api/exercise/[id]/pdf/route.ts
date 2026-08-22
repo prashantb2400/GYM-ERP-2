@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { generateExercisePlanHTML } from '@/lib/pdf/exercise-template';
+import { generateTextPdf } from '@/lib/pdf/generator';
 import { ExercisePlanData } from '@/lib/pdf/types';
 
 export async function GET(
@@ -14,7 +14,7 @@ export async function GET(
 
     // Fetch gym profile
     const { data: gymProfile } = await supabase
-      .from('gym_profiles')
+      .from('gyms')
       .select('*')
       .limit(1)
       .single();
@@ -102,11 +102,16 @@ export async function GET(
       ]
     };
 
-    const html = generateExercisePlanHTML(templateData);
+    const pdf = generateTextPdf([
+      `${templateData.gym.name} - Exercise Plan`,
+      `Member: ${templateData.member.name}`,
+      `Issued: ${templateData.dateIssued}`,
+      ...templateData.days.map((day) => `${day.dayName}: ${day.exercises.map((exercise) => exercise.name).join(', ')}`),
+    ]);
 
-    return new NextResponse(html, {
+    return new NextResponse(pdf, {
       headers: {
-        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="exercise-plan-${planId}.pdf"`,
       },
     });

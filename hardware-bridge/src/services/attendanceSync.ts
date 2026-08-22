@@ -16,7 +16,7 @@ export class AttendanceSyncService {
       // 1. Map biometricUserId to memberId via Supabase `hardware_users` table
       const { data: userMapping, error: mapErr } = await supabase
         .from('hardware_users')
-        .select('member_id')
+        .select('member_id, gym_id')
         .eq('biometric_user_id', event.biometricUserId)
         .single();
 
@@ -27,14 +27,24 @@ export class AttendanceSyncService {
 
       const memberId = userMapping.member_id;
       const dateStr = new Date(event.timestamp).toISOString().split('T')[0];
+      const { data: member, error: memberErr } = await supabase
+        .from('members')
+        .select('name')
+        .eq('id', memberId)
+        .eq('gym_id', userMapping.gym_id)
+        .single();
+
+      if (memberErr || !member) {
+        logger.warn(`Member ${memberId} is not available in mapped gym`);
+        return;
+      }
 
       // 2. Deduplication check
       const { data: existing, error: dedupErr } = await supabase
         .from('attendance')
         .select('id')
         .eq('member_id', memberId)
-        .gte('timestamp', `${dateStr}T00:00:00Z`)
-        .lt('timestamp', `${dateStr}T23:59:59Z`)
+        .eq('date', dateStr)
         .limit(1);
 
       if (dedupErr) throw dedupErr;
@@ -47,9 +57,12 @@ export class AttendanceSyncService {
       const { error: insertErr } = await supabase
         .from('attendance')
         .insert({
+          gym_id: userMapping.gym_id,
           member_id: memberId,
-          timestamp: event.timestamp,
-          method: event.method,
+          member_name: member.name,
+          date: dateStr,
+          check_in_time: event.timestamp,
+          method: 'fingerprint',
           device_id: deviceId
         });
 
@@ -80,13 +93,13 @@ export class AttendanceSyncService {
       // Get latest timestamp we have from this device
       const { data: latestRecord } = await supabase
         .from('attendance')
-        .select('timestamp')
+        .select('check_in_time')
         .eq('device_id', deviceId)
-        .order('timestamp', { ascending: false })
+        .order('check_in_time', { ascending: false })
         .limit(1)
         .single();
 
-      const lastSyncTime = latestRecord ? new Date(latestRecord.timestamp).getTime() : 0;
+      const lastSyncTime = latestRecord ? new Date(latestRecord.check_in_time).getTime() : 0;
 
       for (const log of logs) {
         if (log.recordTime.getTime() > lastSyncTime) {

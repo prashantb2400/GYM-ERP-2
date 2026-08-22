@@ -1,19 +1,9 @@
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-
-function isAuthorized(authHeader: string | null): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return authHeader === `Bearer ${secret}`;
-}
+import { isCronAuthorized } from '@/lib/server/cronAuth';
 
 export async function GET(request: Request) {
-  const headersList = await headers();
-  const auth = headersList.get('authorization') ??
-    new URL(request.url).searchParams.get('cron_secret');
-
-  if (!isAuthorized(auth)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -49,15 +39,12 @@ export async function GET(request: Request) {
         .insert({
           gym_id: member.gym_id,
           member_id: member.id,
-          phone,
+          recipient_phone: phone,
+          recipient_name: member.name,
+          message_type: 'template',
           template_name: 'plan_expiry_reminder',
-          variables: { 
-            member_name: member.name, 
-            plan_end_date: endDate.toISOString().split('T')[0],
-            days_remaining: daysRemaining.toString()
-          },
           sent_at: new Date().toISOString(),
-          status: 'queued',
+          status: 'sent',
           wa_message_id: `cron_exp_${Date.now()}_${member.id.slice(0, 8)}`,
         });
 
