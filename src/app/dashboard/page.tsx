@@ -81,7 +81,10 @@ export default function DashboardHome() {
   };
 
   useEffect(() => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchDashboardData = async () => {
       try {
