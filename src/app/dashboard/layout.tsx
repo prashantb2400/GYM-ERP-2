@@ -13,7 +13,7 @@ export default function AdminDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { loading, isAuthenticated } = useAuth();
+  const { loading, isAuthenticated, user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
@@ -22,10 +22,14 @@ export default function AdminDashboardLayout({
   const isOnboarding = pathname === '/dashboard/onboarding';
 
   useEffect(() => {
-    if (!loading && !isAuthenticated && !isOnboarding) {
-      router.replace('/login');
+    if (!loading) {
+      if (!isAuthenticated && !isOnboarding) {
+        router.replace('/login');
+      } else if (isAuthenticated && user && !user.gymId && !isOnboarding) {
+        router.replace('/dashboard/onboarding');
+      }
     }
-  }, [loading, isAuthenticated, isOnboarding, router]);
+  }, [loading, isAuthenticated, user, isOnboarding, router]);
 
   if (loading) {
     return (

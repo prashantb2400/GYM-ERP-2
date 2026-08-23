@@ -78,28 +78,21 @@ export function useAuth() {
           return;
         }
 
-        // If not found in either, they might be a newly signed-up owner
-        // Check if there are metadata properties indicating signup role
-        const isNewOwner = supabaseUser.app_metadata?.provider === 'google' || supabaseUser.user_metadata?.iss;
-        if (isNewOwner) {
-          // Creating dynamic session for owner setup
-          const authUser: AuthUser = {
-            id: supabaseUser.id, // placeholder until gym is set up
-            authId: supabaseUser.id,
-            gymId: '',
-            branchId: null,
-            name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Gym Owner',
-            email: supabaseUser.email || null,
-            role: 'owner',
-            permissions: ['settings.manage', 'settings.view'], // minimal setup permissions
-            photoUrl: supabaseUser.user_metadata?.avatar_url || null,
-            isActive: true,
-          };
-          setSession({ user: authUser, member: null });
-          return;
-        }
-
-        setSession({ user: null, member: null });
+        // If not found in either table, they are a newly signed-up owner needing onboarding
+        const authUser: AuthUser = {
+          id: supabaseUser.id, // placeholder until gym is set up
+          authId: supabaseUser.id,
+          gymId: '',
+          branchId: null,
+          name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Gym Owner',
+          email: supabaseUser.email || null,
+          role: 'owner',
+          permissions: ['settings.manage', 'settings.view'], // minimal setup permissions
+          photoUrl: supabaseUser.user_metadata?.avatar_url || null,
+          isActive: true,
+        };
+        setSession({ user: authUser, member: null });
+        return;
       } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
         setError(msg || 'Error fetching user details');

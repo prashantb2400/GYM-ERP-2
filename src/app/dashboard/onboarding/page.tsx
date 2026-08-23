@@ -154,7 +154,7 @@ export default function OnboardingPage() {
       if (userError) throw userError;
 
       toast.success('Workspace created! You have a 14-day Pro trial. 🎉');
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       toast.error(msg);
