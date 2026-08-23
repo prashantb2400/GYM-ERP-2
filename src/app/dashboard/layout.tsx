@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { AdminTopbar } from '@/components/layout/AdminTopbar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -15,6 +16,16 @@ export default function AdminDashboardLayout({
   const { loading, isAuthenticated } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const isOnboarding = pathname === '/dashboard/onboarding';
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated && !isOnboarding) {
+      router.replace('/login');
+    }
+  }, [loading, isAuthenticated, isOnboarding, router]);
 
   if (loading) {
     return (
@@ -27,9 +38,21 @@ export default function AdminDashboardLayout({
     );
   }
 
-  // Fallback protection (in case middleware takes a second to redirect)
+  // If on onboarding page, render children directly without sidebar/topbar
+  if (isOnboarding) {
+    return <>{children}</>;
+  }
+
+  // Fallback redirecting screen
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
+          <p className="text-sm text-zinc-400">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
