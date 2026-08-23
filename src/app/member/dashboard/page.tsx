@@ -160,31 +160,20 @@ export default function MemberDashboardPage() {
           </div>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-          {/* Visual QR Code Generator placeholder */}
-          <div className="bg-white p-3.5 rounded-xl shadow-lg border border-zinc-200 flex flex-col items-center justify-center relative">
-            <div className="grid grid-cols-5 gap-1.5 w-32 h-32 opacity-85">
-              {Array.from({ length: 25 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`rounded-[2px] ${
-                    (i % 2 === 0 && i % 3 === 0) || i === 0 || i === 4 || i === 20 || i === 24 || i % 7 === 0
-                      ? 'bg-zinc-950'
-                      : 'bg-zinc-100'
-                  }`}
-                />
-              ))}
-            </div>
-            <div className="absolute bg-white p-1 rounded-md border border-zinc-100">
-              <div className="bg-purple-600 h-6 w-6 rounded flex items-center justify-center text-white text-[9px] font-black">
-                GE
-              </div>
-            </div>
+          {/* M-9 FIX: Real scannable QR Code Generator */}
+          <div className="bg-white p-3 rounded-xl shadow-lg border border-zinc-200 flex flex-col items-center justify-center relative">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(member?.member_code || 'GYM-MEMBER')}&format=svg`}
+              alt={`QR Code Pass for ${member?.member_code}`}
+              className="w-36 h-36 rounded"
+              loading="lazy"
+            />
           </div>
           
           <span className="text-xs font-bold text-zinc-300 mt-4 tracking-wider uppercase font-mono bg-zinc-950 px-3 py-1 rounded border border-zinc-800">
             {member?.member_code}
           </span>
-          <p className="text-[10px] text-zinc-500 mt-2">Hold this QR Code code in front of the reception webcam camera to log attendance.</p>
+          <p className="text-[10px] text-zinc-500 mt-2">Hold this QR Code in front of the reception camera or scanner to log attendance.</p>
         </CardContent>
       </Card>
 

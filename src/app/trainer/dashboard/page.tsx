@@ -229,7 +229,6 @@ export default function TrainerDashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <AnimatedList>
               {filteredMembers.map((m) => (
                 <TableRow key={m.id} className="border-zinc-900/40 hover:bg-zinc-900/10">
                   <TableCell className="font-semibold text-zinc-300 text-xs font-mono">{m.member_code}</TableCell>
@@ -275,7 +274,6 @@ export default function TrainerDashboardPage() {
                   </TableCell>
                 </TableRow>
               ))}
-            </AnimatedList>
             </TableBody>
           </Table>
         )}

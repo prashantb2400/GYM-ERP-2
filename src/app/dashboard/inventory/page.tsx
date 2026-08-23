@@ -191,9 +191,20 @@ export default function InventoryManagementPage() {
     try {
       setAdjusting(true);
       
+      // M-22 FIX: Fetch latest stock from DB before applying change to prevent concurrency race
+      const { data: freshItem, error: fetchErr } = await supabase
+        .from('inventory')
+        .select('stock_quantity, purchase_price, selling_price')
+        .eq('id', selectedItem.id)
+        .single();
+
+      if (fetchErr || !freshItem) {
+        throw new Error('Failed to retrieve current stock level');
+      }
+
       // Calculate quantity adjustments
       const changeAmount = Number(adjustQty);
-      let updatedStock = selectedItem.stock_quantity;
+      let updatedStock = freshItem.stock_quantity;
 
       if (adjustType === 'purchase') {
         updatedStock += changeAmount;
@@ -213,7 +224,7 @@ export default function InventoryManagementPage() {
           inventory_id: selectedItem.id,
           transaction_type: adjustType,
           quantity: adjustType === 'purchase' ? changeAmount : -changeAmount,
-          unit_price: adjustType === 'purchase' ? selectedItem.purchase_price : selectedItem.selling_price,
+          unit_price: adjustType === 'purchase' ? freshItem.purchase_price : freshItem.selling_price,
           created_by: user?.id,
         });
 

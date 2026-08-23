@@ -371,7 +371,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_follow_up ON leads(follow_up_date);`}
                   </TableRow>
                 ) : (
                   leads.map((lead) => (
-                    <TableRow key={lead.id} className={`border-b \${getRowBorder(lead.follow_up_date, lead.status)} transition-colors`}>
+                    <TableRow key={lead.id} className={`border-b ${getRowBorder(lead.follow_up_date, lead.status)} transition-colors`}>
                       <TableCell>
                         <div className="font-medium text-zinc-200">{lead.name}</div>
                         <div className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1">
@@ -387,7 +387,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_follow_up ON leads(follow_up_date);`}
                         <span className="text-xs text-zinc-400 capitalize">{lead.source.replace('_', ' ')}</span>
                       </TableCell>
                       <TableCell>
-                        <div className={`text-xs flex items-center gap-1.5 \${getFollowUpColor(lead.follow_up_date, lead.status)}`}>
+                        <div className={`text-xs flex items-center gap-1.5 ${getFollowUpColor(lead.follow_up_date, lead.status)}`}>
                           <Calendar className="h-3 w-3" />
                           {lead.follow_up_date ? formatDate(lead.follow_up_date) : 'Not set'}
                         </div>
@@ -408,7 +408,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_follow_up ON leads(follow_up_date);`}
                                   key={s}
                                   variant="ghost"
                                   size="sm"
-                                  className={`justify-start capitalize \${lead.status === s ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900'}`}
+                                  className={`justify-start capitalize ${lead.status === s ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900'}`}
                                   onClick={() => updateStatus(lead.id, s)}
                                 >
                                   {s}

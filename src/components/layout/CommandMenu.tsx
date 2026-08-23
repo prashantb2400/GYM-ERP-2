@@ -21,7 +21,7 @@ import {
   Settings,
   Sparkles,
 } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
 interface CommandMenuProps {
@@ -37,13 +37,13 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
   
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   
   // Results states
   const [members, setMembers] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
 
   useEffect(() => {
-    // Escape or close handling is built-in to Dialog
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -59,10 +59,12 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
       setQuery('');
       setMembers([]);
       setInvoices([]);
+      setSelectedIndex(0);
       return;
     }
 
-    if (query.trim().length < 2) {
+    const cleanQuery = query.trim().replace(/[,().%*]/g, '');
+    if (cleanQuery.length < 2) {
       setMembers([]);
       setInvoices([]);
       return;
@@ -74,12 +76,12 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
       try {
         setLoading(true);
 
-        // Fetch members
+        // Fetch members with sanitized query
         const { data: memberData } = await supabase
           .from('members')
           .select('id, name, member_code, phone, status')
           .eq('gym_id', user.gymId)
-          .ilike('name', `%${query}%`)
+          .ilike('name', `%${cleanQuery}%`)
           .limit(5);
 
         setMembers(memberData || []);
@@ -90,7 +92,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
             .from('invoices')
             .select('id, invoice_number, member_name, total, status')
             .eq('gym_id', user.gymId)
-            .ilike('member_name', `%${query}%`)
+            .ilike('member_name', `%${cleanQuery}%`)
             .limit(5);
 
           setInvoices(invoiceData || []);
@@ -100,7 +102,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
       } finally {
         setLoading(false);
       }
-    }, 250); // 250ms debounce
+    }, 250);
 
     return () => clearTimeout(delayDebounce);
   }, [query, open, user?.gymId]);
@@ -125,6 +127,11 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-800 text-white p-0 gap-0 overflow-hidden shadow-2xl">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Quick Command Menu</DialogTitle>
+          <DialogDescription>Search members, invoices, and navigate features</DialogDescription>
+        </DialogHeader>
+
         {/* Search Input Bar */}
         <div className="flex items-center border-b border-zinc-800 px-4 py-3 gap-3 bg-zinc-900/60">
           <Search className="h-5 w-5 text-zinc-400 shrink-0" />

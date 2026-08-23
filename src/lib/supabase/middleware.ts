@@ -49,11 +49,20 @@ export async function updateSession(request: NextRequest) {
   const isSuperAdminRoute = path.startsWith('/superadmin');
   const isSuperAdminLogin = path === '/superadmin/login';
 
+  // Helper to preserve refreshed cookies across redirects (M-1 fix)
+  const redirectWithCookies = (url: URL | string) => {
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
+  };
+
   // Route protection
   if (isSuperAdminRoute) {
     if (!user) {
       if (!isSuperAdminLogin) {
-        return NextResponse.redirect(new URL('/superadmin/login', request.url));
+        return redirectWithCookies(new URL('/superadmin/login', request.url));
       }
     } else {
       // Check if user is super admin
@@ -62,26 +71,26 @@ export async function updateSession(request: NextRequest) {
         .select('id')
         .eq('user_id', user.id)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
         
       if (superAdmin) {
         // Is a super admin
         if (isSuperAdminLogin) {
-          return NextResponse.redirect(new URL('/superadmin', request.url));
+          return redirectWithCookies(new URL('/superadmin', request.url));
         }
       } else {
         // Not a super admin
         if (!isSuperAdminLogin) {
-          return NextResponse.redirect(new URL('/superadmin/login', request.url));
+          return redirectWithCookies(new URL('/superadmin/login', request.url));
         }
       }
     }
   }
 
   if (!user && (isDashboardPage || isMemberPage)) {
-    // Redirect unauthenticated users to landing page or login
+    // Redirect unauthenticated users to login
     const url = new URL('/login', request.url);
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url);
   }
 
   if (user && isAuthPage && !isSuperAdminRoute) {
@@ -94,9 +103,9 @@ export async function updateSession(request: NextRequest) {
 
     if (userData) {
       if (userData.role === 'owner' || userData.role === 'receptionist') {
-        return NextResponse.redirect(new URL(userData.gym_id ? '/dashboard' : '/dashboard/onboarding', request.url));
+        return redirectWithCookies(new URL(userData.gym_id ? '/dashboard' : '/dashboard/onboarding', request.url));
       } else if (userData.role === 'trainer') {
-        return NextResponse.redirect(new URL('/trainer/dashboard', request.url));
+        return redirectWithCookies(new URL('/trainer/dashboard', request.url));
       }
     }
 
@@ -108,11 +117,11 @@ export async function updateSession(request: NextRequest) {
       .maybeSingle();
 
     if (memberData) {
-      return NextResponse.redirect(new URL('/member/dashboard', request.url));
+      return redirectWithCookies(new URL('/member/dashboard', request.url));
     }
 
     // Default for newly registered user without a profile: Onboarding
-    return NextResponse.redirect(new URL('/dashboard/onboarding', request.url));
+    return redirectWithCookies(new URL('/dashboard/onboarding', request.url));
   }
 
   // Protect API routes (except public webhooks and auth callbacks)
@@ -120,8 +129,9 @@ export async function updateSession(request: NextRequest) {
       !path.startsWith('/api/auth/') && 
       !path.startsWith('/api/whatsapp/webhook') &&
       !path.startsWith('/api/payments/razorpay/webhook') &&
+      !path.startsWith('/api/payments/razorpay/verify') &&
       !path.startsWith('/api/attendance/face-mark') &&
-      !path.startsWith('/api/cron') && // S0-8 FIX: no trailing slash — matches /api/cron and /api/cron/due-reminders
+      !path.startsWith('/api/cron') &&
       !path.startsWith('/api/settings/cctv-ping')) {
     
     if (!user) {
@@ -129,27 +139,22 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Check if gym is suspended or if owner needs onboarding
+  // M-2 FIX: Optimized gym check in 1 step using joined relation or single query
   if (user && path.startsWith('/dashboard') && !path.startsWith('/dashboard/suspended') && !path.startsWith('/dashboard/onboarding')) {
     const { data: userData } = await supabase
       .from('users')
-      .select('gym_id')
+      .select('gym_id, gyms:gym_id(is_suspended)')
       .eq('auth_id', user.id)
       .maybeSingle();
     
     if (userData?.gym_id) {
-      const { data: gymData } = await supabase
-        .from('gyms')
-        .select('is_suspended')
-        .eq('id', userData.gym_id)
-        .maybeSingle();
-      
-      if (gymData?.is_suspended === true) {
-        return NextResponse.redirect(new URL('/dashboard/suspended', request.url));
+      const gym = Array.isArray(userData.gyms) ? userData.gyms[0] : userData.gyms;
+      if (gym?.is_suspended === true) {
+        return redirectWithCookies(new URL('/dashboard/suspended', request.url));
       }
     } else {
       // User has no gym assigned yet -> redirect to onboarding
-      return NextResponse.redirect(new URL('/dashboard/onboarding', request.url));
+      return redirectWithCookies(new URL('/dashboard/onboarding', request.url));
     }
   }
 

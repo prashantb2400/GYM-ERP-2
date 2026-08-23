@@ -19,6 +19,8 @@ import {
   Activity,
   UserCheck,
   Zap,
+  Menu,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,6 +35,7 @@ import { AuroraBackground, Particles, Meteors, GradientText, TypewriterText, Blu
 
 export default function LandingPage() {
   const { isAuthenticated } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   return (
     <AuroraBackground className="flex flex-col min-h-screen bg-zinc-950 text-zinc-50 selection:bg-purple-600 selection:text-white w-full">
@@ -55,19 +58,67 @@ export default function LandingPage() {
             <a href="#faq" className="hover:text-purple-400 transition-colors">FAQ</a>
           </nav>
 
-          <div className="flex items-center gap-3">
-            <Link href="/staff/login" passHref legacyBehavior>
+          <div className="hidden sm:flex items-center gap-3">
+            <Link href="/staff/login">
               <Button variant="ghost" className="text-zinc-400 hover:text-white text-sm">
                 Staff Login
               </Button>
             </Link>
-            <Link href={isAuthenticated ? "/dashboard" : "/login"} passHref legacyBehavior>
+            <Link href={isAuthenticated ? "/dashboard" : "/login"}>
               <Button className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-lg shadow-lg shadow-purple-600/20 transition-all">
                 {isAuthenticated ? "Go to Dashboard" : "Owner Login"}
               </Button>
             </Link>
           </div>
+
+          {/* M-29 FIX: Mobile menu hamburger toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="sm:hidden p-2 text-zinc-400 hover:text-white"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-b border-zinc-800 bg-zinc-950/95 px-6 py-4 space-y-3">
+            <a
+              href="#features"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm font-medium text-zinc-300 hover:text-purple-400"
+            >
+              Features
+            </a>
+            <a
+              href="#pricing"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm font-medium text-zinc-300 hover:text-purple-400"
+            >
+              Pricing
+            </a>
+            <a
+              href="#faq"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm font-medium text-zinc-300 hover:text-purple-400"
+            >
+              FAQ
+            </a>
+            <div className="pt-3 border-t border-zinc-800 flex flex-col gap-2">
+              <Link href="/staff/login" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="outline" className="w-full text-zinc-300 border-zinc-800 text-sm">
+                  Staff Login
+                </Button>
+              </Link>
+              <Link href={isAuthenticated ? "/dashboard" : "/login"} onClick={() => setMobileMenuOpen(false)}>
+                <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm">
+                  {isAuthenticated ? "Go to Dashboard" : "Owner Login"}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}

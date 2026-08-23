@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { generateTextPdf } from '@/lib/pdf/generator';
-import { DietChartData } from '@/lib/pdf/types';
 
 export async function GET(
   request: Request,
@@ -9,90 +8,59 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const dietId = id;
 
-    // In a real implementation, you would fetch the diet chart by ID.
-    // For this boilerplate, we'll try to fetch the member directly or use a mock.
-    // Assuming `dietId` could be a diet plan ID or member ID depending on schema.
-    
-    // We'll fetch gym profile
-    const { data: gymProfile } = await supabase
-      .from('gyms')
-      .select('*')
-      .limit(1)
-      .single();
+    // M-20 FIX: Fetch real diet chart record and corresponding gym by ID
+    const { data: chart, error: chartError } = await supabaseAdmin
+      .from('diet_charts')
+      .select('*, gyms(*), members(*)')
+      .eq('id', id)
+      .maybeSingle();
 
-    const gymData = gymProfile || {
-      name: 'Gym Name',
-      address: 'Gym Address',
-      phone: '1234567890',
-      email: 'contact@gym.com'
-    };
+    let gymName = 'GymERP';
+    let memberName = 'Member';
+    let chartName = 'Nutrition Diet Plan';
+    let meals: Array<{ meal_name: string; time?: string; items?: any[] }> = [];
 
-    // Creating mock data since we don't know the exact schema for diet plans
-    const templateData: DietChartData = {
-      gym: {
-        name: gymData.name,
-        address: `${gymData.address?.street || ''} ${gymData.address?.city || ''} ${gymData.address?.state || ''} ${gymData.address?.pin || ''}`.trim() || gymData.address || 'Address not provided',
-        phone: gymData.phone || 'N/A',
-        email: gymData.email || 'N/A',
-      },
-      member: {
-        id: dietId,
-        name: 'John Doe', // Mocked, ideally fetched from DB
-        weight: 75,
-        goal: 'Fat Loss',
-      },
-      dateIssued: new Date().toISOString(),
-      trainerName: 'Master Trainer',
-      trainerNotes: 'Drink at least 3-4 liters of water daily. Avoid sugar and processed foods.',
-      meals: [
-        {
-          name: 'Breakfast',
-          time: '08:00 AM',
-          items: ['4 Egg Whites', '1 Whole Egg', '2 Slices Whole Wheat Bread', '1 Apple'],
-          calories: 350,
-          protein: 25,
-          carbs: 40,
-          fats: 10,
-        },
-        {
-          name: 'Lunch',
-          time: '01:30 PM',
-          items: ['150g Chicken Breast', '1 Cup Brown Rice', 'Mixed Green Salad'],
-          calories: 450,
-          protein: 45,
-          carbs: 45,
-          fats: 8,
-        },
-        {
-          name: 'Dinner',
-          time: '08:00 PM',
-          items: ['150g Grilled Fish', 'Steamed Broccoli', 'Half Sweet Potato'],
-          calories: 300,
-          protein: 35,
-          carbs: 25,
-          fats: 6,
-        }
-      ],
-      totalCalories: 1100, // Reduced for example
-      totalProtein: 105,
-      totalCarbs: 110,
-      totalFats: 24,
-    };
+    if (chart) {
+      gymName = chart.gyms?.name || gymName;
+      memberName = chart.members?.name || memberName;
+      chartName = chart.name || chartName;
+      meals = Array.isArray(chart.meals) ? chart.meals : [];
+    } else {
+      // Check if id is a member_id with assigned diet chart
+      const { data: memberData } = await supabaseAdmin
+        .from('members')
+        .select('*, gyms(*), diet_charts(*)')
+        .eq('id', id)
+        .maybeSingle();
 
-    const pdf = generateTextPdf([
-      `${templateData.gym.name} - Diet Chart`,
-      `Member: ${templateData.member.name}`,
-      `Issued: ${templateData.dateIssued}`,
-      ...templateData.meals.map((meal) => `${meal.name}: ${meal.items.join(', ')}`),
-    ]);
+      if (memberData) {
+        gymName = memberData.gyms?.name || gymName;
+        memberName = memberData.name;
+        chartName = memberData.diet_charts?.name || chartName;
+        meals = Array.isArray(memberData.diet_charts?.meals) ? memberData.diet_charts.meals : [];
+      }
+    }
+
+    const lines = [
+      `${gymName} — ${chartName}`,
+      `Member: ${memberName}`,
+      `Generated: ${new Date().toLocaleDateString('en-IN')}`,
+      '----------------------------------------',
+      ...meals.map((m) => {
+        const itemStr = Array.isArray(m.items)
+          ? m.items.map((it: any) => `${it.name || it} (${it.qty || ''})`).join(', ')
+          : '';
+        return `${m.time || ''} [${m.meal_name}]: ${itemStr}`;
+      }),
+    ];
+
+    const pdf = generateTextPdf(lines);
 
     return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="diet-chart-${dietId}.pdf"`,
+        'Content-Disposition': `inline; filename="diet-chart-${id}.pdf"`,
       },
     });
   } catch (error) {

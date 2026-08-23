@@ -1,21 +1,17 @@
-const CACHE_NAME = 'gymerp-v2-cache';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'gymerp-v2.1-cache';
+const STATIC_ASSETS = [
   '/',
-  '/member/dashboard',
-  '/member/diet',
-  '/member/exercise',
-  '/member/plan',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
 ];
 
-// Install Event - Pre-cache essential offline routes
+// Install Event - Pre-cache essential static offline assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('SW: Pre-caching static skeleton offline views');
-      return cache.addAll(ASSETS_TO_CACHE);
+      console.log('SW: Pre-caching static assets');
+      return cache.addAll(STATIC_ASSETS);
     })
   );
   self.skipWaiting();
@@ -38,43 +34,71 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch Event - Cache-First fallback to Network strategy
+// Fetch Event - M-3 FIX: Network-First strategy for dynamic Next.js RSC & navigations,
+// Cache-First only for static hashed assets (fonts, images, icons).
 self.addEventListener('fetch', (event) => {
-  // Avoid intercepting API calls or Supabase requests
+  const url = new URL(event.request.url);
+
+  // Skip non-GET requests, API calls, Supabase endpoints, and auth routes
   if (
-    event.request.url.includes('/api/') || 
-    event.request.url.includes('supabase.co')
+    event.request.method !== 'GET' ||
+    url.pathname.startsWith('/api/') || 
+    url.hostname.includes('supabase.co') ||
+    url.pathname.includes('/auth/')
   ) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request)
-        .then((networkResponse) => {
-          // If response is valid, clone and cache it for future offline usage
-          if (
-            networkResponse && 
-            networkResponse.status === 200 && 
-            networkResponse.type === 'basic'
-          ) {
+  // Purely static immutable assets -> Cache-First
+  const isStaticAsset = 
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.jpg') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.woff2') ||
+    url.pathname.endsWith('.ico');
+
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetch(event.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseToCache);
             });
           }
           return networkResponse;
-        })
-        .catch(() => {
-          // If network fails (completely offline) and requested page is a route, return cached dashboard
-          if (event.request.mode === 'navigate') {
-            return caches.match('/member/dashboard');
-          }
         });
-    })
+      })
+    );
+    return;
+  }
+
+  // All HTML navigation and dynamic RSC requests -> Network-First (with offline cache fallback)
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        if (event.request.mode === 'navigate') {
+          const fallback = await caches.match('/');
+          if (fallback) return fallback;
+        }
+        return new Response('Network offline', { status: 503, statusText: 'Service Unavailable' });
+      })
   );
 });
 

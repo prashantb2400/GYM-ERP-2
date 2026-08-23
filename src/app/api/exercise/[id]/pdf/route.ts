@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { generateTextPdf } from '@/lib/pdf/generator';
-import { ExercisePlanData } from '@/lib/pdf/types';
 
 export async function GET(
   request: Request,
@@ -9,110 +8,59 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const planId = id;
 
-    // Fetch gym profile
-    const { data: gymProfile } = await supabase
-      .from('gyms')
-      .select('*')
-      .limit(1)
-      .single();
+    // M-20 FIX: Fetch real exercise chart record and corresponding gym by ID
+    const { data: chart, error: chartError } = await supabaseAdmin
+      .from('exercise_charts')
+      .select('*, gyms(*), members(*)')
+      .eq('id', id)
+      .maybeSingle();
 
-    const gymData = gymProfile || {
-      name: 'Gym Name',
-      address: 'Gym Address',
-      phone: '1234567890',
-      email: 'contact@gym.com'
-    };
+    let gymName = 'GymERP';
+    let memberName = 'Member';
+    let routineName = 'Workout Schedule';
+    let days: Array<{ day: string; exercises?: any[] }> = [];
 
-    // Creating mock data since we don't know the exact schema for exercise plans
-    const templateData: ExercisePlanData = {
-      gym: {
-        name: gymData.name,
-        address: `${gymData.address?.street || ''} ${gymData.address?.city || ''} ${gymData.address?.state || ''} ${gymData.address?.pin || ''}`.trim() || gymData.address || 'Address not provided',
-        phone: gymData.phone || 'N/A',
-        email: gymData.email || 'N/A',
-      },
-      member: {
-        id: planId,
-        name: 'John Doe', // Mocked
-        level: 'Intermediate',
-        goal: 'Hypertrophy',
-      },
-      dateIssued: new Date().toISOString(),
-      trainerName: 'Master Trainer',
-      duration: '8 Weeks',
-      days: [
-        {
-          dayName: 'Day 1 - Monday',
-          focus: 'Chest & Triceps',
-          exercises: [
-            {
-              name: 'Barbell Bench Press',
-              sets: 4,
-              reps: '8-10',
-              rest: '90s',
-              muscleGroups: ['Chest', 'Triceps'],
-              notes: 'Focus on slow eccentric movement.'
-            },
-            {
-              name: 'Incline Dumbbell Press',
-              sets: 3,
-              reps: '10-12',
-              rest: '60s',
-              muscleGroups: ['Upper Chest']
-            },
-            {
-              name: 'Tricep Pushdowns',
-              sets: 3,
-              reps: '12-15',
-              rest: '45s',
-              muscleGroups: ['Triceps']
-            }
-          ]
-        },
-        {
-          dayName: 'Day 2 - Wednesday',
-          focus: 'Back & Biceps',
-          exercises: [
-            {
-              name: 'Lat Pulldown',
-              sets: 4,
-              reps: '10-12',
-              rest: '60s',
-              muscleGroups: ['Lats'],
-            },
-            {
-              name: 'Barbell Row',
-              sets: 3,
-              reps: '8-10',
-              rest: '90s',
-              muscleGroups: ['Middle Back'],
-            },
-            {
-              name: 'Barbell Bicep Curl',
-              sets: 3,
-              reps: '12-15',
-              rest: '45s',
-              muscleGroups: ['Biceps']
-            }
-          ]
-        }
-      ]
-    };
+    if (chart) {
+      gymName = chart.gyms?.name || gymName;
+      memberName = chart.members?.name || memberName;
+      routineName = chart.name || routineName;
+      days = Array.isArray(chart.days) ? chart.days : [];
+    } else {
+      // Check if id is a member_id with assigned exercise chart
+      const { data: memberData } = await supabaseAdmin
+        .from('members')
+        .select('*, gyms(*), exercise_charts(*)')
+        .eq('id', id)
+        .maybeSingle();
 
-    const pdf = generateTextPdf([
-      `${templateData.gym.name} - Exercise Plan`,
-      `Member: ${templateData.member.name}`,
-      `Issued: ${templateData.dateIssued}`,
-      ...templateData.days.map((day) => `${day.dayName}: ${day.exercises.map((exercise) => exercise.name).join(', ')}`),
-    ]);
+      if (memberData) {
+        gymName = memberData.gyms?.name || gymName;
+        memberName = memberData.name;
+        routineName = memberData.exercise_charts?.name || routineName;
+        days = Array.isArray(memberData.exercise_charts?.days) ? memberData.exercise_charts.days : [];
+      }
+    }
+
+    const lines = [
+      `${gymName} — ${routineName}`,
+      `Member: ${memberName}`,
+      `Generated: ${new Date().toLocaleDateString('en-IN')}`,
+      '----------------------------------------',
+      ...days.flatMap((d) => [
+        `\n[${d.day}]`,
+        ...(Array.isArray(d.exercises)
+          ? d.exercises.map((ex: any) => `  - ${ex.name}: ${ex.sets} sets x ${ex.reps} reps (Rest: ${ex.rest_seconds || 60}s)`)
+          : []),
+      ]),
+    ];
+
+    const pdf = generateTextPdf(lines);
 
     return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="exercise-plan-${planId}.pdf"`,
+        'Content-Disposition': `inline; filename="exercise-plan-${id}.pdf"`,
       },
     });
   } catch (error) {

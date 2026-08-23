@@ -116,8 +116,9 @@ export default function MembersListPage() {
         query = query.eq('face_enrolled', false).eq('biometric_enrolled', false);
       }
 
-      if (debouncedSearch.trim()) {
-        query = query.or(`name.ilike.%${debouncedSearch.trim()}%,phone.ilike.%${debouncedSearch.trim()}%,member_code.ilike.%${debouncedSearch.trim()}%`);
+      const cleanTerm = debouncedSearch.trim().replace(/[,().%*]/g, '');
+      if (cleanTerm) {
+        query = query.or(`name.ilike.%${cleanTerm}%,phone.ilike.%${cleanTerm}%,member_code.ilike.%${cleanTerm}%`);
       }
 
       // Add pagination constraints

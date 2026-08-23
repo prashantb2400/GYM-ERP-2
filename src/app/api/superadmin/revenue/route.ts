@@ -15,7 +15,8 @@ export async function GET(request: Request) {
       
     if (invError) throw invError;
     
-    const total_revenue = invoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+    const invoiceList = invoices || [];
+    const total_revenue = invoiceList.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
 
     // 2. MRR & ARR
     const { data: activeSubs, error: subError } = await supabaseAdmin
@@ -86,9 +87,9 @@ export async function GET(request: Request) {
       monthly_revenue_map[monthStr] = 0;
     }
     
-    invoices.forEach(inv => {
-      const monthStr = inv.created_at.substring(0, 7);
-      if (monthly_revenue_map[monthStr] !== undefined) {
+    invoiceList.forEach(inv => {
+      const monthStr = inv.created_at?.substring(0, 7);
+      if (monthStr && monthly_revenue_map[monthStr] !== undefined) {
         monthly_revenue_map[monthStr] += Number(inv.amount) || 0;
       }
     });

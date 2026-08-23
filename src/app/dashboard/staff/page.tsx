@@ -60,6 +60,16 @@ const AVAILABLE_PERMISSIONS: { value: Permission; label: string; group: string }
   { value: 'whatsapp.send', label: 'Send WhatsApp Quick', group: 'WhatsApp' },
   { value: 'whatsapp.broadcast', label: 'Send Broadcasts', group: 'WhatsApp' },
   
+  { value: 'analytics.view', label: 'View Analytics', group: 'Analytics' },
+  { value: 'analytics.export', label: 'Export Analytics', group: 'Analytics' },
+  
+  { value: 'expenses.view', label: 'View Expenses', group: 'Finances' },
+  { value: 'expenses.manage', label: 'Manage Expenses', group: 'Finances' },
+  { value: 'inventory.view', label: 'View Inventory', group: 'Finances' },
+  { value: 'inventory.manage', label: 'Manage Inventory', group: 'Finances' },
+  
+  { value: 'branches.view', label: 'View Branches', group: 'Admin' },
+  { value: 'branches.manage', label: 'Manage Branches', group: 'Admin' },
   { value: 'staff.view', label: 'View Staff List', group: 'Admin' },
   { value: 'staff.manage', label: 'Manage Staff Accounts', group: 'Admin' },
   { value: 'settings.view', label: 'View Branch Settings', group: 'Admin' },

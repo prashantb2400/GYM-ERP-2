@@ -64,8 +64,9 @@ export default function InvoicesPage() {
         query = query.eq('status', statusFilter);
       }
 
-      if (search.trim()) {
-        query = query.or(`invoice_number.ilike.%${search.trim()}%,member_name.ilike.%${search.trim()}%`);
+      const cleanTerm = search.trim().replace(/[,().%*]/g, '');
+      if (cleanTerm) {
+        query = query.or(`invoice_number.ilike.%${cleanTerm}%,member_name.ilike.%${cleanTerm}%`);
       }
 
       const { data, error } = await query;

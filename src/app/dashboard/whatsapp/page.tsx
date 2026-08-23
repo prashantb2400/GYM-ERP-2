@@ -67,8 +67,9 @@ export default function WhatsAppLogsPage() {
         query = query.eq('status', statusFilter);
       }
 
-      if (search.trim()) {
-        query = query.or(`recipient_name.ilike.%${search.trim()}%,recipient_phone.ilike.%${search.trim()}%`);
+      const cleanTerm = search.trim().replace(/[,().%*]/g, '');
+      if (cleanTerm) {
+        query = query.or(`recipient_name.ilike.%${cleanTerm}%,recipient_phone.ilike.%${cleanTerm}%`);
       }
 
       const { data, error } = await query;
@@ -143,25 +144,49 @@ export default function WhatsAppLogsPage() {
     try {
       setSendingBroadcast(true);
 
-      // Perform a bulk insertion for whatsapp_logs mimicking Meta Cloud API calls
-      const logsToInsert = selectedMembers.map(mId => {
-        const mem = members.find(m => m.id === mId);
-        return {
-          gym_id: user?.gymId,
-          member_id: mId,
-          recipient_phone: mem?.phone || '919876543210',
-          recipient_name: mem?.name || 'Valued Member',
-          message_type: broadcastType,
-          template_name: broadcastType === 'template' ? templateName : null,
-          status: 'sent',
-          wa_message_id: 'wa_broadcast_' + Math.random().toString(36).substr(2, 9),
-        };
-      });
+      // M-18 & M-24 FIX: Dispatch real broadcast via /api/whatsapp/broadcast API
+      const recipientMembers = selectedMembers
+        .map(mId => members.find(m => m.id === mId))
+        .filter((m): m is NonNullable<typeof m> => !!m && !!m.phone);
 
-      const { error } = await supabase.from('whatsapp_logs').insert(logsToInsert);
-      if (error) throw error;
+      if (recipientMembers.length === 0) {
+        toast.error('Selected members have no valid phone numbers registered');
+        return;
+      }
 
-      toast.success(`Broadcast triggered successfully to ${selectedMembers.length} members!`);
+      const phones = recipientMembers.map(m => m.phone);
+      const paramsPerPhone = recipientMembers.map(m => [{ name: 'name', value: m.name }]);
+
+      if (broadcastType === 'template') {
+        const res = await fetch('/api/whatsapp/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phones,
+            templateName,
+            paramsPerPhone,
+          }),
+        });
+
+        if (!res.ok) {
+          const body = await res.json();
+          throw new Error(body.error || 'Failed to dispatch broadcast');
+        }
+      } else {
+        // Individual custom text messages
+        for (const mem of recipientMembers) {
+          await fetch('/api/whatsapp/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: mem.phone,
+              text: messageContent,
+            }),
+          });
+        }
+      }
+
+      toast.success(`Broadcast sent successfully to ${recipientMembers.length} members!`);
       setOpenBroadcastModal(false);
       fetchLogs();
     } catch (err: unknown) {

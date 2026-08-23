@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import crypto from 'crypto';
 
 export async function POST(request: Request) {
   try {
@@ -9,9 +10,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
-    // Verify token
-    const expectedToken = process.env.CCTV_AUTH_TOKEN || 'cctv_secret_token';
-    if (token !== expectedToken) {
+    // M-8 FIX: Require configured CCTV_AUTH_TOKEN in environment and verify with timing-safe comparison
+    const expectedToken = process.env.CCTV_AUTH_TOKEN;
+    if (!expectedToken) {
+      console.error('CCTV ping failed: CCTV_AUTH_TOKEN environment variable not configured');
+      return NextResponse.json({ error: 'CCTV ping service not configured' }, { status: 500 });
+    }
+
+    const providedBuf = Buffer.from(String(token));
+    const expectedBuf = Buffer.from(expectedToken);
+    if (providedBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(providedBuf, expectedBuf)) {
       return NextResponse.json({ error: 'Unauthorized handshake' }, { status: 401 });
     }
 

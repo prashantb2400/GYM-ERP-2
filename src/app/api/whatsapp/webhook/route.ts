@@ -75,10 +75,11 @@ export async function POST(request: Request) {
       ? cleanNumericPhone.substring(2) 
       : cleanNumericPhone;
 
+    // M-16 FIX: Exact phone number matches only — no '%substring%' wildcards
     const { data: member, error: memberErr } = await supabaseAdmin
       .from('members')
       .select('*, plans(*)')
-      .or(`phone.like.%${standardFormat}%,whatsapp_phone.like.%${standardFormat}%`)
+      .or(`phone.eq.${standardFormat},phone.eq.+91${standardFormat},phone.eq.91${standardFormat},whatsapp_phone.eq.${standardFormat},whatsapp_phone.eq.+91${standardFormat}`)
       .limit(1)
       .maybeSingle();
 
