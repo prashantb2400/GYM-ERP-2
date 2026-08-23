@@ -31,6 +31,11 @@ export default function AdminDashboardLayout({
     }
   }, [loading, isAuthenticated, user, isOnboarding, router]);
 
+  // If on onboarding page, render children directly without waiting or layout wrapper
+  if (isOnboarding) {
+    return <>{children}</>;
+  }
+
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
@@ -40,11 +45,6 @@ export default function AdminDashboardLayout({
         </div>
       </div>
     );
-  }
-
-  // If on onboarding page, render children directly without sidebar/topbar
-  if (isOnboarding) {
-    return <>{children}</>;
   }
 
   // Fallback redirecting screen

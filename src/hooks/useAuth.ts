@@ -15,17 +15,17 @@ export function useAuth() {
     const fetchSessionDetails = async (supabaseUser: any) => {
       if (!supabaseUser) {
         setSession({ user: null, member: null });
+        setLoading(false);
         return;
       }
 
       try {
-        setLoading(true);
         // Query users table first to check if they are owner/staff
-        const { data: userData, error: userError } = await supabase
+        const { data: userData } = await supabase
           .from('users')
           .select('*')
           .eq('auth_id', supabaseUser.id)
-          .single();
+          .maybeSingle();
 
         if (userData) {
           const authUser: AuthUser = {
@@ -46,7 +46,7 @@ export function useAuth() {
               .from('staff')
               .select('id')
               .eq('auth_id', supabaseUser.id)
-              .single();
+              .maybeSingle();
             if (staffRecord) {
               authUser.staffRecordId = staffRecord.id;
             }
@@ -57,11 +57,11 @@ export function useAuth() {
         }
 
         // If not user, check members table
-        const { data: memberData, error: memberError } = await supabase
+        const { data: memberData } = await supabase
           .from('members')
           .select('*')
           .eq('auth_id', supabaseUser.id)
-          .single();
+          .maybeSingle();
 
         if (memberData) {
           const authMember: AuthMember = {
@@ -94,16 +94,25 @@ export function useAuth() {
         setSession({ user: authUser, member: null });
         return;
       } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+        const msg = err instanceof Error ? err.message : 'An unknown error occurred';
         setError(msg || 'Error fetching user details');
+        setSession({ user: null, member: null });
       } finally {
         setLoading(false);
       }
     };
 
-    // Get initial user session
-    supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
-      fetchSessionDetails(supabaseUser);
+    // Get initial session quickly via getSession
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchSessionDetails(session.user);
+      } else {
+        setSession({ user: null, member: null });
+        setLoading(false);
+      }
+    }).catch(() => {
+      setSession({ user: null, member: null });
+      setLoading(false);
     });
 
     // Listen for auth state changes
