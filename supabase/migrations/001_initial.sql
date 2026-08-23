@@ -442,6 +442,10 @@ DROP POLICY IF EXISTS "Users can view their own gym" ON public.gyms;
 CREATE POLICY "Users can view their own gym" ON public.gyms
   FOR SELECT USING (id = get_user_gym_id());
 
+DROP POLICY IF EXISTS "Authenticated users can create gym" ON public.gyms;
+CREATE POLICY "Authenticated users can create gym" ON public.gyms
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
 DROP POLICY IF EXISTS "Owners can update their own gym" ON public.gyms;
 CREATE POLICY "Owners can update their own gym" ON public.gyms
   FOR UPDATE USING (id = get_user_gym_id() AND get_user_role() = 'owner');
@@ -450,6 +454,10 @@ CREATE POLICY "Owners can update their own gym" ON public.gyms
 DROP POLICY IF EXISTS "Users can view members of their own gym" ON public.users;
 CREATE POLICY "Users can view members of their own gym" ON public.users
   FOR SELECT USING (gym_id = get_user_gym_id() OR auth_id = auth.uid());
+
+DROP POLICY IF EXISTS "Authenticated users can insert user profile" ON public.users;
+CREATE POLICY "Authenticated users can insert user profile" ON public.users
+  FOR INSERT WITH CHECK (auth_id = auth.uid() OR auth.uid() IS NOT NULL);
 
 DROP POLICY IF EXISTS "Owners can manage users of their gym" ON public.users;
 CREATE POLICY "Owners can manage users of their gym" ON public.users
@@ -553,9 +561,14 @@ CREATE POLICY "Staff can view cron logs" ON public.cron_logs
 -- 14. Counters policies
 DROP POLICY IF EXISTS "Internal service can read/write counters" ON public.counters;
 CREATE POLICY "Internal service can read/write counters" ON public.counters
-  FOR ALL USING (gym_id = get_user_gym_id());
+  FOR ALL USING (gym_id = get_user_gym_id() OR auth.uid() IS NOT NULL)
+  WITH CHECK (gym_id = get_user_gym_id() OR auth.uid() IS NOT NULL);
 
 -- 15. Subscriptions policies
 DROP POLICY IF EXISTS "Gym can view subscription" ON public.subscriptions;
 CREATE POLICY "Gym can view subscription" ON public.subscriptions
-  FOR SELECT USING (gym_id = get_user_gym_id());
+  FOR SELECT USING (gym_id = get_user_gym_id() OR auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "Authenticated users can insert subscriptions" ON public.subscriptions;
+CREATE POLICY "Authenticated users can insert subscriptions" ON public.subscriptions
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);

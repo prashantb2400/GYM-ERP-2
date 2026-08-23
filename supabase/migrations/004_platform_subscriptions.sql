@@ -152,6 +152,10 @@ CREATE POLICY "gym_owners_read_own_subscription" ON platform_subscriptions
     gym_id IN (SELECT id FROM gyms WHERE owner_id = auth.uid())
   );
 
+DROP POLICY IF EXISTS "Authenticated users can create platform subscriptions" ON platform_subscriptions;
+CREATE POLICY "Authenticated users can create platform subscriptions" ON platform_subscriptions
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
 DROP POLICY IF EXISTS "gym_owners_read_own_invoices" ON platform_invoices;
 CREATE POLICY "gym_owners_read_own_invoices" ON platform_invoices
   FOR SELECT USING (
