@@ -289,11 +289,11 @@ export default function DashboardHome() {
           >
             ⚡ Quick Add
           </Button>
-          <Link href="/dashboard/invoices" passHref legacyBehavior>
-            <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 gap-2">
+          <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 gap-2" asChild>
+            <Link href="/dashboard/invoices">
               <PlusCircle className="h-4 w-4" /> New Invoice
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
 

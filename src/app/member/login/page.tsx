@@ -174,7 +174,7 @@ export default function MemberLoginPage() {
                         <Input
                           id="phone"
                           type="tel"
-                          maxLength={10}
+                          maxLength={13}
                           placeholder="98765 43210"
                           disabled={loading}
                           value={phone}

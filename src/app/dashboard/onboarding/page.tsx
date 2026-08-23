@@ -76,7 +76,8 @@ export default function OnboardingPage() {
       return;
     }
 
-    const cleanPhone = phone.replace(/\D/g, '');
+    const rawPhone = phone.replace(/\D/g, '');
+    const cleanPhone = rawPhone.length === 12 && rawPhone.startsWith('91') ? rawPhone.slice(2) : rawPhone;
     if (phone.trim() && cleanPhone.length !== 10) {
       toast.error('Please enter a valid 10-digit phone number');
       return;
@@ -95,7 +96,7 @@ export default function OnboardingPage() {
         .from('gyms')
         .insert({
           name: gymName.trim(),
-          phone: phone.trim() || null,
+          phone: cleanPhone || null,
           email: email.trim() || null,
           tagline: tagline.trim() || null,
           address: { city: city.trim(), state: state.trim() },
