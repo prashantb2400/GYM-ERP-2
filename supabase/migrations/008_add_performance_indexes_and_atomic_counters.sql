@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_platform_subscriptions_gym ON public.platform_sub
 CREATE INDEX IF NOT EXISTS idx_gyms_owner_id ON public.gyms (owner_id);
 
 -- WhatsApp logs & Cron logs
-CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_gym_created ON public.whatsapp_logs (gym_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_gym_created ON public.whatsapp_logs (gym_id, sent_at);
 CREATE INDEX IF NOT EXISTS idx_cron_logs_job_run ON public.cron_logs (job_name, run_at);
 
 -- Payment transactions
