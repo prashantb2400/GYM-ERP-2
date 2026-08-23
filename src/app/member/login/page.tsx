@@ -76,13 +76,26 @@ export default function MemberLoginPage() {
       setError(null);
 
       // Verify OTP code
-      const { error: verifyError } = await supabase.auth.verifyOtp({
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
         phone: `+91${cleanPhone}`,
         token: otp,
         type: 'sms',
       });
 
       if (verifyError) throw verifyError;
+
+      // S0-9 FIX: Link the newly authenticated Supabase user to the member record
+      // Without this, useAuth() cannot find the member and falls back to treating them as a new owner
+      if (verifyData?.user) {
+        const authUserId = verifyData.user.id;
+
+        // Call server-side route to safely link auth_id using admin client
+        await fetch('/api/auth/link-member', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanPhone, authUserId }),
+        });
+      }
 
       router.push('/member/dashboard');
     } catch (err: unknown) {

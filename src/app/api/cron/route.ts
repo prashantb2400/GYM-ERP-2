@@ -9,6 +9,16 @@ export async function GET(request: Request) {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const jobId = searchParams.get('job');
+
+    // S0-8 FIX: Vercel Cron sends GET requests with ?job= param — execute the job
+    if (jobId) {
+      const result = await executeCronJob(jobId, supabaseAdmin);
+      return NextResponse.json(result);
+    }
+
+    // No job param: return logs for manual dashboard inspection
     const { data: logs } = await supabaseAdmin
       .from('cron_logs')
       .select('*')

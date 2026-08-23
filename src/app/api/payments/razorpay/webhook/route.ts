@@ -73,6 +73,20 @@ export async function POST(request: Request) {
         throw new Error('Plan not found for renewal');
       }
 
+      // ── S0-2 FIX: Verify paid amount matches server-authoritative plan price ──
+      // planData.price is in ₹, paymentEntity.amount is in paise
+      const expectedAmountPaise = Math.round(Number(planData.price) * 100);
+      const paidAmountPaise = Number(paymentEntity.amount);
+      if (paidAmountPaise < expectedAmountPaise) {
+        console.error(`Payment amount mismatch: paid ${paidAmountPaise} paise but plan costs ${expectedAmountPaise} paise`);
+        // Mark transaction as suspicious but acknowledge webhook to Razorpay
+        await supabaseAdmin
+          .from('payment_transactions')
+          .update({ status: 'amount_mismatch' })
+          .eq('razorpay_order_id', orderId);
+        return NextResponse.json({ received: true, status: 'amount_mismatch' });
+      }
+
       // Calculate start and end dates
       const startDate = new Date();
       const endDate = new Date();

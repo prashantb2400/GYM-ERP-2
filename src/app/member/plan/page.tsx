@@ -103,27 +103,18 @@ export default function MemberPlanPage() {
         handler: async function (response: any) {
           toast.success('Payment captured! Synchronizing validity...');
           
-          // Reconcile via local client webhook handler
-          const confirmRes = await fetch('/api/payments/razorpay/webhook', {
+          // S0-3 FIX: Use /verify endpoint instead of /webhook
+          // The webhook requires x-razorpay-signature from Razorpay servers; clients cannot supply it.
+          const confirmRes = await fetch('/api/payments/razorpay/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              event: 'payment.captured',
-              payload: {
-                payment: {
-                  entity: {
-                    id: response.razorpay_payment_id,
-                    order_id: response.razorpay_order_id,
-                    signature: response.razorpay_signature,
-                    notes: {
-                      memberId: member.id,
-                      planId: member.plans.id,
-                      gymId: member.gym_id,
-                    },
-                    amount: order.amount,
-                  }
-                }
-              }
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              memberId: member.id,
+              planId: member.plans.id,
+              gymId: member.gym_id,
             }),
           });
 

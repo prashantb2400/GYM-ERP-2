@@ -121,7 +121,8 @@ export async function updateSession(request: NextRequest) {
       !path.startsWith('/api/whatsapp/webhook') &&
       !path.startsWith('/api/payments/razorpay/webhook') &&
       !path.startsWith('/api/attendance/face-mark') &&
-      !path.startsWith('/api/cron/')) {
+      !path.startsWith('/api/cron') && // S0-8 FIX: no trailing slash — matches /api/cron and /api/cron/due-reminders
+      !path.startsWith('/api/settings/cctv-ping')) {
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

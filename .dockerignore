@@ -1,0 +1,48 @@
+# S0-4: Prevent secrets from being copied into Docker image layers
+# These files contain live Supabase service role keys, JWT tokens, and CRON_SECRET
+
+# Environment files — NEVER include in Docker builds
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.vercel
+.env.example
+*.env
+
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Node dependencies — installed fresh in Dockerfile
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# Next.js build output — rebuilt in Dockerfile
+.next
+out
+build
+
+# Testing artifacts
+coverage
+.nyc_output
+
+# IDE and OS files
+.DS_Store
+.vscode
+*.pem
+
+# Supabase local dev — not needed in production Docker image
+supabase/.temp
+supabase/seed.sql
+
+# Vercel deployment artifacts
+.vercel
+
+# TypeScript build cache
+*.tsbuildinfo

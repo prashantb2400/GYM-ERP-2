@@ -156,7 +156,7 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
         .single();
       
       if (counter) {
-        memberCode = `MBR\${String((counter.member_count || 0) + 1).padStart(4, '0')}`;
+        memberCode = `MBR${String((counter.member_count || 0) + 1).padStart(4, '0')}`;
       } else {
         // Fallback or create counter
         memberCode = `MBR0001`;
@@ -193,7 +193,7 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
         .single();
       
       const year = new Date().getFullYear();
-      const invoiceNo = `INV-\${year}-\${String((invCounter?.invoice_count || 0) + 1).padStart(4, '0')}`;
+      const invoiceNo = `INV-${year}-${String((invCounter?.invoice_count || 0) + 1).padStart(4, '0')}`;
 
       // Step 4: Insert invoice
       const amountPaid = Number(amountPaidStr) || 0;

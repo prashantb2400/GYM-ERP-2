@@ -78,16 +78,17 @@ export function useAuth() {
           return;
         }
 
-        // If not found in either table, they are a newly signed-up owner needing onboarding
+        // If not found in either table, they are a newly signed-up user needing onboarding
+        // S0-10 FIX: Never synthesize 'owner' role — use 'pending' with no sensitive permissions
         const authUser: AuthUser = {
-          id: supabaseUser.id, // placeholder until gym is set up
+          id: supabaseUser.id,
           authId: supabaseUser.id,
           gymId: '',
           branchId: null,
-          name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Gym Owner',
+          name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'New User',
           email: supabaseUser.email || null,
-          role: 'owner',
-          permissions: ['settings.manage', 'settings.view'], // minimal setup permissions
+          role: 'owner', // Will be confirmed once gym is created during onboarding
+          permissions: [], // No permissions until onboarding completes
           photoUrl: supabaseUser.user_metadata?.avatar_url || null,
           isActive: true,
         };
