@@ -88,7 +88,7 @@ export async function GET(
       `Report date: ${templateData.reportDate}`,
     ]);
 
-    return new NextResponse(pdf, {
+    return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="member-report-${member.id}.pdf"`,

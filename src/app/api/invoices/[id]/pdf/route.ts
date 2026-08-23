@@ -75,7 +75,7 @@ export async function GET(
 
     const pdf = generateInvoicePdf(templateData);
 
-    return new NextResponse(pdf, {
+    return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="invoice-${templateData.invoiceNo}.pdf"`,

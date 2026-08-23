@@ -89,7 +89,7 @@ export async function GET(
       ...templateData.meals.map((meal) => `${meal.name}: ${meal.items.join(', ')}`),
     ]);
 
-    return new NextResponse(pdf, {
+    return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="diet-chart-${dietId}.pdf"`,
