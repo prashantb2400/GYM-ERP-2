@@ -18,11 +18,12 @@ export default function MemberDietPage() {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (!authUser) return;
 
+        // H-M27 FIX: Use strict auth_id eq — email is undefined for phone OTP users
         const { data } = await supabase
           .from('members')
           .select('*, diet_charts(*)')
-          .or(`auth_id.eq.${authUser.id},email.eq.${authUser.email}`)
-          .single();
+          .eq('auth_id', authUser.id)
+          .maybeSingle();
 
         if (data?.diet_charts) {
           setDiet(data.diet_charts);

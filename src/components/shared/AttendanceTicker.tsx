@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,69 +14,72 @@ interface AttendanceTickerProps {
   className?: string;
 }
 
+// H-2 FIX: Corrected interface — members table has 'name' and 'photo_url', not first_name/last_name/avatar_url
 interface AttendanceEvent {
   id: string;
   member_id: string;
   check_in_time: string;
   method: 'face' | 'fingerprint' | 'manual';
   member: {
-    first_name: string;
-    last_name: string;
-    avatar_url?: string | null;
+    name: string;
+    photo_url?: string | null;
   };
 }
 
 export function AttendanceTicker({ gymId, maxItems = 10, className = '' }: AttendanceTickerProps) {
   const [events, setEvents] = useState<AttendanceEvent[]>([]);
   const supabase = createClient();
+  // H-2 FIX: Use ref to track channel so cleanup properly removes it
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
-    // Initial fetch of recent attendance (mocked for now, would be a real query)
-    const fetchRecent = async () => {
-      // Setup realtime subscription
-      const channel = supabase
-        .channel('attendance_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'attendance_logs',
-            filter: gymId ? `gym_id=eq.${gymId}` : undefined,
-          },
-          async (payload) => {
-            // Fetch member details for the new log
-            const { data: memberData } = await supabase
-              .from('members')
-              .select('first_name, last_name, avatar_url')
-              .eq('id', payload.new.member_id)
-              .single();
+    // H-2 FIX: Correct table is 'attendance', not 'attendance_logs'
+    const channel = supabase
+      .channel(`attendance_ticker_${gymId || 'all'}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'attendance',  // Fixed: was 'attendance_logs'
+          filter: gymId ? `gym_id=eq.${gymId}` : undefined,
+        },
+        async (payload) => {
+          // H-2 FIX: Query correct columns — 'name' and 'photo_url' (not first_name/last_name/avatar_url)
+          const { data: memberData } = await supabase
+            .from('members')
+            .select('name, photo_url')
+            .eq('id', payload.new.member_id)
+            .single();
 
-            if (memberData) {
-              const newEvent: AttendanceEvent = {
-                id: payload.new.id,
-                member_id: payload.new.member_id,
-                check_in_time: payload.new.check_in_time,
-                method: payload.new.method as AttendanceEvent['method'],
-                member: memberData,
-              };
+          if (memberData) {
+            const newEvent: AttendanceEvent = {
+              id: payload.new.id,
+              member_id: payload.new.member_id,
+              check_in_time: payload.new.check_in_time || payload.new.created_at,
+              method: (payload.new.method || 'manual') as AttendanceEvent['method'],
+              member: memberData,
+            };
 
-              setEvents((prev) => {
-                const updated = [newEvent, ...prev];
-                return updated.slice(0, maxItems);
-              });
-            }
+            setEvents((prev) => {
+              const updated = [newEvent, ...prev];
+              return updated.slice(0, maxItems);
+            });
           }
-        )
-        .subscribe();
+        }
+      )
+      .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
+    channelRef.current = channel;
+
+    // H-2 FIX: Proper cleanup — removes channel in the effect cleanup, not inside async
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-
-    fetchRecent();
-  }, [gymId, maxItems, supabase]);
+  }, [gymId, maxItems]); // removed 'supabase' from deps — singleton, doesn't change
 
   const getMethodDetails = (method: string) => {
     switch (method) {
@@ -88,6 +91,13 @@ export function AttendanceTicker({ gymId, maxItems = 10, className = '' }: Atten
       default:
         return { icon: PenLine, color: 'bg-amber-100 text-amber-800 border-amber-200', label: 'Manual' };
     }
+  };
+
+  // Helper to safely get initials from a full name
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -104,9 +114,7 @@ export function AttendanceTicker({ gymId, maxItems = 10, className = '' }: Atten
           </motion.div>
         ) : (
           events.map((event) => {
-            const MethodIcon = getMethodDetails(event.method).icon;
-            const methodColor = getMethodDetails(event.method).color;
-            const methodLabel = getMethodDetails(event.method).label;
+            const { icon: MethodIcon, color: methodColor, label: methodLabel } = getMethodDetails(event.method);
 
             return (
               <motion.div
@@ -119,15 +127,13 @@ export function AttendanceTicker({ gymId, maxItems = 10, className = '' }: Atten
               >
                 <div className="flex items-center space-x-3">
                   <Avatar>
-                    <AvatarImage src={event.member.avatar_url || ''} />
+                    <AvatarImage src={event.member.photo_url || ''} />
                     <AvatarFallback>
-                      {event.member.first_name[0]}{event.member.last_name[0]}
+                      {getInitials(event.member.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium text-sm">
-                      {event.member.first_name} {event.member.last_name}
-                    </p>
+                    <p className="font-medium text-sm">{event.member.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(event.check_in_time), { addSuffix: true })}
                     </p>

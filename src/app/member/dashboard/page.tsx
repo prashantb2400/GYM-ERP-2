@@ -40,43 +40,20 @@ export default function MemberDashboardPage() {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (!authUser) return;
 
-        // Fetch corresponding member record joined with plans, diet, and exercise
+        // H-M27 FIX: Use strict auth_id filter only — never include email.eq.undefined
+        // Phone OTP users have no email, causing PostgREST .or() syntax errors
         const { data, error } = await supabase
           .from('members')
           .select('*, plans(*), diet_charts(*), exercise_charts(*)')
-          .or(`auth_id.eq.${authUser.id},email.eq.${authUser.email}`)
-          .single();
+          .eq('auth_id', authUser.id)
+          .maybeSingle();
 
         if (data) {
           setMember(data);
         } else {
-          // Mock data fallback for standalone layout testing
-          setMember({
-            name: authUser.user_metadata?.full_name || 'Athletic Pro',
-            member_code: 'GYM0099',
-            status: 'active',
-            plan_start_date: '2026-06-01',
-            plan_end_date: '2026-09-01',
-            plans: { name: '3 Month Gold Premium Package', duration_days: 90 },
-            diet_charts: {
-              name: 'Lean Bulk Schedule',
-              meals: [
-                { meal_name: 'Breakfast', time: '08:00 AM', items: [{ name: 'Oats with milk & scoop of whey', qty: '1 bowl' }] },
-                { meal_name: 'Post-Workout', time: '06:30 PM', items: [{ name: 'Whey shake + 2 bananas', qty: '1 serving' }] },
-              ]
-            },
-            exercise_charts: {
-              name: 'Push Pull Legs (PPL)',
-              days: [
-                { day: 'Mon Push', exercises: [{ name: 'Incline Bench Press', sets: 4, reps: '8-12' }] },
-                { day: 'Tue Pull', exercises: [{ name: 'Lat Pulldowns', sets: 4, reps: '10-12' }] },
-              ]
-            },
-            bmi: 23.5,
-            height_cm: 178,
-            weight_kg: 74.5,
-            attendance_count: 14,
-          });
+          // M-10 FIX: Show real empty state instead of fake mock data
+          // Fake data was showing "active pass" to deactivated/unlinked members
+          setMember(null);
         }
       } catch (err) {
         console.error('Error fetching member stats:', err);
@@ -101,6 +78,16 @@ export default function MemberDashboardPage() {
   const daysLeft = member?.plan_end_date ? getDaysRemaining(member.plan_end_date) : 0;
   const planDaysTotal = member?.plans?.duration_days || 30;
   const progressPercent = Math.max(0, Math.min(100, (daysLeft / planDaysTotal) * 100));
+
+  // M-10 FIX: Explicit null guard — layout redirects on null but dashboard also handles gracefully
+  if (!member) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
+        <p className="text-zinc-400 text-sm">Could not load your membership details.</p>
+        <p className="text-zinc-600 text-xs">Please log in again or contact your gym.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

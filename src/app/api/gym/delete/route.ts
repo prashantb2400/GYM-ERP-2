@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
     // 4. Delete members
     await supabaseAdmin.from('members').delete().eq('gym_id', gymId);
     
-    // 5. Delete staff
-    await supabaseAdmin.from('staff').delete().eq('gym_id', gymId);
+    // 5. H-11 FIX: 'staff' table does not exist — staff are in public.users (role=trainer/receptionist)
+    // They will be removed by step 6 (delete users associated with this gym)
     
-    // 6. Delete users associated with this gym
+    // 6. Delete users associated with this gym (includes trainers, receptionists, owner)
     await supabaseAdmin.from('users').delete().eq('gym_id', gymId);
     
     // 7. Delete the gym itself (cascades remaining tables)

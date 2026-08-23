@@ -13,9 +13,20 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    // H-17 FIX: Whitelist allowed fields to prevent mass assignment of protected DB columns
+    const allowed = ['title', 'content', 'type', 'is_active', 'target_gym_ids', 'expires_at'];
+    const safeUpdate: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (key in body) safeUpdate[key] = body[key];
+    }
+
+    if (Object.keys(safeUpdate).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('platform_announcements')
-      .update(body)
+      .update(safeUpdate)
       .eq('id', id)
       .select()
       .single();

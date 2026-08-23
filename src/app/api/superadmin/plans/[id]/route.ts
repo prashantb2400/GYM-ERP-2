@@ -47,10 +47,21 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+
+    // H-17 FIX: Whitelist allowed fields to prevent mass assignment
+    const allowed = ['name', 'description', 'price', 'duration_days', 'max_members', 'max_staff', 'features', 'is_active', 'sort_order'];
+    const safeUpdate: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (key in body) safeUpdate[key] = body[key];
+    }
+
+    if (Object.keys(safeUpdate).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
     
     const { data, error } = await supabaseAdmin
       .from('platform_plans')
-      .update(body)
+      .update(safeUpdate)
       .eq('id', id)
       .select()
       .single();

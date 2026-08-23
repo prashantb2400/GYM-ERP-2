@@ -35,26 +35,24 @@ export default function MemberPortalLayout({ children }: { children: React.React
           return;
         }
 
-        // Fetch corresponding member record by matching phone / email or authId
+        // H-4 FIX: Use strict auth_id eq — .or() with email.eq.undefined breaks PostgREST
         const { data, error } = await supabase
           .from('members')
           .select('*, plans(name)')
-          .or(`auth_id.eq.${authUser.id},email.eq.${authUser.email}`)
-          .single();
+          .eq('auth_id', authUser.id)
+          .maybeSingle();
 
         if (error || !data) {
-          // Fallback mockup member profile for testing if DB migration auth link isn't fully completed
-          setMember({
-            name: authUser.user_metadata?.full_name || 'Athletic Member',
-            member_code: 'GYM0088',
-            phone: authUser.phone || '9876543210',
-            status: 'active',
-          });
-        } else {
-          setMember(data);
+          // H-4 FIX: Don't fall back to mock data — redirect unlinked users to login
+          // A missing member record means auth_id was never linked (S0-9 fix resolves this going forward)
+          router.replace('/member/login?error=account-not-linked');
+          return;
         }
+
+        setMember(data);
       } catch (err) {
         console.error('Session error:', err);
+        router.replace('/member/login');
       } finally {
         setLoading(false);
       }

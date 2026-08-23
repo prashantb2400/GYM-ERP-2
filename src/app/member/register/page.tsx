@@ -131,30 +131,27 @@ function RegisterForm() {
         throw new Error(verifyError?.message || 'Invalid or expired OTP');
       }
 
-      // We have a user session. Let's create the member profile row!
-      // First let's get the next member counter value for code GYM0001
-      // We can call supabase function 'generate_member_code'
-      const { data: memberCode, error: codeError } = await supabase.rpc('generate_member_code', {
-        p_gym_id: gymId,
+      // H-19 FIX: Call secure server API instead of broken client-side RPC+insert.
+      // The old code used supabase.rpc('generate_member_code') which failed with
+      // 'Not authorized' because the caller didn't have owner/receptionist role,
+      // and direct .from('members').insert() was blocked by RLS.
+      const res = await fetch('/api/members/self-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          authUserId: authData.user.id,
+          gymId,
+          name: name.trim(),
+          phone: cleanPhone,
+          dob: dob || null,
+          gender: gender || null,
+        }),
       });
 
-      if (codeError || !memberCode) {
-        throw new Error(codeError?.message || 'Failed to generate member code');
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || 'Registration failed');
       }
-
-      // Insert member profile
-      const { error: insertError } = await supabase.from('members').insert({
-        auth_id: authData.user.id,
-        gym_id: gymId,
-        member_code: memberCode,
-        name: name.trim(),
-        phone: cleanPhone,
-        dob: dob || null,
-        gender: gender || null,
-        status: 'pending', // Pending approval / setup by receptionist
-      });
-
-      if (insertError) throw insertError;
 
       setSuccess(true);
     } catch (err: unknown) {

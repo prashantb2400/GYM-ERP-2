@@ -355,23 +355,41 @@ export async function runAdminDailySummary(supabase: SupabaseClient): Promise<Cr
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    // Dummy query for metrics
-    const { data: newMembers } = await supabase.from('members').select('id').eq('admission_date', today);
-    const { data: attendance } = await supabase.from('attendance').select('id').eq('date', today);
-    
-    // In a real app we'd fetch actual values
-    const newMembersCount = newMembers?.length || 0;
-    const attendanceCount = attendance?.length || 0;
+    // H-16 FIX: Fetch all active gyms and send per-gym summaries to each gym's owner
+    // Previously this fetched ALL members globally and sent to the first gym's phone — a cross-tenant leak
+    const { data: gyms } = await supabase
+      .from('gyms')
+      .select('id, phone, name')
+      .eq('is_suspended', false);
 
-    const summaryText = `Daily Summary:\nNew Members: ${newMembersCount}\nAttendance: ${attendanceCount}`;
+    for (const gym of gyms || []) {
+      if (!gym.phone) continue;
 
-    // Fetch admin/owner phone
-    const { data: gyms } = await supabase.from('gyms').select('phone').limit(1);
-    const ownerPhone = gyms?.[0]?.phone;
+      // Query metrics scoped strictly to this gym_id
+      const { data: newMembers } = await supabase
+        .from('members')
+        .select('id')
+        .eq('gym_id', gym.id)
+        .eq('admission_date', today);
 
-    if (ownerPhone) {
-      await whatsappClient.sendTextMessage(ownerPhone, summaryText);
-      processed++;
+      const { data: attendance } = await supabase
+        .from('attendance')
+        .select('id')
+        .eq('gym_id', gym.id)
+        .eq('date', today);
+
+      const newMembersCount = newMembers?.length || 0;
+      const attendanceCount = attendance?.length || 0;
+
+      const summaryText = `Daily Summary for ${gym.name}:\nNew Members: ${newMembersCount}\nAttendance: ${attendanceCount}`;
+
+      try {
+        await whatsappClient.sendTextMessage(gym.phone, summaryText);
+        processed++;
+      } catch {
+        // Log but continue for other gyms
+        console.error(`Failed to send daily summary to gym ${gym.id}`);
+      }
     }
 
     return await logJobRun(supabase, 'runAdminDailySummary', startTime, { success: true, processed, errors, duration: 0 });

@@ -23,12 +23,12 @@ export default function MemberPlanPage() {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (!authUser) return;
 
-        // Fetch corresponding member
+        // H-M27 FIX: Use strict auth_id eq — email is undefined for phone OTP users
         const { data: memData } = await supabase
           .from('members')
           .select('*, plans(*)')
-          .or(`auth_id.eq.${authUser.id},email.eq.${authUser.email}`)
-          .single();
+          .eq('auth_id', authUser.id)
+          .maybeSingle();
 
         if (memData) {
           setMember(memData);
