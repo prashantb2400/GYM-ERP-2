@@ -26,7 +26,9 @@ export default function MemberLoginPage() {
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanPhone = phone.replace(/\D/g, '');
+    const rawClean = phone.replace(/\D/g, '');
+    const cleanPhone = rawClean.length === 12 && rawClean.startsWith('91') ? rawClean.slice(2) : rawClean;
+
     if (cleanPhone.length !== 10) {
       setError('Please enter a valid 10-digit mobile number');
       return;
@@ -65,7 +67,9 @@ export default function MemberLoginPage() {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanPhone = phone.replace(/\D/g, '');
+    const rawClean = phone.replace(/\D/g, '');
+    const cleanPhone = rawClean.length === 12 && rawClean.startsWith('91') ? rawClean.slice(2) : rawClean;
+
     if (otp.length !== 6) {
       setError('OTP must be exactly 6 digits');
       return;

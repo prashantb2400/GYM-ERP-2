@@ -2,7 +2,7 @@
   "name": "GymERP Enterprise Gym Platform",
   "short_name": "GymERP",
   "description": "Automated gym management, member CRM, and billing SaaS platform.",
-  "start_url": "/member/dashboard",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#09090b",
   "theme_color": "#9333ea",

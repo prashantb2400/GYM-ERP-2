@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit, rateLimitHeaders } from '@/lib/server/rateLimit';
+import { getTodayIST } from '@/lib/utils/format';
 
 export async function POST(request: Request) {
   try {
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
       }, { status: 403 });
     }
 
-    const todayString = new Date().toISOString().split('T')[0];
+    const todayString = getTodayIST();
 
     // 2. Check if already marked for today to prevent multiple quick camera triggers
     const { data: existingAttendance } = await supabaseAdmin
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       .eq('gym_id', gymId)
       .eq('member_id', member.id)
       .eq('date', todayString)
-      .single();
+      .maybeSingle();
 
     if (existingAttendance) {
       return NextResponse.json({ 

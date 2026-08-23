@@ -73,6 +73,10 @@ export function getBMICategory(bmi: number): string {
   return 'Obese';
 }
 
+export function getTodayIST(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+}
+
 export function calculateGST(subtotal: number, discountAmount: number = 0): { cgst: number; sgst: number; total: number } {
   const taxableAmount = subtotal - discountAmount;
   const cgst = Math.round(taxableAmount * 0.09 * 100) / 100;

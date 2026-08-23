@@ -19,7 +19,7 @@ export const SIDEBAR_ITEMS = [
   { label: 'Diet Charts', href: '/dashboard/diet', icon: 'Apple', permission: 'diet.view' as const },
   { label: 'Exercise Plans', href: '/dashboard/exercise', icon: 'Dumbbell', permission: 'exercise.view' as const },
   { label: 'KYC', href: '/dashboard/kyc', icon: 'FileCheck', permission: 'kyc.view' as const },
-  { label: 'Cron Jobs', href: '/dashboard/cron', icon: 'Clock', permission: null },
+  { label: 'Cron Jobs', href: '/dashboard/cron', icon: 'Clock', permission: 'settings.manage' as const },
   { label: 'Settings', href: '/dashboard/settings', icon: 'Settings', permission: 'settings.view' as const },
 ] as const;
 

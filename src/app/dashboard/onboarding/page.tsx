@@ -76,6 +76,17 @@ export default function OnboardingPage() {
       return;
     }
 
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (phone.trim() && cleanPhone.length !== 10) {
+      toast.error('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
     try {
       setLoading(true);
 

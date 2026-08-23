@@ -18,6 +18,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'GymERP — Enterprise Gym Management Platform',
   description: 'Automated membership management, billing, notifications, and analytics SaaS for gyms.',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/icon-192.png',
+  },
 };
 
 export default function RootLayout({

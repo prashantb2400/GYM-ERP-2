@@ -202,7 +202,7 @@ export default function SettingsPage() {
     if (minutes <= 5) {
       return { 
         status: 'Online', 
-        color: 'text-green-450 bg-green-500/10 border-green-500/20 animate-pulse',
+        color: 'text-green-400 bg-green-500/10 border-green-500/20 animate-pulse',
         time: new Date(lastPing).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
       };
     }

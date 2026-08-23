@@ -34,6 +34,7 @@ import { AnimatedList } from '@/components/magicui/animated-list';
 import { GradientText } from '@/components/magicui/gradient-text';
 import { GridPattern } from '@/components/magicui/grid-pattern';
 import { QuickAddMember } from '@/components/shared/QuickAddMember';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 
 export default function DashboardHome() {
   const supabase = createClient();
@@ -392,11 +393,11 @@ export default function DashboardHome() {
         </SpotlightCard>
       </div>
 
-      {/* Grid: Live Ticker & Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Live Attendance Ticker */}
-        <Card className="border-zinc-800 bg-zinc-900/40 lg:col-span-1 flex flex-col">
-          <CardHeader>
+      {/* Live Attendance Ticker & Velocity Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Attendance Ticker */}
+        <Card className="border-zinc-800 bg-zinc-900/40 flex flex-col">
+          <CardHeader className="pb-3 border-b border-zinc-800">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-purple-400" />
               <CardTitle className="text-lg font-bold">Live Check-ins</CardTitle>
@@ -404,30 +405,32 @@ export default function DashboardHome() {
             <CardDescription className="text-zinc-500 text-xs">Real-time attendance tracking ticker</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto max-h-[350px] space-y-4">
-            {ticker.length === 0 ? (
-              <div className="text-center text-zinc-600 text-sm py-12">No attendance logged yet today.</div>
-            ) : (
-              <AnimatedList>
-                {ticker.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between border-b border-zinc-800/40 pb-3 last:border-0 last:pb-0">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-300 font-bold border border-purple-800/40">
-                      {entry.member_name.slice(0,2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-zinc-200">{entry.member_name}</div>
-                      <div className="text-[10px] text-zinc-500 mt-0.5 uppercase flex items-center gap-1.5">
-                        <GlowingBadge variant="active" pulse={false}>{entry.method}</GlowingBadge>
+            <ErrorBoundary fallbackTitle="Live check-ins feed unavailable">
+              {ticker.length === 0 ? (
+                <div className="text-center text-zinc-600 text-sm py-12">No attendance logged yet today.</div>
+              ) : (
+                <AnimatedList>
+                  {ticker.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between border-b border-zinc-800/40 pb-3 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-300 font-bold border border-purple-800/40">
+                        {entry.member_name.slice(0,2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-zinc-200">{entry.member_name}</div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5 uppercase flex items-center gap-1.5">
+                          <GlowingBadge variant="active" pulse={false}>{entry.method}</GlowingBadge>
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right">
+                      <span className="text-xs font-semibold text-zinc-400">{formatDateTime(entry.check_in_time).split(',')[1]}</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs font-semibold text-zinc-400">{formatDateTime(entry.check_in_time).split(',')[1]}</span>
-                  </div>
-                </div>
-              ))}
-              </AnimatedList>
-            )}
+                ))}
+                </AnimatedList>
+              )}
+            </ErrorBoundary>
           </CardContent>
         </Card>
 
@@ -444,26 +447,28 @@ export default function DashboardHome() {
           </CardHeader>
           <CardContent className="h-[280px] relative">
             <BorderBeam />
-            {chartData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-zinc-500 pb-8">
-                <CalendarDays className="h-10 w-10 mb-3 opacity-30" />
-                <p className="text-sm font-medium">No check-ins yet this week</p>
-                <p className="text-xs mt-1">Members will appear here once they check in</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                  <XAxis dataKey="name" stroke="#71717a" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#71717a" fontSize={11} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
-                    labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
-                  />
-                  <Bar dataKey="count" fill="#9333ea" radius={[4, 4, 0, 0]} maxBarSize={45} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+            <ErrorBoundary fallbackTitle="Chart data failed to render">
+              {chartData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-zinc-500 pb-8">
+                  <CalendarDays className="h-10 w-10 mb-3 opacity-30" />
+                  <p className="text-sm font-medium">No check-ins yet this week</p>
+                  <p className="text-xs mt-1">Members will appear here once they check in</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                    <XAxis dataKey="name" stroke="#71717a" fontSize={11} tickLine={false} />
+                    <YAxis stroke="#71717a" fontSize={11} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
+                      labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
+                    />
+                    <Bar dataKey="count" fill="#9333ea" radius={[4, 4, 0, 0]} maxBarSize={45} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ErrorBoundary>
           </CardContent>
         </Card>
       </div>
@@ -472,7 +477,7 @@ export default function DashboardHome() {
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-zinc-200">Management Shortcuts</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-stagger">
-          <Link href="/dashboard/members" passHref legacyBehavior>
+          <Link href="/dashboard/members">
             <GlowCard className="group flex items-start gap-4" glowColor="purple">
               <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
                 <Users className="h-5 w-5" />
@@ -484,7 +489,7 @@ export default function DashboardHome() {
             </GlowCard>
           </Link>
 
-          <Link href="/dashboard/whatsapp" passHref legacyBehavior>
+          <Link href="/dashboard/whatsapp">
             <GlowCard className="group flex items-start gap-4" glowColor="purple">
               <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
                 <MessageCircle className="h-5 w-5" />
@@ -496,26 +501,26 @@ export default function DashboardHome() {
             </GlowCard>
           </Link>
 
-          <Link href="/dashboard/followups" passHref legacyBehavior>
+          <Link href="/dashboard/followups">
             <GlowCard className="group flex items-start gap-4" glowColor="purple">
               <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
                 <Clock className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-zinc-100">CRM Follow-ups</h4>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Clear outstanding due alerts, view tasks.</p>
+                <h4 className="text-sm font-bold text-zinc-100">Follow-ups CRM</h4>
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Convert leads, track renewals & dropouts.</p>
               </div>
             </GlowCard>
           </Link>
 
-          <Link href="/dashboard/settings" passHref legacyBehavior>
+          <Link href="/dashboard/invoices">
             <GlowCard className="group flex items-start gap-4" glowColor="purple">
               <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                <FileText className="h-5 w-5" />
+                <IndianRupee className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-zinc-100">Settings</h4>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Setup working hours, modify RLS permissions.</p>
+                <h4 className="text-sm font-bold text-zinc-100">Billing & GST</h4>
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Print PDF invoices, track unpaid balances.</p>
               </div>
             </GlowCard>
           </Link>

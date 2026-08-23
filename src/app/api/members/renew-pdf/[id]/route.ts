@@ -188,6 +188,9 @@ export async function GET(
     return new NextResponse(htmlContent, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+        'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline';",
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (err: unknown) {

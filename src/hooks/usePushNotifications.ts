@@ -47,7 +47,12 @@ export function usePushNotifications(userId?: string, memberId?: string) {
       // 2. Register subscription with Service Worker
       const registration = await navigator.serviceWorker.ready;
       
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BDxG8H_u7v3VpXoN4GgPry5XN-lB2b_e56mGqZk5y74747y9G_7G47e8w904g87y3t45g73t4';
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        toast.info('Push notification service key not configured for this environment');
+        return false;
+      }
+
       const convertedKey = urlBase64ToUint8Array(vapidPublicKey);
 
       const subscription = await registration.pushManager.subscribe({

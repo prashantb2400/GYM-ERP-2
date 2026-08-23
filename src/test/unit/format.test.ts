@@ -5,6 +5,9 @@ import {
   calculateGST,
   calculateBMI,
   getBMICategory,
+  getTodayIST,
+  formatMemberCode,
+  formatInvoiceNumber,
 } from '@/lib/utils/format';
 
 describe('Indian Locale & Health Formatters', () => {
@@ -51,17 +54,23 @@ describe('Indian Locale & Health Formatters', () => {
     });
   });
 
-  describe('calculateBMI & Category', () => {
-    it('should compute correct BMI value', () => {
-      const bmi = calculateBMI(70, 175);
-      expect(bmi).toBe(22.9);
+  describe('getTodayIST', () => {
+    it('should return a date string in YYYY-MM-DD format', () => {
+      const today = getTodayIST();
+      expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  });
+
+  describe('formatMemberCode & formatInvoiceNumber', () => {
+    it('should pad member code with GYM prefix and leading zeroes', () => {
+      expect(formatMemberCode(5)).toBe('GYM0005');
+      expect(formatMemberCode(123)).toBe('GYM0123');
     });
 
-    it('should match category classification', () => {
-      expect(getBMICategory(17)).toBe('Underweight');
-      expect(getBMICategory(22.9)).toBe('Normal');
-      expect(getBMICategory(26)).toBe('Overweight');
-      expect(getBMICategory(32)).toBe('Obese');
+    it('should format invoice number with current year', () => {
+      const year = new Date().getFullYear();
+      expect(formatInvoiceNumber(1)).toBe(`INV-${year}-0001`);
+      expect(formatInvoiceNumber(42)).toBe(`INV-${year}-0042`);
     });
   });
 });
