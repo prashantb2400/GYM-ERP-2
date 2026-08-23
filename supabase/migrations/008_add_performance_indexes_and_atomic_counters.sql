@@ -66,6 +66,8 @@ END $$;
 -- ── 3. ATOMIC COUNTERS RPC (M-19) ────────────────────────────────────────────
 
 -- Prevents race conditions when concurrent member registrations or invoices occur.
+DROP FUNCTION IF EXISTS public.increment_counter(UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION public.increment_counter(
   p_gym_id UUID,
   p_counter_type TEXT
