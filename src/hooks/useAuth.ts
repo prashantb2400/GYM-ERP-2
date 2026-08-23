@@ -128,7 +128,7 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase, setSession, setLoading, setError, logout, router]);
+  }, []);
 
   const signOut = async () => {
     setLoading(true);

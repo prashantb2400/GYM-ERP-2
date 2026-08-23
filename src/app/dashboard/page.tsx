@@ -227,7 +227,7 @@ export default function DashboardHome() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.gymId, supabase]);
+  }, [user?.gymId]);
 
   if (loading) {
     return (

@@ -40,7 +40,7 @@ export function useGym() {
     };
 
     fetchGymDetails();
-  }, [gymId, supabase]);
+  }, [gymId]);
 
   const updateGymSettings = async (updates: Partial<Gym>) => {
     if (!gymId) return { error: 'No gym ID found in current session' };
