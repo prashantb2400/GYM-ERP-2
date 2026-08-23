@@ -48,7 +48,7 @@ export default function SuperAdminLoginPage() {
         .select('*')
         .eq('user_id', data.session.user.id)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (saError || !superAdmin) {
         // Sign out if they aren't a super admin

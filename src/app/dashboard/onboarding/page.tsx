@@ -26,33 +26,47 @@ export default function OnboardingPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Check if user is logged in
     const checkUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        router.push('/login');
-        return;
-      }
-      
-      setUser(authUser);
-      setEmail(authUser.email || '');
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) {
+          if (isMounted) router.push('/login');
+          return;
+        }
+        
+        if (isMounted) {
+          setUser(authUser);
+          setEmail(authUser.email || '');
+        }
 
-      // Check if they already have a gym assigned in users table
-      const { data: userData } = await supabase
-        .from('users')
-        .select('gym_id')
-        .eq('auth_id', authUser.id)
-        .single();
+        // Check if they already have a gym assigned in users table
+        const { data: userData } = await supabase
+          .from('users')
+          .select('gym_id')
+          .eq('auth_id', authUser.id)
+          .maybeSingle();
 
-      if (userData?.gym_id) {
-        router.push('/dashboard');
-        return;
+        if (userData?.gym_id) {
+          if (isMounted) router.push('/dashboard');
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking onboarding user:', err);
+      } finally {
+        if (isMounted) {
+          setChecking(false);
+        }
       }
-      
-      setChecking(false);
     };
     
     checkUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {

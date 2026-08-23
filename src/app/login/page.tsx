@@ -89,7 +89,7 @@ function OwnerLoginForm() {
           .from('users')
           .select('gym_id')
           .eq('auth_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (!userData?.gym_id) {
           router.push('/dashboard/onboarding');
