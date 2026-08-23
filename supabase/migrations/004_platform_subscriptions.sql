@@ -100,36 +100,50 @@ ALTER TABLE platform_invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE super_admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform_announcements ENABLE ROW LEVEL SECURITY;
 
--- Super admins can do everything
+-- 7. Helper Function for Super Admin check
+CREATE OR REPLACE FUNCTION public.is_current_super_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.super_admins
+    WHERE user_id = auth.uid() AND is_active = true
+  );
+$$;
+
+-- Super admins RLS (non-recursive)
+DROP POLICY IF EXISTS "super_admins_full_access_admins" ON super_admins;
+DROP POLICY IF EXISTS "super_admins_select_own" ON super_admins;
+DROP POLICY IF EXISTS "super_admins_manage_own" ON super_admins;
+
+CREATE POLICY "super_admins_select_own" ON super_admins
+  FOR SELECT USING (
+    user_id = auth.uid()
+  );
+
+CREATE POLICY "super_admins_manage_own" ON super_admins
+  FOR ALL USING (
+    user_id = auth.uid()
+  );
+
 DROP POLICY IF EXISTS "super_admins_full_access_plans" ON platform_plans;
 CREATE POLICY "super_admins_full_access_plans" ON platform_plans
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
-  );
+  FOR ALL USING (public.is_current_super_admin());
 
 DROP POLICY IF EXISTS "super_admins_full_access_subs" ON platform_subscriptions;
 CREATE POLICY "super_admins_full_access_subs" ON platform_subscriptions
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
-  );
+  FOR ALL USING (public.is_current_super_admin());
 
 DROP POLICY IF EXISTS "super_admins_full_access_invoices" ON platform_invoices;
 CREATE POLICY "super_admins_full_access_invoices" ON platform_invoices
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
-  );
-
-DROP POLICY IF EXISTS "super_admins_full_access_admins" ON super_admins;
-CREATE POLICY "super_admins_full_access_admins" ON super_admins
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
-  );
+  FOR ALL USING (public.is_current_super_admin());
 
 DROP POLICY IF EXISTS "super_admins_full_access_announcements" ON platform_announcements;
 CREATE POLICY "super_admins_full_access_announcements" ON platform_announcements
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
-  );
+  FOR ALL USING (public.is_current_super_admin());
 
 -- Gym owners can read their own subscription and invoices
 DROP POLICY IF EXISTS "gym_owners_read_own_subscription" ON platform_subscriptions;
