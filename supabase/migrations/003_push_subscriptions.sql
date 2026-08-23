@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.push_subscriptions (
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
+DROP POLICY IF EXISTS "Allow authenticated users to insert their own subscriptions" ON public.push_subscriptions;
 CREATE POLICY "Allow authenticated users to insert their own subscriptions"
 ON public.push_subscriptions
 FOR INSERT
@@ -19,6 +20,7 @@ WITH CHECK (
     (auth.uid() IS NOT NULL)
 );
 
+DROP POLICY IF EXISTS "Allow users to view their own subscriptions" ON public.push_subscriptions;
 CREATE POLICY "Allow users to view their own subscriptions"
 ON public.push_subscriptions
 FOR SELECT
@@ -27,6 +29,7 @@ USING (
     member_id IN (SELECT id FROM public.members WHERE auth_id = auth.uid())
 );
 
+DROP POLICY IF EXISTS "Allow users to delete their own subscriptions" ON public.push_subscriptions;
 CREATE POLICY "Allow users to delete their own subscriptions"
 ON public.push_subscriptions
 FOR DELETE

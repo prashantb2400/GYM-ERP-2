@@ -12,6 +12,7 @@ export async function POST(request: Request) {
       password,
       role,
       permissions,
+      commissionRatePct,
       createdBy,
     } = await request.json();
 
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
       login_id: loginId,
       role,
       permissions,
+      commission_rate_pct: Number(commissionRatePct) || 0,
       created_by: createdBy || null,
       is_active: true,
     });

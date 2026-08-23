@@ -101,47 +101,56 @@ ALTER TABLE super_admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform_announcements ENABLE ROW LEVEL SECURITY;
 
 -- Super admins can do everything
+DROP POLICY IF EXISTS "super_admins_full_access_plans" ON platform_plans;
 CREATE POLICY "super_admins_full_access_plans" ON platform_plans
   FOR ALL USING (
     EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
   );
 
+DROP POLICY IF EXISTS "super_admins_full_access_subs" ON platform_subscriptions;
 CREATE POLICY "super_admins_full_access_subs" ON platform_subscriptions
   FOR ALL USING (
     EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
   );
 
+DROP POLICY IF EXISTS "super_admins_full_access_invoices" ON platform_invoices;
 CREATE POLICY "super_admins_full_access_invoices" ON platform_invoices
   FOR ALL USING (
     EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
   );
 
+DROP POLICY IF EXISTS "super_admins_full_access_admins" ON super_admins;
 CREATE POLICY "super_admins_full_access_admins" ON super_admins
   FOR ALL USING (
     EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
   );
 
+DROP POLICY IF EXISTS "super_admins_full_access_announcements" ON platform_announcements;
 CREATE POLICY "super_admins_full_access_announcements" ON platform_announcements
   FOR ALL USING (
     EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid() AND is_active = true)
   );
 
 -- Gym owners can read their own subscription and invoices
+DROP POLICY IF EXISTS "gym_owners_read_own_subscription" ON platform_subscriptions;
 CREATE POLICY "gym_owners_read_own_subscription" ON platform_subscriptions
   FOR SELECT USING (
     gym_id IN (SELECT id FROM gyms WHERE owner_id = auth.uid())
   );
 
+DROP POLICY IF EXISTS "gym_owners_read_own_invoices" ON platform_invoices;
 CREATE POLICY "gym_owners_read_own_invoices" ON platform_invoices
   FOR SELECT USING (
     gym_id IN (SELECT id FROM gyms WHERE owner_id = auth.uid())
   );
 
 -- Anyone can read active plans (for pricing page)
+DROP POLICY IF EXISTS "anyone_read_active_plans" ON platform_plans;
 CREATE POLICY "anyone_read_active_plans" ON platform_plans
   FOR SELECT USING (is_active = true);
 
 -- Anyone can read active announcements
+DROP POLICY IF EXISTS "anyone_read_active_announcements" ON platform_announcements;
 CREATE POLICY "anyone_read_active_announcements" ON platform_announcements
   FOR SELECT USING (is_active = true);
 
@@ -164,7 +173,8 @@ INSERT INTO platform_plans (name, slug, description, monthly_price, annual_price
   249900, 2499000, true, false, 3,
   '{"whatsapp_enabled": true, "cctv_enabled": true, "hardware_bridge_enabled": true, "diet_exercise_builder": true, "custom_invoice_branding": true, "crm_followups": true, "analytics_advanced": true, "api_access": true, "white_label": true, "priority_support": true}'::jsonb,
   '{"max_members": -1, "max_staff": -1, "max_whatsapp_messages_per_day": -1, "max_cctv_cameras": -1, "max_storage_gb": 100}'::jsonb
-);
+)
+ON CONFLICT (slug) DO NOTHING;
 
 -- 9. Indexes
 CREATE INDEX IF NOT EXISTS idx_platform_subs_gym ON platform_subscriptions(gym_id);

@@ -27,6 +27,7 @@ export default function TrainerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [trainerUser, setTrainerUser] = useState<any>(null);
   const [assignedMembers, setAssignedMembers] = useState<any[]>([]);
+  const [totalCommissions, setTotalCommissions] = useState<number>(0);
   const [search, setSearch] = useState('');
 
   const fetchTrainerSessionAndMembers = async () => {
@@ -48,12 +49,28 @@ export default function TrainerDashboardPage() {
         // 2. Fetch members assigned to this trainer
         const { data: members, error } = await supabase
           .from('members')
-          .select('*, plans(name)')
+          .select('*, plans(name, price)')
           .eq('trainer_id', trainer.id)
           .order('name', { ascending: true });
 
         if (error) throw error;
         setAssignedMembers(members || []);
+
+        // 3. Fetch commissions from invoices
+        const { data: invoices } = await supabase
+          .from('invoices')
+          .select('total, amount_paid, trainer_commission_amount')
+          .eq('trainer_id', trainer.id);
+
+        let earned = 0;
+        if (invoices && invoices.length > 0) {
+          earned = invoices.reduce((acc, inv) => acc + (Number(inv.trainer_commission_amount) || 0), 0);
+        } else if (trainer.commission_rate_pct && members) {
+          // Estimated commission from active client plans
+          const rate = Number(trainer.commission_rate_pct) / 100;
+          earned = members.reduce((acc, m) => acc + ((Number(m.plans?.price) || 0) * rate), 0);
+        }
+        setTotalCommissions(earned);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -139,27 +156,44 @@ export default function TrainerDashboardPage() {
       </div>
 
       {/* Metrics Banner */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SpotlightCard>
-        <Card className="border-zinc-900 bg-zinc-900/30 p-4 flex flex-col justify-between">
-          <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
-            <Users className="h-4 w-4 text-purple-400" />
-            <span>Assigned Clients</span>
-          </div>
-          <span className="text-2xl font-black text-zinc-100 mt-2">{assignedMembers.length}</span>
-        </Card>
+          <Card className="border-zinc-900 bg-zinc-900/30 p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
+              <Users className="h-4 w-4 text-purple-400" />
+              <span>Assigned Clients</span>
+            </div>
+            <span className="text-2xl font-black text-zinc-100 mt-2">{assignedMembers.length}</span>
+          </Card>
         </SpotlightCard>
 
         <SpotlightCard>
-        <Card className="border-zinc-900 bg-zinc-900/30 p-4 flex flex-col justify-between">
-          <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
-            <CalendarCheck className="h-4 w-4 text-purple-400" />
-            <span>Marked Today</span>
-          </div>
-          <span className="text-2xl font-black text-zinc-100 mt-2">
-            {assignedMembers.filter(m => m.status === 'active').length} Active
-          </span>
-        </Card>
+          <Card className="border-zinc-900 bg-zinc-900/30 p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase font-bold">
+              <CalendarCheck className="h-4 w-4 text-emerald-400" />
+              <span>Active Status</span>
+            </div>
+            <span className="text-2xl font-black text-zinc-100 mt-2">
+              {assignedMembers.filter(m => m.status === 'active').length} Active
+            </span>
+          </Card>
+        </SpotlightCard>
+
+        <SpotlightCard>
+          <Card className="border-zinc-900 bg-zinc-900/30 p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between text-zinc-500 text-[10px] uppercase font-bold">
+              <div className="flex items-center gap-2">
+                <Flame className="h-4 w-4 text-amber-400" />
+                <span>Commissions Earned</span>
+              </div>
+              {trainerUser?.commission_rate_pct ? (
+                <span className="text-amber-400 font-bold text-[9px]">{trainerUser.commission_rate_pct}% rate</span>
+              ) : null}
+            </div>
+            <span className="text-2xl font-black text-amber-400 mt-2">
+              ₹{totalCommissions.toLocaleString('en-IN')}
+            </span>
+          </Card>
         </SpotlightCard>
       </div>
 
@@ -211,15 +245,33 @@ export default function TrainerDashboardPage() {
                   </TableCell>
                   <TableCell className="text-center font-bold text-zinc-300 text-xs">{m.attendance_count || 0}</TableCell>
                   <TableCell className="text-right">
-                    {m.status === 'active' && (
-                      <Button
-                        onClick={() => handleMarkAttendance(m)}
-                        size="sm"
-                        className="bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold h-7 px-2.5 rounded gap-1"
-                      >
-                        <CheckCircle className="h-3 w-3" /> Check-in
-                      </Button>
-                    )}
+                    <div className="flex items-center justify-end gap-1.5">
+                      {m.phone && (
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-950/20"
+                        >
+                          <a
+                            href={`https://wa.me/91${m.phone.replace(/\D/g, '')}?text=Hi%20${encodeURIComponent(m.name)},%20ready%20for%20today's%20workout?`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Phone className="h-3 w-3" />
+                          </a>
+                        </Button>
+                      )}
+                      {m.status === 'active' && (
+                        <Button
+                          onClick={() => handleMarkAttendance(m)}
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold h-7 px-2.5 rounded gap-1"
+                        >
+                          <CheckCircle className="h-3 w-3" /> Check-in
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

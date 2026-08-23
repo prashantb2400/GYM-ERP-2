@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { BarChart3, IndianRupee, PieChart as PieIcon, TrendingDown, TrendingUp, Users, Loader2 } from 'lucide-react';
+import { BarChart3, IndianRupee, PieChart as PieIcon, TrendingDown, TrendingUp, Users, Loader2, Download, FileSpreadsheet, Wallet, CreditCard, Banknote } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { SpotlightCard } from '@/components/magicui/spotlight-card';
@@ -9,6 +9,7 @@ import { BorderBeam } from '@/components/magicui/border-beam';
 import { GlowCard } from '@/components/magicui/glow-card';
 import { GradientText } from '@/components/magicui/gradient-text';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   BarChart,
   Bar,
@@ -28,6 +29,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
+import { toast } from 'sonner';
 
 const COLORS = ['#9333ea', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'];
 
@@ -41,10 +43,18 @@ export default function AnalyticsPage() {
   const [planDistribution, setPlanDistribution] = useState<any[]>([]);
   const [attendanceTrend, setAttendanceTrend] = useState<any[]>([]);
   const [trainerAssignments, setTrainerAssignments] = useState<any[]>([]);
+  const [paymentModes, setPaymentModes] = useState<{ upi: number; cash: number; card: number; online: number }>({
+    upi: 0,
+    cash: 0,
+    card: 0,
+    online: 0,
+  });
+  const [expenseCategories, setExpenseCategories] = useState<{ category: string; amount: number }[]>([]);
   
   const [summaryStats, setSummaryStats] = useState({
     totalSales: 0,
     totalExpenses: 0,
+    totalCommissions: 0,
     netProfit: 0,
     activeMembersCount: 0,
     checkInRate: 0,
@@ -58,12 +68,24 @@ export default function AnalyticsPage() {
       try {
         setLoading(true);
 
-        // 1. Fetch total sales (sum of invoices total)
+        // 1. Fetch total sales (sum of invoices total) and payment mode breakdown
         const { data: invoices } = await supabase
           .from('invoices')
-          .select('total, issued_at');
+          .select('total, amount_paid, payment_mode, issued_at, trainer_commission_amount');
 
-        const totalSales = invoices?.reduce((acc: number, curr: any) => acc + Number(curr.total), 0) || 0;
+        const totalSales = invoices?.reduce((acc: number, curr: any) => acc + Number(curr.total || 0), 0) || 0;
+        const totalCommissions = invoices?.reduce((acc: number, curr: any) => acc + Number(curr.trainer_commission_amount || 0), 0) || 0;
+
+        const pModes = { upi: 0, cash: 0, card: 0, online: 0 };
+        invoices?.forEach((inv: any) => {
+          const mode = (inv.payment_mode || 'cash').toLowerCase();
+          const paid = Number(inv.amount_paid) || 0;
+          if (mode === 'upi') pModes.upi += paid;
+          else if (mode === 'cash') pModes.cash += paid;
+          else if (mode === 'card') pModes.card += paid;
+          else pModes.online += paid;
+        });
+        setPaymentModes(pModes);
 
         // Group invoice total by month for Revenue Timeline chart
         const salesByMonth: Record<string, number> = {};
@@ -73,19 +95,25 @@ export default function AnalyticsPage() {
           salesByMonth[monthKey] = (salesByMonth[monthKey] || 0) + Number(inv.total);
         });
 
-        // 2. Fetch expenses
+        // 2. Fetch expenses with category breakdown
         const { data: expenses } = await supabase
           .from('expenses')
-          .select('amount, date');
+          .select('amount, category, date');
 
         const totalExpenses = expenses?.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0) || 0;
 
+        const catMap: Record<string, number> = {};
         const expensesByMonth: Record<string, number> = {};
         expenses?.forEach((exp: any) => {
           const date = new Date(exp.date);
           const monthKey = date.toLocaleString('default', { month: 'short', year: '2-digit' });
           expensesByMonth[monthKey] = (expensesByMonth[monthKey] || 0) + Number(exp.amount);
+          
+          const cat = exp.category || 'General';
+          catMap[cat] = (catMap[cat] || 0) + Number(exp.amount);
         });
+
+        setExpenseCategories(Object.entries(catMap).map(([category, amount]) => ({ category, amount })));
 
         // Combine revenue and expenses by month
         const allMonths = Array.from(new Set([...Object.keys(salesByMonth), ...Object.keys(expensesByMonth)]));
@@ -207,7 +235,8 @@ export default function AnalyticsPage() {
         setSummaryStats({
           totalSales,
           totalExpenses,
-          netProfit: totalSales - totalExpenses,
+          totalCommissions,
+          netProfit: totalSales - totalExpenses - totalCommissions,
           activeMembersCount: activeCount,
           checkInRate: Math.min(100, Math.max(15, checkInRate)), // Bound between 15%-100% for mock safety
           pendingDuesTotal: totalDues,
@@ -223,6 +252,38 @@ export default function AnalyticsPage() {
     fetchAnalytics();
   }, [user?.gymId, supabase]);
 
+  const handleExportPnL = () => {
+    try {
+      const rows = [
+        ['Metric / Category', 'Amount (INR)', 'Notes'],
+        ['Gross Sales Volume', summaryStats.totalSales.toFixed(2), 'Total billed revenue'],
+        ['Collections - UPI', paymentModes.upi.toFixed(2), 'Direct UPI collections'],
+        ['Collections - Cash', paymentModes.cash.toFixed(2), 'Direct Cash receipts'],
+        ['Collections - Card', paymentModes.card.toFixed(2), 'Card POS swipes'],
+        ['Collections - Online/NetBanking', paymentModes.online.toFixed(2), 'Online gateway'],
+        ['Operating Expenses', summaryStats.totalExpenses.toFixed(2), 'Total logged cash outflows'],
+        ...expenseCategories.map(c => [`Expense: ${c.category}`, c.amount.toFixed(2), 'Category outflow']),
+        ['Trainer Commissions Paid', summaryStats.totalCommissions.toFixed(2), 'Trainer package commissions'],
+        ['Net Operating Profit', summaryStats.netProfit.toFixed(2), 'Gross Revenue - Expenses - Commissions'],
+        ['Outstanding Member Dues', summaryStats.pendingDuesTotal.toFixed(2), 'Uncollected receivables'],
+        ['Active Paying Members', summaryStats.activeMembersCount.toString(), 'Current active subscriptions'],
+      ];
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(r => r.map(cell => `"${cell}"`).join(',')).join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `gym_pnl_statement_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('P&L Statement exported to CSV successfully!');
+    } catch (err) {
+      toast.error('Failed to export P&L statement');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -236,9 +297,17 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
-          <GradientText className="text-2xl font-bold tracking-tight">Business Analytics</GradientText>
-          <p className="text-zinc-500 text-xs mt-1">Review revenue growth trends, membership distributions, and trainer stats.</p>
+          <GradientText className="text-2xl font-bold tracking-tight">Business & Financial Analytics</GradientText>
+          <p className="text-zinc-500 text-xs mt-1">Review revenue growth trends, P&L statements, membership distributions, and trainer stats.</p>
         </div>
+        <Button
+          onClick={handleExportPnL}
+          variant="outline"
+          className="border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold gap-2 h-9"
+        >
+          <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+          Export P&L Statement (CSV)
+        </Button>
       </div>
 
       {/* Stats summary banner */}
@@ -427,6 +496,88 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
         </GlowCard>
+      </div>
+
+      {/* Cash Flow & Payment Mode Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <SpotlightCard className="lg:col-span-1">
+          <Card className="border-zinc-800 bg-zinc-900/40 h-full">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-purple-400" />
+                <CardTitle className="text-sm font-bold">Collection Channels</CardTitle>
+              </div>
+              <CardDescription className="text-zinc-500 text-xs">Revenue collections by payment gateway/mode</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-950/40 border border-zinc-800/60">
+                <div className="flex items-center gap-2">
+                  <Banknote className="h-4 w-4 text-emerald-400" />
+                  <span className="text-xs font-semibold text-zinc-300">UPI / QR Code</span>
+                </div>
+                <span className="text-xs font-black text-emerald-400">{formatCurrency(paymentModes.upi)}</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-950/40 border border-zinc-800/60">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-amber-400" />
+                  <span className="text-xs font-semibold text-zinc-300">Cash Counter</span>
+                </div>
+                <span className="text-xs font-black text-amber-400">{formatCurrency(paymentModes.cash)}</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-950/40 border border-zinc-800/60">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-blue-400" />
+                  <span className="text-xs font-semibold text-zinc-300">Card POS / Gateway</span>
+                </div>
+                <span className="text-xs font-black text-blue-400">{formatCurrency(paymentModes.card + paymentModes.online)}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </SpotlightCard>
+
+        {/* Detailed P&L Financial Summary */}
+        <SpotlightCard className="lg:col-span-2">
+          <Card className="border-zinc-800 bg-zinc-900/40 h-full">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-emerald-400" />
+                  <CardTitle className="text-sm font-bold">Executive P&L Statement</CardTitle>
+                </div>
+                <Badge className="bg-emerald-950/50 text-emerald-400 border-emerald-800/30 text-[9px] font-bold">
+                  Live Snapshot
+                </Badge>
+              </div>
+              <CardDescription className="text-zinc-500 text-xs">Consolidated income, operational outflows, and net margin</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between py-1.5 border-b border-zinc-800/60 text-zinc-300">
+                  <span>Gross Billed Revenue (Invoices)</span>
+                  <span className="font-bold text-zinc-100">{formatCurrency(summaryStats.totalSales)}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-zinc-800/60 text-zinc-400">
+                  <span>(-) Operating Expenses (Rent, Utilities, etc.)</span>
+                  <span className="font-semibold text-red-400">-{formatCurrency(summaryStats.totalExpenses)}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-zinc-800/60 text-zinc-400">
+                  <span>(-) Trainer Commissions Attributed</span>
+                  <span className="font-semibold text-amber-400">-{formatCurrency(summaryStats.totalCommissions)}</span>
+                </div>
+                <div className="flex justify-between py-2 pt-3 font-bold text-sm bg-zinc-950/60 px-3 rounded-lg border border-zinc-800/80">
+                  <span className="text-zinc-100">Net Operating Profit</span>
+                  <span className={summaryStats.netProfit >= 0 ? "text-emerald-400 font-black" : "text-red-400 font-black"}>
+                    {formatCurrency(summaryStats.netProfit)}
+                  </span>
+                </div>
+                <div className="flex justify-between pt-1 text-[11px] text-zinc-500 px-1">
+                  <span>Uncollected Member Receivables (Dues)</span>
+                  <span className="text-amber-400 font-medium">{formatCurrency(summaryStats.pendingDuesTotal)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </SpotlightCard>
       </div>
     </div>
   );

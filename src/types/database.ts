@@ -113,6 +113,7 @@ export interface User {
   specialization: string | null;
   bio: string | null;
   is_active: boolean;
+  commission_rate_pct?: number;
   last_login: string | null;
   created_at: string;
   created_by: string | null;
@@ -257,6 +258,8 @@ export interface Invoice {
   amount_due: number;
   payment_mode: 'cash' | 'upi' | 'card' | 'bank_transfer' | 'online' | null;
   transaction_id: string | null;
+  trainer_id?: string | null;
+  trainer_commission_amount?: number;
   status: 'paid' | 'partial' | 'pending';
   issued_at: string;
   paid_at: string | null;

@@ -49,12 +49,15 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
   const [showOptional, setShowOptional] = useState(false);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [sendWelcomeWhatsapp, setSendWelcomeWhatsapp] = useState(true);
 
   const [successData, setSuccessData] = useState<{
     name: string;
     memberCode: string;
     invoiceNo: string;
     invoiceId: string;
+    memberId: string;
+    phone: string;
   } | null>(null);
 
   // Auto-calculated fields
@@ -245,19 +248,41 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
         console.error("Counter update failed", counterError);
       }
 
-      // Step 6: Success
-      toast.success(`✅ \${name} onboarded! Invoice \${invoiceNo} generated.`);
+      // Step 6: Trigger WhatsApp Welcome if enabled
+      const targetPhone = whatsappPhone || phone.trim();
+      if (sendWelcomeWhatsapp && targetPhone) {
+        try {
+          await fetch('/api/whatsapp/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: targetPhone,
+              type: 'template',
+              templateName: 'gym_welcome',
+              memberId: member.id,
+              params: [
+                { type: 'text', text: member.name },
+                { type: 'text', text: member.member_code },
+                { type: 'text', text: selectedPlan.name },
+              ],
+            }),
+          });
+        } catch (waErr) {
+          console.warn('WhatsApp welcome dispatch failed:', waErr);
+        }
+      }
+
+      // Step 7: Success
+      toast.success(`✅ ${name} onboarded! Invoice ${invoiceNo} generated.`);
       setSuccessData({
         name: member.name,
         memberCode: member.member_code,
         invoiceNo,
         invoiceId: invoice.id,
+        memberId: member.id,
+        phone: targetPhone,
       });
-
-      setTimeout(() => {
-        onSuccess(member.id);
-        onClose();
-      }, 2500);
+      onSuccess(member.id);
 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -297,11 +322,33 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
                 <p className="text-sm text-zinc-400 mt-1">Code: {successData.memberCode}</p>
                 <p className="text-sm text-zinc-400">Invoice: {successData.invoiceNo}</p>
               </div>
-              <Button asChild variant="outline" className="w-full border-green-500/30 text-green-400 hover:bg-green-500/10 hover:text-green-300">
-                <Link href={`/api/invoices/\${successData.invoiceId}/pdf`} target="_blank">
-                  Print Invoice
-                </Link>
-              </Button>
+              <div className="flex flex-col gap-2 pt-2">
+                <Button asChild variant="outline" className="w-full border-green-500/30 text-green-400 hover:bg-green-500/10 hover:text-green-300">
+                  <Link href={`/api/invoices/${successData.invoiceId}/pdf`} target="_blank">
+                    📄 Print Invoice PDF
+                  </Link>
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    setName('');
+                    setPhone('');
+                    setSelectedPlanId('');
+                    setAmountPaidStr('');
+                    setSuccessData(null);
+                  }}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  ⚡ Onboard Another Member
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={onClose}
+                  className="w-full text-zinc-400 hover:text-zinc-100"
+                >
+                  Done
+                </Button>
+              </div>
             </div>
           ) : (
             <>
@@ -454,6 +501,18 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
                         onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, ''))}
                         className="border-zinc-800 bg-zinc-900/50 text-zinc-100"
                       />
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id="q-send-wa"
+                        checked={sendWelcomeWhatsapp}
+                        onChange={(e) => setSendWelcomeWhatsapp(e.target.checked)}
+                        className="rounded border-zinc-700 bg-zinc-900 text-purple-600 focus:ring-purple-500 h-4 w-4"
+                      />
+                      <Label htmlFor="q-send-wa" className="text-xs text-zinc-300 cursor-pointer">
+                        Send instant Welcome message on WhatsApp
+                      </Label>
                     </div>
                   </div>
                 )}

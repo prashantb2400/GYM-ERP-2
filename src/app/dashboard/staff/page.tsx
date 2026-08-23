@@ -83,6 +83,7 @@ export default function StaffCRUDPage() {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'receptionist' | 'trainer' | ''>('');
+  const [commissionRate, setCommissionRate] = useState('10');
 
   // Edit Permissions Modal states
   const [openPermsModal, setOpenPermsModal] = useState(false);
@@ -179,6 +180,7 @@ export default function StaffCRUDPage() {
           password: password,
           role,
           permissions: DEFAULT_PERMISSIONS[role] || [],
+          commissionRatePct: role === 'trainer' ? Number(commissionRate) : 0,
           createdBy: user?.id,
         }),
       });
@@ -321,6 +323,11 @@ export default function StaffCRUDPage() {
                       <Badge className={`text-[8px] font-bold rounded px-1.5 py-0.2 uppercase ${getRoleBadgeColor(staff.role)}`}>
                         {staff.role}
                       </Badge>
+                      {staff.role === 'trainer' && staff.commission_rate_pct ? (
+                        <Badge className="bg-amber-950/40 text-amber-400 border border-amber-800/20 text-[8px] font-bold">
+                          {staff.commission_rate_pct}% Comm.
+                        </Badge>
+                      ) : null}
                     </div>
                     <span className="text-[10px] text-zinc-500 block mt-0.5">ID: {staff.login_id || 'Google Auth'}</span>
                   </div>
@@ -463,6 +470,24 @@ export default function StaffCRUDPage() {
                 </Select>
               </div>
             </div>
+
+            {role === 'trainer' && (
+              <div className="grid gap-2 border border-amber-900/30 bg-amber-950/10 p-3 rounded-lg animate-in fade-in">
+                <Label htmlFor="staffCommission" className="text-amber-300 text-xs font-semibold">Trainer Commission Rate (%)</Label>
+                <Input
+                  id="staffCommission"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="e.g. 10"
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(e.target.value)}
+                  className="border-zinc-800 bg-zinc-950 text-zinc-100 text-xs"
+                />
+                <span className="text-[10px] text-zinc-500">Percentage commission applied on client packages/sessions.</span>
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="staffPass" className="text-zinc-300 text-xs">Workspace Password *</Label>

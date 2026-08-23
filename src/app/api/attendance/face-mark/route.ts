@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { checkRateLimit, rateLimitHeaders } from '@/lib/server/rateLimit';
 
 export async function POST(request: Request) {
   try {
@@ -7,6 +8,15 @@ export async function POST(request: Request) {
 
     if (!memberCode || !gymId || !token) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+    }
+
+    // Rate limiting: max 120 check-in requests per minute per gym
+    const rateLimit = checkRateLimit(`cctv_facemark:${gymId}`, 120, 60000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'CCTV check-in rate limit exceeded. Please throttle device requests.' },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
     }
 
     // Verify secure connection token

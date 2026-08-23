@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.branches (
 );
 
 -- Apply auto-updated_at trigger
+DROP TRIGGER IF EXISTS update_branches_updated_at ON public.branches;
 CREATE TRIGGER update_branches_updated_at
   BEFORE UPDATE ON public.branches
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -74,6 +75,7 @@ CREATE TABLE IF NOT EXISTS public.inventory (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+DROP TRIGGER IF EXISTS update_inventory_updated_at ON public.inventory;
 CREATE TRIGGER update_inventory_updated_at
   BEFORE UPDATE ON public.inventory
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -116,15 +118,19 @@ ALTER TABLE public.inventory_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Select policies
+DROP POLICY IF EXISTS select_branches ON public.branches;
 CREATE POLICY select_branches ON public.branches
   FOR SELECT USING (gym_id = get_user_gym_id());
 
+DROP POLICY IF EXISTS select_expenses ON public.expenses;
 CREATE POLICY select_expenses ON public.expenses
   FOR SELECT USING (gym_id = get_user_gym_id());
 
+DROP POLICY IF EXISTS select_inventory ON public.inventory;
 CREATE POLICY select_inventory ON public.inventory
   FOR SELECT USING (gym_id = get_user_gym_id());
 
+DROP POLICY IF EXISTS select_inventory_tx ON public.inventory_transactions;
 CREATE POLICY select_inventory_tx ON public.inventory_transactions
   FOR SELECT USING (
     EXISTS (
@@ -134,35 +140,40 @@ CREATE POLICY select_inventory_tx ON public.inventory_transactions
     )
   );
 
+DROP POLICY IF EXISTS select_payment_tx ON public.payment_transactions;
 CREATE POLICY select_payment_tx ON public.payment_transactions
   FOR SELECT USING (gym_id = get_user_gym_id());
 
 -- Write (Insert/Update/Delete) policies - Restricted by role
--- Branches: Owner only
+DROP POLICY IF EXISTS modify_branches ON public.branches;
 CREATE POLICY modify_branches ON public.branches
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() = 'owner');
 
--- Expenses: Owner and Receptionist can insert/update, only Owner can delete
+DROP POLICY IF EXISTS insert_expenses ON public.expenses;
 CREATE POLICY insert_expenses ON public.expenses
   FOR INSERT WITH CHECK (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist'));
 
+DROP POLICY IF EXISTS update_expenses ON public.expenses;
 CREATE POLICY update_expenses ON public.expenses
   FOR UPDATE USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist'));
 
+DROP POLICY IF EXISTS delete_expenses ON public.expenses;
 CREATE POLICY delete_expenses ON public.expenses
   FOR DELETE USING (gym_id = get_user_gym_id() AND get_user_role() = 'owner');
 
--- Inventory: Owner and Receptionist can insert/update
+DROP POLICY IF EXISTS insert_inventory ON public.inventory;
 CREATE POLICY insert_inventory ON public.inventory
   FOR INSERT WITH CHECK (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist'));
 
+DROP POLICY IF EXISTS update_inventory ON public.inventory;
 CREATE POLICY update_inventory ON public.inventory
   FOR UPDATE USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist'));
 
+DROP POLICY IF EXISTS delete_inventory ON public.inventory;
 CREATE POLICY delete_inventory ON public.inventory
   FOR DELETE USING (gym_id = get_user_gym_id() AND get_user_role() = 'owner');
 
--- Inventory Transactions: Insert only on inventory items belonging to gym
+DROP POLICY IF EXISTS insert_inventory_tx ON public.inventory_transactions;
 CREATE POLICY insert_inventory_tx ON public.inventory_transactions
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -172,13 +183,9 @@ CREATE POLICY insert_inventory_tx ON public.inventory_transactions
     )
   );
 
--- Payment Transactions: Can be written by system/receptionist
+DROP POLICY IF EXISTS write_payment_tx ON public.payment_transactions;
 CREATE POLICY write_payment_tx ON public.payment_transactions
   FOR ALL USING (gym_id = get_user_gym_id());
-
--- 6. Refine existing RLS policies to enforce branch isolation for staff
--- Note: A staff member (receptionist/trainer) should only query data belonging to their assigned branch.
--- An owner can view all branches (since their branch_id might be null or they have administrative bypass).
 
 DROP POLICY IF EXISTS select_members ON public.members;
 CREATE POLICY select_members ON public.members

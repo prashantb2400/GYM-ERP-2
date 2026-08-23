@@ -2,6 +2,8 @@
 
 -- Restrict member writes to the owner's gym or the staff member's branch.
 DROP POLICY IF EXISTS "Staff can manage members" ON public.members;
+DROP POLICY IF EXISTS "Owners can manage members in their gym" ON public.members;
+DROP POLICY IF EXISTS "Branch staff can manage branch members" ON public.members;
 
 CREATE POLICY "Owners can manage members in their gym" ON public.members
   FOR ALL USING (
@@ -107,13 +109,20 @@ CREATE TABLE IF NOT EXISTS public.cctv_cameras (
 ALTER TABLE public.hardware_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cctv_cameras ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Staff can view hardware users" ON public.hardware_users;
 CREATE POLICY "Staff can view hardware users" ON public.hardware_users
   FOR SELECT USING (gym_id = get_user_gym_id());
+
+DROP POLICY IF EXISTS "Owners can manage hardware users" ON public.hardware_users;
 CREATE POLICY "Owners can manage hardware users" ON public.hardware_users
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() = 'owner')
   WITH CHECK (gym_id = get_user_gym_id() AND get_user_role() = 'owner');
+
+DROP POLICY IF EXISTS "Staff can view cameras" ON public.cctv_cameras;
 CREATE POLICY "Staff can view cameras" ON public.cctv_cameras
   FOR SELECT USING (gym_id = get_user_gym_id());
+
+DROP POLICY IF EXISTS "Owners can manage cameras" ON public.cctv_cameras;
 CREATE POLICY "Owners can manage cameras" ON public.cctv_cameras
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() = 'owner')
   WITH CHECK (gym_id = get_user_gym_id() AND get_user_role() = 'owner');

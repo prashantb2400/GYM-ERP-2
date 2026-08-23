@@ -5,7 +5,7 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ─── HELPER FUNCTIONS ────────────────────────────────────────
+-- ─── 1. CORE TRIGGER FUNCTION ─────────────────────────────────
 
 -- Auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -16,28 +16,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Get current user's gym_id from users table
-CREATE OR REPLACE FUNCTION get_user_gym_id()
-RETURNS UUID AS $$
-  SELECT gym_id FROM public.users WHERE auth_id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
-
--- Get current user's role
-CREATE OR REPLACE FUNCTION get_user_role()
-RETURNS TEXT AS $$
-  SELECT role FROM public.users WHERE auth_id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
-
--- Get email by login_id for staff authentication
-CREATE OR REPLACE FUNCTION get_email_by_login_id(p_login_id TEXT)
-RETURNS TEXT AS $$
-  SELECT email FROM public.users WHERE login_id = p_login_id AND is_active = true LIMIT 1;
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
-
--- ─── TABLES ──────────────────────────────────────────────────
+-- ─── 2. TABLES DEFINITIONS ────────────────────────────────────
 
 -- 1. Gyms Table
-CREATE TABLE public.gyms (
+CREATE TABLE IF NOT EXISTS public.gyms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   owner_id UUID,
@@ -61,7 +43,7 @@ CREATE TABLE public.gyms (
 );
 
 -- 2. Users Table (Staff & Owners)
-CREATE TABLE public.users (
+CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   auth_id UUID UNIQUE,
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE,
@@ -82,7 +64,7 @@ CREATE TABLE public.users (
 );
 
 -- 3. Plans Table
-CREATE TABLE public.plans (
+CREATE TABLE IF NOT EXISTS public.plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
@@ -98,7 +80,7 @@ CREATE TABLE public.plans (
 );
 
 -- 4. Diet Charts Table
-CREATE TABLE public.diet_charts (
+CREATE TABLE IF NOT EXISTS public.diet_charts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
@@ -112,7 +94,7 @@ CREATE TABLE public.diet_charts (
 );
 
 -- 5. Exercise Charts Table
-CREATE TABLE public.exercise_charts (
+CREATE TABLE IF NOT EXISTS public.exercise_charts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
@@ -125,7 +107,7 @@ CREATE TABLE public.exercise_charts (
 );
 
 -- 6. Members Table
-CREATE TABLE public.members (
+CREATE TABLE IF NOT EXISTS public.members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   auth_id UUID,
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
@@ -176,7 +158,7 @@ CREATE TABLE public.members (
 );
 
 -- 7. Invoices Table
-CREATE TABLE public.invoices (
+CREATE TABLE IF NOT EXISTS public.invoices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
   invoice_number TEXT NOT NULL,
@@ -202,7 +184,7 @@ CREATE TABLE public.invoices (
 );
 
 -- 8. Attendance Table
-CREATE TABLE public.attendance (
+CREATE TABLE IF NOT EXISTS public.attendance (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
   member_id UUID REFERENCES public.members(id) ON DELETE CASCADE NOT NULL,
@@ -220,7 +202,7 @@ CREATE TABLE public.attendance (
 );
 
 -- 9. Follow-ups Table
-CREATE TABLE public.followups (
+CREATE TABLE IF NOT EXISTS public.followups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
   member_id UUID REFERENCES public.members(id) ON DELETE CASCADE NOT NULL,
@@ -237,7 +219,7 @@ CREATE TABLE public.followups (
 );
 
 -- 10. Due Records Table
-CREATE TABLE public.due_records (
+CREATE TABLE IF NOT EXISTS public.due_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
   member_id UUID REFERENCES public.members(id) ON DELETE CASCADE NOT NULL,
@@ -254,7 +236,7 @@ CREATE TABLE public.due_records (
 );
 
 -- 11. KYC Documents Table
-CREATE TABLE public.kyc_documents (
+CREATE TABLE IF NOT EXISTS public.kyc_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
   member_id UUID REFERENCES public.members(id) ON DELETE CASCADE NOT NULL,
@@ -268,7 +250,7 @@ CREATE TABLE public.kyc_documents (
 );
 
 -- 12. WhatsApp Logs Table
-CREATE TABLE public.whatsapp_logs (
+CREATE TABLE IF NOT EXISTS public.whatsapp_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE NOT NULL,
   member_id UUID REFERENCES public.members(id),
@@ -284,7 +266,7 @@ CREATE TABLE public.whatsapp_logs (
 );
 
 -- 13. Cron Logs Table
-CREATE TABLE public.cron_logs (
+CREATE TABLE IF NOT EXISTS public.cron_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE,
   job_name TEXT NOT NULL,
@@ -297,7 +279,7 @@ CREATE TABLE public.cron_logs (
 );
 
 -- 14. Counters Table (Auto-increment tracking)
-CREATE TABLE public.counters (
+CREATE TABLE IF NOT EXISTS public.counters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE UNIQUE NOT NULL,
   member_count INTEGER DEFAULT 0,
@@ -305,7 +287,7 @@ CREATE TABLE public.counters (
 );
 
 -- 15. Subscriptions Table (SaaS Tiers)
-CREATE TABLE public.subscriptions (
+CREATE TABLE IF NOT EXISTS public.subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id UUID REFERENCES public.gyms(id) ON DELETE CASCADE UNIQUE NOT NULL,
   tier TEXT DEFAULT 'free' CHECK (tier IN ('free','pro','enterprise')),
@@ -317,54 +299,25 @@ CREATE TABLE public.subscriptions (
   is_active BOOLEAN DEFAULT true
 );
 
--- ─── INDEXES ─────────────────────────────────────────────────
+-- ─── 3. HELPER FUNCTIONS (DEFINED AFTER TABLES) ───────────────
 
-CREATE INDEX idx_users_gym_id ON public.users(gym_id);
-CREATE INDEX idx_users_auth_id ON public.users(auth_id);
-CREATE INDEX idx_users_role ON public.users(gym_id, role);
+-- Get current user's gym_id from users table
+CREATE OR REPLACE FUNCTION get_user_gym_id()
+RETURNS UUID AS $$
+  SELECT gym_id FROM public.users WHERE auth_id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
-CREATE INDEX idx_members_gym_id ON public.members(gym_id);
-CREATE INDEX idx_members_status ON public.members(gym_id, status);
-CREATE INDEX idx_members_plan_end ON public.members(gym_id, status, plan_end_date);
-CREATE INDEX idx_members_trainer ON public.members(gym_id, trainer_id);
-CREATE INDEX idx_members_due ON public.members(gym_id, status, total_due);
-CREATE INDEX idx_members_attendance ON public.members(gym_id, status, last_attendance);
-CREATE INDEX idx_members_phone ON public.members(gym_id, phone);
-CREATE INDEX idx_members_code ON public.members(gym_id, member_code);
+-- Get current user's role
+CREATE OR REPLACE FUNCTION get_user_role()
+RETURNS TEXT AS $$
+  SELECT role FROM public.users WHERE auth_id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
-CREATE INDEX idx_plans_gym_id ON public.plans(gym_id);
-
-CREATE INDEX idx_invoices_gym_id ON public.invoices(gym_id);
-CREATE INDEX idx_invoices_member ON public.invoices(gym_id, member_id);
-CREATE INDEX idx_invoices_status ON public.invoices(gym_id, status);
-CREATE INDEX idx_invoices_number ON public.invoices(gym_id, invoice_number);
-
-CREATE INDEX idx_attendance_gym_date ON public.attendance(gym_id, date);
-CREATE INDEX idx_attendance_member_date ON public.attendance(member_id, date);
-CREATE INDEX idx_attendance_method ON public.attendance(gym_id, date, method);
-
-CREATE INDEX idx_followups_gym_status ON public.followups(gym_id, status);
-CREATE INDEX idx_followups_scheduled ON public.followups(gym_id, status, scheduled_date);
-
-CREATE INDEX idx_due_records_gym ON public.due_records(gym_id, status);
-CREATE INDEX idx_due_records_member ON public.due_records(gym_id, member_id);
-
-CREATE INDEX idx_whatsapp_logs_gym ON public.whatsapp_logs(gym_id);
-CREATE INDEX idx_whatsapp_logs_member ON public.whatsapp_logs(gym_id, member_id);
-
-CREATE INDEX idx_cron_logs_gym ON public.cron_logs(gym_id);
-CREATE INDEX idx_kyc_member ON public.kyc_documents(gym_id, member_id);
-
--- ─── TRIGGERS FOR UPDATED_AT ───────────────────────────────
-
-CREATE TRIGGER trigger_update_gyms BEFORE UPDATE ON public.gyms FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trigger_update_users BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trigger_update_plans BEFORE UPDATE ON public.plans FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trigger_update_diet_charts BEFORE UPDATE ON public.diet_charts FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trigger_update_exercise_charts BEFORE UPDATE ON public.exercise_charts FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trigger_update_members BEFORE UPDATE ON public.members FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
--- ─── INCREMENT AND CODE GENERATORS ─────────────────────────
+-- Get email by login_id for staff authentication
+CREATE OR REPLACE FUNCTION get_email_by_login_id(p_login_id TEXT)
+RETURNS TEXT AS $$
+  SELECT email FROM public.users WHERE login_id = p_login_id AND is_active = true LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- Increment counter and return new value
 CREATE OR REPLACE FUNCTION increment_counter(p_gym_id UUID, p_field TEXT)
@@ -408,7 +361,65 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- ─── ROW LEVEL SECURITY (RLS) policies ─────────────────────
+-- ─── 4. INDEXES ──────────────────────────────────────────────
+
+CREATE INDEX IF NOT EXISTS idx_users_gym_id ON public.users(gym_id);
+CREATE INDEX IF NOT EXISTS idx_users_auth_id ON public.users(auth_id);
+CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(gym_id, role);
+
+CREATE INDEX IF NOT EXISTS idx_members_gym_id ON public.members(gym_id);
+CREATE INDEX IF NOT EXISTS idx_members_status ON public.members(gym_id, status);
+CREATE INDEX IF NOT EXISTS idx_members_plan_end ON public.members(gym_id, status, plan_end_date);
+CREATE INDEX IF NOT EXISTS idx_members_trainer ON public.members(gym_id, trainer_id);
+CREATE INDEX IF NOT EXISTS idx_members_due ON public.members(gym_id, status, total_due);
+CREATE INDEX IF NOT EXISTS idx_members_attendance ON public.members(gym_id, status, last_attendance);
+CREATE INDEX IF NOT EXISTS idx_members_phone ON public.members(gym_id, phone);
+CREATE INDEX IF NOT EXISTS idx_members_code ON public.members(gym_id, member_code);
+
+CREATE INDEX IF NOT EXISTS idx_plans_gym_id ON public.plans(gym_id);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_gym_id ON public.invoices(gym_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_member ON public.invoices(gym_id, member_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON public.invoices(gym_id, status);
+CREATE INDEX IF NOT EXISTS idx_invoices_number ON public.invoices(gym_id, invoice_number);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_gym_date ON public.attendance(gym_id, date);
+CREATE INDEX IF NOT EXISTS idx_attendance_member_date ON public.attendance(member_id, date);
+CREATE INDEX IF NOT EXISTS idx_attendance_method ON public.attendance(gym_id, date, method);
+
+CREATE INDEX IF NOT EXISTS idx_followups_gym_status ON public.followups(gym_id, status);
+CREATE INDEX IF NOT EXISTS idx_followups_scheduled ON public.followups(gym_id, status, scheduled_date);
+
+CREATE INDEX IF NOT EXISTS idx_due_records_gym ON public.due_records(gym_id, status);
+CREATE INDEX IF NOT EXISTS idx_due_records_member ON public.due_records(gym_id, member_id);
+
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_gym ON public.whatsapp_logs(gym_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_logs_member ON public.whatsapp_logs(gym_id, member_id);
+
+CREATE INDEX IF NOT EXISTS idx_cron_logs_gym ON public.cron_logs(gym_id);
+CREATE INDEX IF NOT EXISTS idx_kyc_member ON public.kyc_documents(gym_id, member_id);
+
+-- ─── 5. TRIGGERS FOR UPDATED_AT ──────────────────────────────
+
+DROP TRIGGER IF EXISTS trigger_update_gyms ON public.gyms;
+CREATE TRIGGER trigger_update_gyms BEFORE UPDATE ON public.gyms FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+DROP TRIGGER IF EXISTS trigger_update_users ON public.users;
+CREATE TRIGGER trigger_update_users BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+DROP TRIGGER IF EXISTS trigger_update_plans ON public.plans;
+CREATE TRIGGER trigger_update_plans BEFORE UPDATE ON public.plans FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+DROP TRIGGER IF EXISTS trigger_update_diet_charts ON public.diet_charts;
+CREATE TRIGGER trigger_update_diet_charts BEFORE UPDATE ON public.diet_charts FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+DROP TRIGGER IF EXISTS trigger_update_exercise_charts ON public.exercise_charts;
+CREATE TRIGGER trigger_update_exercise_charts BEFORE UPDATE ON public.exercise_charts FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+DROP TRIGGER IF EXISTS trigger_update_members ON public.members;
+CREATE TRIGGER trigger_update_members BEFORE UPDATE ON public.members FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ─── 6. ROW LEVEL SECURITY (RLS) POLICIES ────────────────────
 
 ALTER TABLE public.gyms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -427,85 +438,124 @@ ALTER TABLE public.counters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- 1. Gyms policies
+DROP POLICY IF EXISTS "Users can view their own gym" ON public.gyms;
 CREATE POLICY "Users can view their own gym" ON public.gyms
   FOR SELECT USING (id = get_user_gym_id());
+
+DROP POLICY IF EXISTS "Owners can update their own gym" ON public.gyms;
 CREATE POLICY "Owners can update their own gym" ON public.gyms
   FOR UPDATE USING (id = get_user_gym_id() AND get_user_role() = 'owner');
 
 -- 2. Users policies
+DROP POLICY IF EXISTS "Users can view members of their own gym" ON public.users;
 CREATE POLICY "Users can view members of their own gym" ON public.users
   FOR SELECT USING (gym_id = get_user_gym_id() OR auth_id = auth.uid());
+
+DROP POLICY IF EXISTS "Owners can manage users of their gym" ON public.users;
 CREATE POLICY "Owners can manage users of their gym" ON public.users
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() = 'owner');
 
 -- 3. Plans policies
+DROP POLICY IF EXISTS "Anyone can view plans of their gym" ON public.plans;
 CREATE POLICY "Anyone can view plans of their gym" ON public.plans
   FOR SELECT USING (gym_id = get_user_gym_id());
+
+DROP POLICY IF EXISTS "Owners can manage plans of their gym" ON public.plans;
 CREATE POLICY "Owners can manage plans of their gym" ON public.plans
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() = 'owner');
 
 -- 4. Diet Charts policies
+DROP POLICY IF EXISTS "Users can view diet charts" ON public.diet_charts;
 CREATE POLICY "Users can view diet charts" ON public.diet_charts
   FOR SELECT USING (gym_id = get_user_gym_id());
+
+DROP POLICY IF EXISTS "Staff can manage diet charts" ON public.diet_charts;
 CREATE POLICY "Staff can manage diet charts" ON public.diet_charts
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'trainer'));
 
 -- 5. Exercise Charts policies
+DROP POLICY IF EXISTS "Users can view exercise charts" ON public.exercise_charts;
 CREATE POLICY "Users can view exercise charts" ON public.exercise_charts
   FOR SELECT USING (gym_id = get_user_gym_id());
+
+DROP POLICY IF EXISTS "Staff can manage exercise charts" ON public.exercise_charts;
 CREATE POLICY "Staff can manage exercise charts" ON public.exercise_charts
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'trainer'));
 
 -- 6. Members policies
+DROP POLICY IF EXISTS "Users can view members of their gym" ON public.members;
 CREATE POLICY "Users can view members of their gym" ON public.members
   FOR SELECT USING (gym_id = get_user_gym_id() OR auth_id = auth.uid());
+
+DROP POLICY IF EXISTS "Staff can manage members" ON public.members;
 CREATE POLICY "Staff can manage members" ON public.members
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist'));
 
 -- 7. Invoices policies
+DROP POLICY IF EXISTS "Users can view invoices of their gym" ON public.invoices;
 CREATE POLICY "Users can view invoices of their gym" ON public.invoices
   FOR SELECT USING (gym_id = get_user_gym_id() OR member_id = (SELECT id FROM public.members WHERE auth_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Staff can manage invoices" ON public.invoices;
 CREATE POLICY "Staff can manage invoices" ON public.invoices
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist'));
 
 -- 8. Attendance policies
+DROP POLICY IF EXISTS "Users can view attendance of their gym" ON public.attendance;
 CREATE POLICY "Users can view attendance of their gym" ON public.attendance
   FOR SELECT USING (gym_id = get_user_gym_id() OR member_id = (SELECT id FROM public.members WHERE auth_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Staff can manage attendance" ON public.attendance;
 CREATE POLICY "Staff can manage attendance" ON public.attendance
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist', 'trainer'));
 
 -- 9. Followups policies
+DROP POLICY IF EXISTS "Staff can view followups" ON public.followups;
 CREATE POLICY "Staff can view followups" ON public.followups
   FOR SELECT USING (gym_id = get_user_gym_id());
+
+DROP POLICY IF EXISTS "Staff can manage followups" ON public.followups;
 CREATE POLICY "Staff can manage followups" ON public.followups
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist'));
 
 -- 10. Due Records policies
+DROP POLICY IF EXISTS "Staff can view due records" ON public.due_records;
 CREATE POLICY "Staff can view due records" ON public.due_records
   FOR SELECT USING (gym_id = get_user_gym_id());
+
+DROP POLICY IF EXISTS "Staff can manage due records" ON public.due_records;
 CREATE POLICY "Staff can manage due records" ON public.due_records
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist'));
 
 -- 11. KYC Documents policies
+DROP POLICY IF EXISTS "Users can view KYC of their gym" ON public.kyc_documents;
 CREATE POLICY "Users can view KYC of their gym" ON public.kyc_documents
   FOR SELECT USING (gym_id = get_user_gym_id() OR member_id = (SELECT id FROM public.members WHERE auth_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Staff can manage KYC" ON public.kyc_documents;
 CREATE POLICY "Staff can manage KYC" ON public.kyc_documents
   FOR ALL USING (gym_id = get_user_gym_id() AND get_user_role() IN ('owner', 'receptionist'));
 
 -- 12. WhatsApp Logs policies
+DROP POLICY IF EXISTS "Staff can view WhatsApp logs" ON public.whatsapp_logs;
 CREATE POLICY "Staff can view WhatsApp logs" ON public.whatsapp_logs
   FOR SELECT USING (gym_id = get_user_gym_id());
+
+DROP POLICY IF EXISTS "System can log WhatsApp" ON public.whatsapp_logs;
 CREATE POLICY "System can log WhatsApp" ON public.whatsapp_logs
   FOR INSERT WITH CHECK (gym_id = get_user_gym_id());
 
 -- 13. Cron Logs policies
+DROP POLICY IF EXISTS "Staff can view cron logs" ON public.cron_logs;
 CREATE POLICY "Staff can view cron logs" ON public.cron_logs
   FOR SELECT USING (gym_id = get_user_gym_id());
 
 -- 14. Counters policies
+DROP POLICY IF EXISTS "Internal service can read/write counters" ON public.counters;
 CREATE POLICY "Internal service can read/write counters" ON public.counters
   FOR ALL USING (gym_id = get_user_gym_id());
 
 -- 15. Subscriptions policies
+DROP POLICY IF EXISTS "Gym can view subscription" ON public.subscriptions;
 CREATE POLICY "Gym can view subscription" ON public.subscriptions
   FOR SELECT USING (gym_id = get_user_gym_id());
