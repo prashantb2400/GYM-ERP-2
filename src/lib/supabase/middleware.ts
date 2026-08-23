@@ -86,21 +86,33 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthPage && !isSuperAdminRoute) {
     // If user is already logged in, redirect away from login pages
-    // Query role to determine appropriate dashboard redirection
     const { data: userData } = await supabase
       .from('users')
-      .select('role')
+      .select('role, gym_id')
       .eq('auth_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (userData?.role === 'owner' || userData?.role === 'receptionist') {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    } else if (userData?.role === 'trainer') {
-      return NextResponse.redirect(new URL('/trainer/dashboard', request.url));
-    } else {
-      // Check if it's a gym member
+    if (userData) {
+      if (userData.role === 'owner' || userData.role === 'receptionist') {
+        return NextResponse.redirect(new URL(userData.gym_id ? '/dashboard' : '/dashboard/onboarding', request.url));
+      } else if (userData.role === 'trainer') {
+        return NextResponse.redirect(new URL('/trainer/dashboard', request.url));
+      }
+    }
+
+    // Check if it's a gym member
+    const { data: memberData } = await supabase
+      .from('members')
+      .select('id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    if (memberData) {
       return NextResponse.redirect(new URL('/member/dashboard', request.url));
     }
+
+    // Default for newly registered user without a profile: Onboarding
+    return NextResponse.redirect(new URL('/dashboard/onboarding', request.url));
   }
 
   // Protect API routes (except public webhooks and auth callbacks)
@@ -116,24 +128,27 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Check if gym is suspended
-  if (user && path.startsWith('/dashboard') && !path.startsWith('/dashboard/suspended')) {
+  // Check if gym is suspended or if owner needs onboarding
+  if (user && path.startsWith('/dashboard') && !path.startsWith('/dashboard/suspended') && !path.startsWith('/dashboard/onboarding')) {
     const { data: userData } = await supabase
       .from('users')
       .select('gym_id')
       .eq('auth_id', user.id)
-      .single();
+      .maybeSingle();
     
     if (userData?.gym_id) {
       const { data: gymData } = await supabase
         .from('gyms')
         .select('is_suspended')
         .eq('id', userData.gym_id)
-        .single();
+        .maybeSingle();
       
       if (gymData?.is_suspended === true) {
         return NextResponse.redirect(new URL('/dashboard/suspended', request.url));
       }
+    } else {
+      // User has no gym assigned yet -> redirect to onboarding
+      return NextResponse.redirect(new URL('/dashboard/onboarding', request.url));
     }
   }
 
