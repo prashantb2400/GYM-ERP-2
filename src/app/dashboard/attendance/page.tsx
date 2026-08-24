@@ -181,7 +181,7 @@ export default function AttendancePage() {
         .eq('date', today);
 
       const checkedIds = new Set<string>((todayChecked || []).map((r: { member_id: string }) => r.member_id));
-      const absent = (activeMembers || []).filter(m => !checkedIds.has(m.id));
+      const absent = (activeMembers || []).filter((m: { id: string }) => !checkedIds.has(m.id));
       setAbsentees((absent || []) as Member[]);
     } finally {
       setLoadingAbsent(false);

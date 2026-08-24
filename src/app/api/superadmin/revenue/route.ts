@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       monthly_revenue_map[monthStr] = 0;
     }
     
-    invoiceList.forEach(inv => {
+    invoiceList.forEach((inv: { created_at?: string | null; amount?: number | string | null }) => {
       const monthStr = inv.created_at?.substring(0, 7);
       if (monthStr && monthly_revenue_map[monthStr] !== undefined) {
         monthly_revenue_map[monthStr] += Number(inv.amount) || 0;

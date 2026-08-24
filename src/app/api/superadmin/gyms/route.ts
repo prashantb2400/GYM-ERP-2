@@ -60,7 +60,7 @@ export async function GET(request: Request) {
         .in('gym_id', gymIds);
         
       if (!memberError && memberData) {
-        memberData.forEach(m => {
+        memberData.forEach((m: { gym_id: string }) => {
           memberCounts[m.gym_id] = (memberCounts[m.gym_id] || 0) + 1;
         });
       }
