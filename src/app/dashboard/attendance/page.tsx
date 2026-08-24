@@ -110,7 +110,7 @@ export default function AttendancePage() {
       
       setTodayLogs(logs || []);
       
-      const checkedIds = new Set((logs || []).map(l => l.member_id));
+      const checkedIds = new Set((logs || []).map((l: { member_id: string }) => l.member_id));
       setCheckedInMemberIds(checkedIds);
 
       // Get active members count for stats
