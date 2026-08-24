@@ -53,7 +53,7 @@ function RegisterForm() {
         .select('name')
         .eq('id', queryGymId)
         .single()
-        .then(({ data }) => {
+        .then((res: any) => { const data = res.data;
           if (data) setGymName(data.name);
         });
     }

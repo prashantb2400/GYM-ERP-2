@@ -66,7 +66,7 @@ export default function PlatformInvoicesPage() {
 
       // Compute stats
       let tInv = 0, tCol = 0, tPen = 0, fCount = 0;
-      displayInvoices.forEach(inv => {
+      displayInvoices.forEach((inv: any) => {
         const amt = inv.amount / 100;
         tInv += amt;
         if (inv.status === 'paid') tCol += amt;

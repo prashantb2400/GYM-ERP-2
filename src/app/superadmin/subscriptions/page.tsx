@@ -65,11 +65,11 @@ export default function SuperAdminSubscriptionsPage() {
       let processedData = data || [];
       
       if (statusFilter !== 'all') {
-        processedData = processedData.filter(s => s.status === statusFilter);
+        processedData = processedData.filter((s: any) => s.status === statusFilter);
       }
       
       if (planFilter !== 'all') {
-        processedData = processedData.filter(s => s.platform_plans?.slug === planFilter);
+        processedData = processedData.filter((s: any) => s.platform_plans?.slug === planFilter);
       }
 
       setSubscriptions(processedData);

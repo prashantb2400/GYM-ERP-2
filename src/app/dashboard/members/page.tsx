@@ -199,7 +199,7 @@ export default function MembersListPage() {
       }
       
       const headers = ['Member Code', 'Name', 'Phone', 'Email', 'Status', 'Plan', 'Plan End Date', 'Admission Date', 'Dues (₹)'];
-      const rows = data.map(m => [
+      const rows = data.map((m: any) => [
         m.member_code || '',
         m.name || '',
         m.phone || '',
@@ -213,7 +213,7 @@ export default function MembersListPage() {
       
       const csvContent = [
         headers.join(','),
-        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        ...rows.map((row: any) => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       ].join('\\n');
       
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

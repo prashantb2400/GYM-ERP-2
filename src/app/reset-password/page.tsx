@@ -31,7 +31,7 @@ function ResetPasswordForm() {
     // Listen for the PASSWORD_RECOVERY event — Supabase fires this
     // after successfully exchanging the token from the email link.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event) => {
+      (event: any) => {
         if (event === 'PASSWORD_RECOVERY') {
           setSessionReady(true);
         }
@@ -39,7 +39,7 @@ function ResetPasswordForm() {
     );
 
     // Also check if there is already a session (user may have refreshed the page)
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((res: any) => { const session = res.data.session;
       if (session) setSessionReady(true);
     });
 

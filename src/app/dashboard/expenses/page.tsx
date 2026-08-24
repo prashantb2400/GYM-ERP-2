@@ -106,7 +106,7 @@ export default function ExpenseTrackerPage() {
         .eq('gym_id', user.gymId)
         .gte('date', startOfMonth.toISOString().split('T')[0]);
 
-      const sum = currentMonthData?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
+      const sum = currentMonthData?.reduce((acc: any, curr: any) => acc + Number(curr.amount), 0) || 0;
       setTotalExpensesThisMonth(sum);
 
     } catch (err: unknown) {

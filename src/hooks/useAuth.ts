@@ -104,7 +104,7 @@ export function useAuth() {
     };
 
     // Get initial session quickly via getSession
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((res: any) => { const session = res.data.session;
       if (session?.user) {
         fetchSessionDetails(session.user);
       } else {
@@ -118,7 +118,7 @@ export function useAuth() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: any, session: any) => {
         if (event === 'SIGNED_IN' && session?.user) {
           fetchSessionDetails(session.user);
         } else if (event === 'SIGNED_OUT') {

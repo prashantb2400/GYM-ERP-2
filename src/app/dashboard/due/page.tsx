@@ -71,7 +71,7 @@ export default function DueCollectionPage() {
       let filtered = data || [];
       if (search.trim()) {
         const term = search.toLowerCase().trim();
-        filtered = filtered.filter(m => 
+        filtered = filtered.filter((m: any) =>
           m.name.toLowerCase().includes(term) || 
           m.member_code.toLowerCase().includes(term)
         );

@@ -201,7 +201,7 @@ export default function AttendancePage() {
           schema: 'public',
           table: 'attendance',
           filter: `gym_id=eq.${user.gymId}`,
-        }, (payload) => {
+        }, (payload: any) => {
           fetchTodayData(); // Just refetch to get joined data easily
           loadAbsentees();
         })

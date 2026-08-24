@@ -109,7 +109,7 @@ export default function DashboardHome() {
           .eq('gym_id', user.gymId)
           .gte('issued_at', startOfMonth.toISOString());
 
-        const revenueSum = invoicesData?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
+        const revenueSum = invoicesData?.reduce((acc: any, curr: any) => acc + Number(curr.total), 0) || 0;
 
         // 3. Fetch outstanding dues
         const { data: memberDues } = await supabase
@@ -117,7 +117,7 @@ export default function DashboardHome() {
           .select('total_due')
           .eq('gym_id', user.gymId);
           
-        const duesSum = memberDues?.reduce((acc, curr) => acc + Number(curr.total_due), 0) || 0;
+        const duesSum = memberDues?.reduce((acc: any, curr: any) => acc + Number(curr.total_due), 0) || 0;
 
         // 4. Fetch expiring soon (next 7 days)
         const endOfWeek = new Date();
@@ -148,7 +148,7 @@ export default function DashboardHome() {
           .select('amount_paid')
           .eq('gym_id', user.gymId)
           .gte('issued_at', todayISO);
-        const todayRevenue = todayInvoices?.reduce((a, c) => a + Number(c.amount_paid || 0), 0) || 0;
+        const todayRevenue = todayInvoices?.reduce((a: any, c: any) => a + Number(c.amount_paid || 0), 0) || 0;
 
         // Check-ins today
         const today = new Date().toISOString().split('T')[0];
@@ -187,7 +187,7 @@ export default function DashboardHome() {
           .limit(50);
 
         const dateCounts: Record<string, number> = {};
-        attendanceHistory?.forEach(row => {
+        attendanceHistory?.forEach((row: any) => {
           const dateStr = formatDate(row.date);
           dateCounts[dateStr] = (dateCounts[dateStr] || 0) + 1;
         });
@@ -220,7 +220,7 @@ export default function DashboardHome() {
           table: 'attendance',
           filter: `gym_id=eq.${user.gymId}`,
         },
-        (payload) => {
+        (payload: any) => {
           setTicker(prev => [payload.new, ...prev.slice(0, 4)]);
           // Increment check-in count in stats dynamically
           // trigger sound notification or toast

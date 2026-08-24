@@ -67,7 +67,7 @@ export function CCTVLiveView({ cameraId, cameraName, location, rtspUrl, showCont
           table: 'face_recognition_logs',
           filter: `camera_id=eq.${cameraId}`,
         },
-        async (payload) => {
+        async (payload: any) => {
           if (payload.new.member_id) {
             const { data } = await supabase
               .from('members')
