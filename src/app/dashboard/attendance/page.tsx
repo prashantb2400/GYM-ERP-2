@@ -110,7 +110,7 @@ export default function AttendancePage() {
       
       setTodayLogs(logs || []);
       
-      const checkedIds = new Set((logs || []).map((l: { member_id: string }) => l.member_id));
+      const checkedIds = new Set<string>((logs || []).map((l: { member_id: string }) => l.member_id));
       setCheckedInMemberIds(checkedIds);
 
       // Get active members count for stats
@@ -180,7 +180,7 @@ export default function AttendancePage() {
         .eq('gym_id', user.gymId)
         .eq('date', today);
 
-      const checkedIds = new Set((todayChecked || []).map(r => r.member_id));
+      const checkedIds = new Set<string>((todayChecked || []).map((r: { member_id: string }) => r.member_id));
       const absent = (activeMembers || []).filter(m => !checkedIds.has(m.id));
       setAbsentees((absent || []) as Member[]);
     } finally {
