@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       { name: 'Vikram Joshi', phone: '9123456789', status: 'active', planIdx: 1, daysAgo: 5, totalDue: 500 },
     ];
     
-    const memberIds = [];
+    const memberIds: string[] = [];
 
     for (let i = 0; i < memberTemplates.length; i++) {
       const template = memberTemplates[i];
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
       { daysBack: 0, memberIdxs: [0, 1] },         // 2 today
     ];
 
-    const attendanceRecords = [];
+    const attendanceRecords: any[] = [];
     for (const day of attendanceDays) {
       const date = new Date();
       date.setDate(date.getDate() - day.daysBack);

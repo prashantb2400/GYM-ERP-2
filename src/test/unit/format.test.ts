@@ -37,17 +37,19 @@ describe('Indian Locale & Health Formatters', () => {
 
   describe('calculateGST', () => {
     it('should compute exact CGST and SGST at 9% each', () => {
-      const subtotal = 1000;
-      const { cgst, sgst, total } = calculateGST(subtotal);
+      const totalInclusiveAmount = 1180;
+      const { baseAmount, cgst, sgst, total } = calculateGST(totalInclusiveAmount);
+      expect(baseAmount).toBe(1000);
       expect(cgst).toBe(90);
       expect(sgst).toBe(90);
       expect(total).toBe(1180);
     });
 
     it('should compute GST after discount deduction', () => {
-      const subtotal = 1000;
-      const discount = 200;
-      const { cgst, sgst, total } = calculateGST(subtotal, discount);
+      const totalInclusiveAmount = 1180;
+      const discount = 236;
+      const { baseAmount, cgst, sgst, total } = calculateGST(totalInclusiveAmount, discount);
+      expect(baseAmount).toBe(800);
       expect(cgst).toBe(72);
       expect(sgst).toBe(72);
       expect(total).toBe(944);

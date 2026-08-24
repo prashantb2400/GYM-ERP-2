@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Member, Attendance } from '@/types/database';
@@ -201,7 +201,7 @@ export default function AttendancePage() {
           schema: 'public',
           table: 'attendance',
           filter: `gym_id=eq.${user.gymId}`,
-        }, (payload) => {
+        }, () => {
           fetchTodayData(); // Just refetch to get joined data easily
           loadAbsentees();
         })
