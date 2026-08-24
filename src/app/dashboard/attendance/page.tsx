@@ -128,7 +128,7 @@ export default function AttendancePage() {
 
       // Calculate peak hour
       const hourCounts: Record<string, number> = {};
-      logs?.forEach(log => {
+      logs?.forEach((log: { check_in_time?: string | null }) => {
         if (log.check_in_time) {
           const hour = new Date(log.check_in_time).getHours();
           hourCounts[hour] = (hourCounts[hour] || 0) + 1;
