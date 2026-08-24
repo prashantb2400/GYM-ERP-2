@@ -3,8 +3,6 @@ import {
   formatCurrency,
   formatPhone,
   calculateGST,
-  calculateBMI,
-  getBMICategory,
   getTodayIST,
   formatMemberCode,
   formatInvoiceNumber,
