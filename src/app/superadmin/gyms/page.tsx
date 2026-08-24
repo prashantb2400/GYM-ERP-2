@@ -83,18 +83,18 @@ export default function SuperAdminGymsPage() {
 
       if (debouncedSearch.trim()) {
         const searchLower = debouncedSearch.toLowerCase();
-        processedData = processedData.filter(g => 
+        processedData = processedData.filter((g: any) =>
           g.name.toLowerCase().includes(searchLower) || 
           g.ownerEmail.toLowerCase().includes(searchLower)
         );
       }
 
       if (statusFilter !== 'all') {
-        processedData = processedData.filter(g => g.status === statusFilter);
+        processedData = processedData.filter((g: any) => g.status === statusFilter);
       }
       
       if (planFilter !== 'all') {
-        processedData = processedData.filter(g => g.planSlug === planFilter);
+        processedData = processedData.filter((g: any) => g.planSlug === planFilter);
       }
 
       setGyms(processedData);
@@ -103,7 +103,7 @@ export default function SuperAdminGymsPage() {
       const allGyms = data || [];
       const total = allGyms.length;
       let active = 0, suspended = 0, trialing = 0;
-      allGyms.forEach(g => {
+      allGyms.forEach((g: any) => {
         const status = g.platform_subscriptions?.[0]?.status;
         if (status === 'active') active++;
         else if (status === 'suspended') suspended++;

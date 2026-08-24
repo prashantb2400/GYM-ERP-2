@@ -95,7 +95,7 @@ export default function WhatsAppLogsPage() {
       .select('id, name, member_code, phone')
       .eq('gym_id', user.gymId)
       .eq('status', 'active')
-      .then(({ data }) => {
+      .then((res: any) => { const data = res.data;
         if (data) setMembers(data);
       });
   }, [user?.gymId]);

@@ -50,7 +50,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
         .eq('status', 'pending')
         .limit(3);
 
-      kycDocs?.forEach(doc => {
+      kycDocs?.forEach((doc: any) => {
         list.push({
           id: doc.id,
           type: 'kyc',
@@ -68,7 +68,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
         .eq('status', 'failed')
         .limit(3);
 
-      failedWa?.forEach(log => {
+      failedWa?.forEach((log: any) => {
         list.push({
           id: log.id,
           type: 'whatsapp',

@@ -86,7 +86,7 @@ export default function LeadsPage() {
       
       let hot = 0;
       let conv = 0;
-      data?.forEach(l => {
+      data?.forEach((l: any) => {
         if (l.status !== 'converted' && l.status !== 'lost' && l.follow_up_date && l.follow_up_date <= today) {
           hot++;
         }

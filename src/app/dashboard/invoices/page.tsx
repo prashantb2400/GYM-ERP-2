@@ -92,7 +92,7 @@ export default function InvoicesPage() {
       .select('*')
       .eq('id', user.gymId)
       .single()
-      .then(({ data }) => {
+      .then((res: any) => { const data = res.data;
         if (data) setGymDetails(data);
       });
   }, [user?.gymId]);

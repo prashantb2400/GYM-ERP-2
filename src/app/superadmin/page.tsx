@@ -65,7 +65,7 @@ export default function SuperAdminDashboard() {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        subs?.forEach(sub => {
+        subs?.forEach((sub: any) => {
           // Status counts
           statusCounts[sub.status] = (statusCounts[sub.status] || 0) + 1;
           
@@ -115,7 +115,7 @@ export default function SuperAdminDashboard() {
         let revenueThisMonth = 0;
         const revenueByMonth: Record<string, number> = {};
 
-        invoices?.forEach(inv => {
+        invoices?.forEach((inv: any) => {
           const invDate = new Date(inv.created_at);
           if (invDate >= startOfMonth) {
             revenueThisMonth += inv.amount;

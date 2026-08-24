@@ -4,7 +4,7 @@ import { calculateGST } from '@/lib/utils/format';
 describe('Financial & Commission Computations', () => {
   it('should correctly calculate Indian GST (9% CGST + 9% SGST on 18% inclusive plans)', () => {
     const totalAmount = 1180;
-    const { baseAmount, cgst, sgst, total } = calculateGST(totalAmount);
+    const { baseAmount, cgst, sgst, total } = calculateGST(totalAmount, 0, true);
 
     expect(total).toBe(1180);
     expect(baseAmount).toBeCloseTo(1000, 2);

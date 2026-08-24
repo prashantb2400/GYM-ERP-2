@@ -64,11 +64,11 @@ export default function TrainerDashboardPage() {
 
         let earned = 0;
         if (invoices && invoices.length > 0) {
-          earned = invoices.reduce((acc, inv) => acc + (Number(inv.trainer_commission_amount) || 0), 0);
+          earned = invoices.reduce((acc: any, inv: any) => acc + (Number(inv.trainer_commission_amount) || 0), 0);
         } else if (trainer.commission_rate_pct && members) {
           // Estimated commission from active client plans
           const rate = Number(trainer.commission_rate_pct) / 100;
-          earned = members.reduce((acc, m) => acc + ((Number(m.plans?.price) || 0) * rate), 0);
+          earned = members.reduce((acc: any, m: any) => acc + ((Number(m.plans?.price) || 0) * rate), 0);
         }
         setTotalCommissions(earned);
       }

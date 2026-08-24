@@ -77,13 +77,33 @@ export function getTodayIST(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 }
 
-export function calculateGST(subtotal: number, discountAmount: number = 0): { cgst: number; sgst: number; total: number } {
-  const taxableAmount = subtotal - discountAmount;
-  const cgst = Math.round(taxableAmount * 0.09 * 100) / 100;
-  const sgst = Math.round(taxableAmount * 0.09 * 100) / 100;
+export function calculateGST(
+  amount: number,
+  discountAmount: number = 0,
+  isInclusive: boolean = false
+): { baseAmount: number; cgst: number; sgst: number; total: number } {
+  let baseAmount = 0;
+  let cgst = 0;
+  let sgst = 0;
+  let total = 0;
+
+  if (isInclusive) {
+    const discountedAmount = amount - discountAmount;
+    baseAmount = Math.round((discountedAmount / 1.18) * 100) / 100;
+    cgst = Math.round(baseAmount * 0.09 * 100) / 100;
+    sgst = Math.round(baseAmount * 0.09 * 100) / 100;
+    total = discountedAmount;
+  } else {
+    baseAmount = amount - discountAmount;
+    cgst = Math.round(baseAmount * 0.09 * 100) / 100;
+    sgst = Math.round(baseAmount * 0.09 * 100) / 100;
+    total = baseAmount + cgst + sgst;
+  }
+
   return {
+    baseAmount,
     cgst,
     sgst,
-    total: taxableAmount + cgst + sgst,
+    total,
   };
 }

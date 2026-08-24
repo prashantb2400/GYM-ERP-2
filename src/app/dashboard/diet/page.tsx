@@ -98,7 +98,7 @@ export default function DietChartsPage() {
       .select('id, name, member_code')
       .eq('gym_id', user.gymId)
       .eq('status', 'active')
-      .then(({ data }) => {
+      .then((res: any) => { const data = res.data;
         if (data) setMembers(data);
       });
   }, [user?.gymId]);

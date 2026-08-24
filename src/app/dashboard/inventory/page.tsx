@@ -112,7 +112,7 @@ export default function InventoryManagementPage() {
         .select('id, stock_quantity, reorder_level')
         .eq('gym_id', user.gymId);
 
-      const reorderCount = reorderCountData?.filter(i => Number(i.stock_quantity) <= Number(i.reorder_level)).length || 0;
+      const reorderCount = reorderCountData?.filter((i: any) => Number(i.stock_quantity) <= Number(i.reorder_level)).length || 0;
       setItemsToReorder(reorderCount);
 
     } catch (err: unknown) {

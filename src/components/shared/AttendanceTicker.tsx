@@ -44,7 +44,7 @@ export function AttendanceTicker({ gymId, maxItems = 10, className = '' }: Atten
           table: 'attendance',  // Fixed: was 'attendance_logs'
           filter: gymId ? `gym_id=eq.${gymId}` : undefined,
         },
-        async (payload) => {
+        async (payload: any) => {
           // H-2 FIX: Query correct columns — 'name' and 'photo_url' (not first_name/last_name/avatar_url)
           const { data: memberData } = await supabase
             .from('members')

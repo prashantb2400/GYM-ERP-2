@@ -67,7 +67,7 @@ export default function KycPage() {
       let filtered = data || [];
       if (search.trim()) {
         const term = search.toLowerCase().trim();
-        filtered = filtered.filter(doc => 
+        filtered = filtered.filter((doc: any) =>
           doc.members?.name.toLowerCase().includes(term) ||
           doc.members?.member_code.toLowerCase().includes(term)
         );

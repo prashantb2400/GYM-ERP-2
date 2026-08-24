@@ -81,7 +81,7 @@ export default function FollowupsPage() {
       let filtered = data || [];
       if (search.trim()) {
         const term = search.toLowerCase().trim();
-        filtered = filtered.filter(f => f.member_name.toLowerCase().includes(term));
+        filtered = filtered.filter((f: any) => f.member_name.toLowerCase().includes(term));
       }
 
       setFollowups(filtered);
@@ -105,7 +105,7 @@ export default function FollowupsPage() {
       .select('id, name, member_code')
       .eq('gym_id', user.gymId)
       .eq('status', 'active')
-      .then(({ data }) => {
+      .then((res: any) => { const data = res.data;
         if (data) setMembers(data);
       });
   }, [user?.gymId]);

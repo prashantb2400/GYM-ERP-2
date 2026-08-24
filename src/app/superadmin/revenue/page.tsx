@@ -46,7 +46,7 @@ export default function RevenueAnalyticsPage() {
         let totalRev = 0;
         const revByMonth: Record<string, number> = {};
         
-        invoices?.forEach((inv) => {
+        invoices?.forEach((inv: any) => {
           const amount = inv.amount / 100; // Assuming paise
           totalRev += amount;
           
