@@ -1,13 +1,48 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    const { amount, memberId, planId, gymId } = await request.json();
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Resolve gym from authenticated user
+    const { data: userData } = await supabase
+      .from('users')
+      .select('gym_id, role')
+      .eq('auth_id', user.id)
+      .single();
+    
+    if (!userData?.gym_id) {
+      return NextResponse.json({ error: 'No gym associated with user' }, { status: 403 });
+    }
+    
+    const { memberId, planId } = await request.json();
+    const gymId = userData.gym_id; // Server-side resolved, not client-supplied
 
-    if (!amount || !memberId || !planId || !gymId) {
+    if (!memberId || !planId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    // Resolve price server-side from the plan to prevent price manipulation
+    const { data: planData, error: planError } = await supabaseAdmin
+      .from('plans')
+      .select('price')
+      .eq('id', planId)
+      .eq('gym_id', gymId)
+      .eq('is_active', true)
+      .single();
+
+    if (planError || !planData) {
+      return NextResponse.json({ error: 'Plan not found or inactive' }, { status: 404 });
+    }
+
+    const amount = Number(planData.price);
 
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -68,7 +103,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       orderId,
-      keyId: keyId || 'rzp_test_mockKey123',
+      keyId: keyId || '',
       amount: amount,
       isMock,
     });

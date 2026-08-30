@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0",
+  "description": "Antigravity 2.0 MCP Strategy and Tool Access Configuration",
+  "servers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "enabled": true,
+      "description": "Repository inspection, branch creation, commit creation, and draft PR generation",
+      "permissions": {
+        "auto_approved": ["read_repository", "read_issues", "create_branch", "create_commit", "open_draft_pr"],
+        "human_approval_required": ["merge_pr", "push_to_main", "delete_branch", "update_security_settings"]
+      },
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-playwright"],
+      "enabled": true,
+      "description": "Headless browser automation for UI verification, DOM assertions, and interaction verification",
+      "permissions": {
+        "auto_approved": ["navigate", "click", "fill", "screenshot", "evaluate_script"],
+        "human_approval_required": ["external_site_navigation", "file_download"]
+      }
+    },
+    "database": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "enabled": false,
+      "description": "Scoped local/development database access",
+      "permissions": {
+        "auto_approved": ["select_dev", "describe_table_dev"],
+        "human_approval_required": ["drop_table", "truncate_table", "raw_delete", "production_access"]
+      }
+    }
+  }
+}

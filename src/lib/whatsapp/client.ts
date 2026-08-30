@@ -74,7 +74,7 @@ export class WhatsAppClient {
     try {
       await supabaseAdmin.from('whatsapp_logs').insert({
         ...data,
-        gym_id: data.gym_id || 'system',
+        gym_id: data.gym_id || null,
       });
     } catch (e) {
       console.error('Failed to log WhatsApp message:', e);

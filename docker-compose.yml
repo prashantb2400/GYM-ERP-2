@@ -20,19 +20,24 @@ services:
     env_file: ./cctv-service/.env
     devices:
       - /dev/video0:/dev/video0  # for USB webcam
-    network_mode: host  # needed for RTSP/ONVIF LAN access
     volumes:
       - cctv-models:/app/models
+    networks:
+      - gymerp-network
 
   hardware-bridge:
     build: ./hardware-bridge
     ports:
       - '5002:5002'
     env_file: ./hardware-bridge/.env
-    network_mode: host  # needed for ZKTeco LAN access
-    privileged: true  # needed for USB HID access
+    devices:
+      - /dev/bus/usb:/dev/bus/usb  # USB HID access for biometric devices
+    cap_add:
+      - SYS_RAWIO  # Required for USB HID communication
     volumes:
-      - /dev:/dev  # USB device access
+      - /dev/serial:/dev/serial:ro  # Serial device access (read-only)
+    networks:
+      - gymerp-network
 
   # Optional: Redis for caching
   redis:

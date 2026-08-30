@@ -8,7 +8,10 @@ import crypto from 'crypto';
 /** Verify Meta's X-Hub-Signature-256 header */
 async function verifyMetaSignature(request: Request, bodyText: string): Promise<boolean> {
   const appSecret = process.env.WHATSAPP_APP_SECRET;
-  if (!appSecret) return true; // Skip if not configured (dev mode)
+  if (!appSecret) {
+    console.error('WHATSAPP_APP_SECRET is not configured — rejecting webhook');
+    return false;
+  }
   const signature = request.headers.get('x-hub-signature-256');
   if (!signature) return false;
   const expectedSig = 'sha256=' + crypto
@@ -25,7 +28,10 @@ export async function GET(request: Request) {
   const token = searchParams.get('hub.verify_token');
   const challenge = searchParams.get('hub.challenge');
 
-  const expectedToken = process.env.WHATSAPP_VERIFY_TOKEN || 'whatsapp_bot_verify';
+  const expectedToken = process.env.WHATSAPP_VERIFY_TOKEN;
+  if (!expectedToken) {
+    return new Response('Webhook verify token not configured', { status: 503 });
+  }
 
   if (mode === 'subscribe' && token === expectedToken) {
     return new Response(challenge, { status: 200 });

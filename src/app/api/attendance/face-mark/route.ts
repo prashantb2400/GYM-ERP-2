@@ -10,7 +10,10 @@ export async function POST(request: Request) {
     }
 
     // Verify secure connection token
-    const expectedToken = process.env.CCTV_AUTH_TOKEN || 'cctv_secret_token';
+    const expectedToken = process.env.CCTV_AUTH_TOKEN;
+    if (!expectedToken) {
+      return NextResponse.json({ error: 'CCTV service not configured' }, { status: 503 });
+    }
     if (token !== expectedToken) {
       return NextResponse.json({ error: 'Unauthorized hardware handshake' }, { status: 401 });
     }

@@ -6,16 +6,26 @@ import { TemplateParam } from '@/lib/whatsapp/types';
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !session) {
+    if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Optional: add authorization check (e.g. check if user has permissions for gym)
+    // Resolve gym from authenticated user
+    const { data: userData } = await supabase
+      .from('users')
+      .select('gym_id')
+      .eq('auth_id', user.id)
+      .single();
+    
+    if (!userData?.gym_id) {
+      return NextResponse.json({ error: 'No gym associated' }, { status: 403 });
+    }
     
     const body = await request.json();
-    const { to, type, text, templateName, params, gymId, memberId, documentParams } = body;
+    const { to, type, text, templateName, params, memberId, documentParams } = body;
+    const gymId = userData.gym_id; // Server-side resolved
 
     if (!to || !type) {
       return NextResponse.json({ error: 'Missing "to" or "type" in payload' }, { status: 400 });

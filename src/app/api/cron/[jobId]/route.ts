@@ -1,11 +1,25 @@
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { executeCronJob } from '@/lib/cron/scheduler';
+
+function isCronAuthorized(authHeader: string | null): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  return authHeader === `Bearer ${secret}`;
+}
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
+  const headersList = await headers();
+  const authHeader = headersList.get('authorization');
+
+  if (!isCronAuthorized(authHeader)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { jobId } = await params;
     const { data: logs } = await supabaseAdmin
@@ -25,6 +39,13 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
+  const headersList = await headers();
+  const authHeader = headersList.get('authorization');
+
+  if (!isCronAuthorized(authHeader)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { jobId } = await params;
     const result = await executeCronJob(jobId, supabaseAdmin);

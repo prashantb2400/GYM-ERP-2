@@ -42,7 +42,7 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthPage = ['/login', '/staff/login', '/member/login', '/member/register'].some(p => path.startsWith(p));
-  const isPublicPage = path === '/' || path.startsWith('/api/whatsapp/webhook');
+  const isPublicPage = path === '/';
   const isDashboardPage = path.startsWith('/dashboard');
   const isMemberPage = path.startsWith('/member') && !path.startsWith('/member/login') && !path.startsWith('/member/register');
   
@@ -107,7 +107,7 @@ export async function updateSession(request: NextRequest) {
   if (path.startsWith('/api/') && 
       !path.startsWith('/api/auth/') && 
       !path.startsWith('/api/whatsapp/webhook') &&
-      !path.startsWith('/api/razorpay/webhook') &&
+      !path.startsWith('/api/payments/razorpay/webhook') &&
       !path.startsWith('/api/cron/')) {
     
     if (!user) {

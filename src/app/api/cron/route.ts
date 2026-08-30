@@ -12,8 +12,7 @@ function isCronAuthorized(authHeader: string | null): boolean {
 
 export async function GET(request: Request) {
   const headersList = await headers();
-  const authHeader = headersList.get('authorization') ||
-    new URL(request.url).searchParams.get('cron_secret');
+  const authHeader = headersList.get('authorization');
 
   if (!isCronAuthorized(authHeader)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,10 +1,31 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { formatInvoiceNumber } from '@/lib/utils/format';
+import crypto from 'crypto';
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json();
+    const bodyText = await request.text();
+    
+    // Verify Razorpay webhook signature
+    const razorpaySignature = request.headers.get('x-razorpay-signature');
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    
+    if (keySecret && razorpaySignature) {
+      const expectedSig = crypto
+        .createHmac('sha256', keySecret)
+        .update(bodyText)
+        .digest('hex');
+      
+      if (!crypto.timingSafeEqual(Buffer.from(razorpaySignature), Buffer.from(expectedSig))) {
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      }
+    } else if (keySecret && !razorpaySignature) {
+      // Key is configured but no signature provided — reject
+      return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+    }
+    
+    const payload = JSON.parse(bodyText);
     const event = payload.event;
     
     // We expect the payload structure of 'payment.captured'
@@ -168,9 +189,10 @@ export async function POST(request: Request) {
     const msg = err instanceof Error ? err.message : 'Webhook internal failure';
     console.error('Razorpay Webhook Exception:', err);
     const isFetchFailure = msg?.includes('fetch failed') || msg?.includes('TypeError: fetch failed');
-    if (isFetchFailure || process.env.NODE_ENV === 'test' || msg?.includes('Plan not found') || msg?.includes('Member not found')) {
+    if (process.env.NODE_ENV === 'test') {
       return NextResponse.json({ received: true, status: 'mocked', detail: msg });
     }
+    // Return 500 so Razorpay retries the webhook for genuine failures
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
