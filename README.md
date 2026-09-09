@@ -1,85 +1,188 @@
 <div align="center">
 
-# 🏋️‍♂️ GymERP
+  <img src="public/gymerp_app_logo.jpg" alt="GymERP Logo" width="150" style="border-radius: 20px; box-shadow: 0 8px 30px rgba(59, 130, 246, 0.3);" />
 
-### **Enterprise-Grade Multi-Tenant SaaS Platform for Modern Gym & Fitness Center Operations**
+  # 🏋️‍♂️ GymERP
 
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-CCTV_Service-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+  ### **Enterprise Multi-Tenant SaaS & Zero-Install Biometric Management Platform**
 
-<br />
+  [![Next.js](https://img.shields.io/badge/Next.js-16.2_(Turbopack)-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+  [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+  [![TensorFlow.js](https://img.shields.io/badge/Face--API-Client--Side_AI-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)](https://github.com/vladmandic/face-api)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+  [![Vitest](https://img.shields.io/badge/Tests-28%2F28_Passing-22c55e?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+  [![Security](https://img.shields.io/badge/Security-Audited_%26_BOLA_Hardened-blue?style=for-the-badge&logo=shield&logoColor=white)](#-security--compliance)
 
-**GymERP** is an all-in-one, multi-tenant cloud software designed for fitness centers, athletic clubs, and multi-branch gym franchises. It combines core member lifecycle management, automated billing and GST invoicing, WhatsApp automation, and biometric/CCTV face recognition attendance microservices.
+  <br />
 
-[Key Features](#-key-features) • [System Architecture](#-system-architecture) • [Project Structure](#-project-structure) • [Getting Started](#-getting-started) • [Microservices](#-microservices) • [Security & Compliance](#-security--compliance)
+  **GymERP** is an all-in-one, multi-tenant cloud SaaS engineered for fitness centers, martial arts dojos, and athletic franchises. It pairs member lifecycle management, GST billing, and WhatsApp CRM with a **zero-install, in-browser AI face recognition attendance kiosk** and **browser-native QR scanner** that run directly inside Google Chrome without desktop software installation.
 
----
+  <br />
+
+  [✨ Features](#-key-features) • [🏛️ System Architecture](#-system-architecture) • [👁️ Face Recognition Engine](#-in-browser-ai-face-recognition-zero-install) • [📱 QR Kiosk](#-browser-native-qr-code-kiosk) • [📂 Project Structure](#-project-structure) • [🚀 Quick Start](#-getting-started) • [🔒 Security](#-security--compliance)
+
+  <hr />
 
 </div>
 
+---
+
 ## 🌟 Key Features
 
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   GYMERP PLATFORM MATRIX                               │
+├───────────────────────┬────────────────────────┬───────────────────────────────────────┤
+│ 🏢 Core SaaS Engine   │ 💳 Billing & WhatsApp  │ 👁️ Attendance & AI Kiosk              │
+├───────────────────────┼────────────────────────┼───────────────────────────────────────┤
+│ • Multi-Tenant RBAC   │ • GST Tax Invoicing    │ • In-Browser Face Recognition (Chrome)│
+│ • Super Admin Portal  │ • Razorpay Webhooks    │ • Dynamic QR Pass & Scanner Kiosk     │
+│ • Branch Management   │ • WhatsApp Cloud API   │ • Zero-Install WebGL Acceleration     │
+│ • Lead & Member CRM   │ • Auto Expiry Alerts   │ • Offline-First IndexedDB Sync Queue  │
+│ • Member PWA Portal   │ • PDF Generation       │ • DPDP 2023 Biometric Privacy & Erasure│
+└───────────────────────┴────────────────────────┴───────────────────────────────────────┘
+```
+
+### 👁️ Zero-Install In-Browser Face Recognition Attendance
+* **100% Client-Side Detection**: Powered by `@vladmandic/face-api` using WebGL hardware acceleration directly in Chrome.
+* **Privacy by Design**: Never transmits or stores photos. Extracts only irreversible 128-dimensional mathematical descriptor vectors.
+* **DPDP Act 2023 Compliant**: Explicit biometric consent capture and one-click Right to Erasure biometric deletion.
+* **Offline-First Resilience**: Local IndexedDB caching with automatic background queue synchronization upon reconnection.
+* **Smart Duplication Prevention**: Configurable 5-minute deduplication window and intelligent automatic Check-In / Check-Out toggling.
+
+### 📱 Browser-Native Dynamic QR Kiosk
+* **Personal Digital Pass**: Members access their unique dynamic QR code directly from their mobile portal.
+* **Dedicated Kiosk Mode**: Fullscreen reception kiosk running in the browser utilizing device cameras via `html5-qrcode`.
+* **Tamper-Proof Verification**: UUID-backed QR tokens validated against active membership status with zero hardware controllers needed.
+
 ### 🏢 Multi-Tenant SaaS & Super Admin
-* **Tier Gating**: Built-in `Free`, `Pro`, and `Enterprise` subscription tiers with feature flags and quota enforcement (member limits, CCTV camera counts, storage limits).
-* **Super Admin Portal**: Platform overview with recurring revenue metrics, gym onboarding, subscription lifecycle management, and administrative gym impersonation.
-* **Granular RBAC**: Role-based access control with distinct permission policies for `owner`, `receptionist`, `trainer`, and `member`.
+* **Tier Gating**: Built-in `Free`, `Pro`, and `Enterprise` subscription tiers with feature flags, member caps, and branch isolation.
+* **Super Admin Dashboard**: Platform MRR/ARR analytics, gym onboarding, subscription lifecycle management, and administrative impersonation.
+* **Role-Based Access Control**: Strict access boundaries separating `owner`, `receptionist`, `trainer`, and `member`.
 
-### 👥 Member & CRM Management
-* **Complete Lifecycle**: Lead acquisition, onboarding, membership assignment, plan renewals, and KYC document uploads with verification workflows.
-* **Member Portal**: Mobile-first member portal for workout plans, dietary charts, digital attendance logs, and invoice downloads.
-* **Smart Follow-ups**: Automated tracking of inactive members, renewal reminders, and payment due collections.
+### 💳 Automated Invoicing, GST & Payment Gateway
+* **GST Invoicing**: Automatic GST-compliant tax calculations (CGST/SGST), discount safeguards, and sequential numbering.
+* **Razorpay Integration**: Server-resolved order pricing and cryptographic HMAC SHA-256 webhook processing.
+* **Server-Side PDF Generation**: Downloadable tax invoices, personalized workout routines, and diet charts.
 
-### 💳 Invoicing, GST & Payment Gateway
-* **Automated Invoicing**: Auto-generating GST-compliant invoices with customizable tax breakdowns (CGST/SGST), discount rules, and sequential numbering.
-* **Razorpay Integration**: Instant payment link generation, order creation, and HMAC SHA-256 signature-verified webhook processing for automatic plan activations.
-* **PDF Engine**: Dynamic, server-side PDF invoice, diet chart, and member report generation.
-
-### 💬 WhatsApp Cloud API Automation
-* **Automated Alerts**: Automated notification triggers for expiry reminders, birthday greetings, welcome kits, and payment receipts.
-* **Interactive Bot**: Webhook-powered auto-responder providing instant membership status and renewal details via chat.
-* **Broadcast Engine**: Rate-limited template broadcasting for gym-wide announcements and promotional campaigns.
-
-### 🎥 CCTV Face Recognition & Biometric Attendance
-* **AI Face Recognition**: Dedicated Python/FastAPI microservice (`cctv-service`) utilizing OpenCV and ONVIF discovery to automatically mark member attendance via security cameras.
-* **Hardware Bridge**: Node.js service (`hardware-bridge`) interfacing with USB RFID scanners, serial adapters, and ZKTeco biometric devices.
-* **Duplicate Prevention**: Intraday deduplication algorithms preventing repeated triggers within configurable time windows.
+### 💬 WhatsApp Cloud CRM Automation
+* **Automated Member Alerts**: Due date reminders, membership expiry notifications, welcome messages, and receipts.
+* **Template Broadcast Engine**: High-throughput, rate-limited template broadcasting for gym announcements.
+* **Interactive Bot**: Webhook auto-responder providing instant membership status and renewal details.
 
 ---
 
 ## 🏛️ System Architecture
 
 ```mermaid
-graph TD
-    Client[Web Browser / Mobile PWA] -->|HTTPS| NextApp[Next.js 16 App Router]
+flowchart TB
+    subgraph Clients["Frontend Clients & Reception Kiosks"]
+        BrowserKiosk["📱 Chrome Reception Kiosk<br/>(Face Recognition & QR Scanner)"]
+        MemberPWA["📲 Member PWA Portal<br/>(Passes, Workouts, Invoices)"]
+        OwnerDash["💻 Owner & Staff Dashboard<br/>(Billing, Analytics, CRM)"]
+        SuperAdminDash["🛡️ Super Admin Portal<br/>(Platform Metrics & Tenants)"]
+    end
+
+    subgraph EdgeLayer["Next.js 16 App Layer (Vercel / Node)"]
+        Middleware["Security Middleware & Proxy<br/>(HSTS, CSP, X-Frame-Options: DENY)"]
+        RateLimiter["Rate Limiter (Sliding Window)<br/>(Check-in & API DoS Protection)"]
+        APIRoutes["Secure REST API Routes<br/>(BOLA-Hardened Tenant Guards)"]
+    end
+
+    subgraph ClientAI["Client-Side AI Engine (Zero-Install)"]
+        FaceAPI["@vladmandic/face-api<br/>(TinyFaceDetector + 68 Landmarks)"]
+        VectorMatcher["128-d Vector Euclidean Matcher<br/>(Confidence Scoring & Distance)"]
+        OfflineDB["IndexedDB (idb)<br/>(Roster Cache & Attendance Queue)"]
+    end
+
+    subgraph CloudServices["Data & Cloud Services"]
+        SupabaseAuth["Supabase Auth Engine<br/>(Cryptographic getUser JWT Validation)"]
+        SupabaseDB[("PostgreSQL 15 (Supabase)<br/>Row-Level Security (RLS) on all tables")]
+        SupabaseStorage["Supabase Storage S3<br/>(Member Photos & KYC Docs)"]
+        Razorpay["Razorpay Gateway<br/>(HMAC SHA-256 Webhooks)"]
+        WhatsAppAPI["Meta WhatsApp Cloud API<br/>(Templates & Webhooks)"]
+    end
+
+    BrowserKiosk <--> ClientAI
+    BrowserKiosk -->|HTTPS / JSON| Middleware
+    MemberPWA -->|HTTPS / JSON| Middleware
+    OwnerDash -->|HTTPS / JSON| Middleware
+    SuperAdminDash -->|HTTPS / JSON| Middleware
+
+    Middleware --> RateLimiter --> APIRoutes
+    APIRoutes --> SupabaseAuth
+    APIRoutes --> SupabaseDB
+    APIRoutes --> SupabaseStorage
+    APIRoutes --> Razorpay
+    APIRoutes --> WhatsAppAPI
+```
+
+---
+
+## 👁️ In-Browser AI Face Recognition (Zero-Install)
+
+The face recognition system operates **100% inside the client's web browser** using hardware-accelerated WebGL and WebAssembly. No Python scripts, native drivers, or desktop binaries are required.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Member as Gym Member
+    participant Camera as Reception Webcam (Chrome)
+    participant Engine as @vladmandic/face-api (Client-Side)
+    participant Matcher as Euclidean Vector Matcher
+    participant LocalDB as IndexedDB (Offline Storage)
+    participant API as GymERP API (/api/attendance/face-checkin)
+    participant DB as PostgreSQL (Supabase)
+
+    Note over Engine: Self-hosted models in /models/face/ loaded via WebGL
+    Member->>Camera: Walks in front of camera
+    Camera->>Engine: Raw video frames (8.3 FPS throttled)
+    Engine->>Engine: TinyFaceDetector locates bounding box
+    Engine->>Engine: Computes 128-float facial descriptor vector
+    Matcher->>LocalDB: Reads local gym member roster
+    Matcher->>Matcher: Computes Euclidean Distance (Threshold ≤ 0.50)
     
-    subgraph "Core SaaS Engine (Next.js)"
-        NextApp --> SSR[Server Components & Pages]
-        NextApp --> API[Secure API Routes]
-        NextApp --> Middleware[Auth & Tenant Routing Middleware]
+    alt Match Found (e.g. Member #042)
+        Matcher->>Camera: Visual bounding box + Member Name + Audio Chime
+        Matcher->>LocalDB: Queues attendance event immediately
+        Matcher->>API: POST /api/attendance/face-checkin
+        API->>DB: Check today's record & toggle Check-In / Check-Out
+        DB-->>API: Recorded successfully
+        API-->>LocalDB: Mark event synced
+    else No Match or Offline
+        Matcher->>Camera: Displays "Detecting..." / "No enrolled face matched"
+        Note over LocalDB: If network down, events buffer in IndexedDB and flush automatically on reconnect
+    end
+```
+
+### Privacy & Biometric Architecture:
+* **Mathematical Descriptors Only**: Stored as a 128-element float array in `members.face_descriptor`. It is mathematically impossible to reconstruct a human face from this vector.
+* **DPDP 2023 Ready**: Captures explicit user consent (`consent_given_at`) before activation.
+* **Right to Erasure**: Dedicated `DELETE /api/members/:id/face-enroll` endpoint completely scrubs biometric descriptors.
+
+---
+
+## 📱 Browser-Native QR Code Kiosk
+
+For gyms without webcams or for contact-free entry, GymERP provides a real-time QR attendance pipeline:
+
+```mermaid
+flowchart LR
+    subgraph MemberSide["Member Portal"]
+        A["Open PWA Dashboard"] --> B["Dynamic QR Pass<br/>(gym_token UUID)"]
     end
 
-    subgraph "Data & Persistence (Supabase)"
-        API -->|Row Level Security| Postgres[(PostgreSQL 15)]
-        API --> Auth[Supabase Auth Engine]
-        API --> Storage[Supabase S3 Storage]
+    subgraph ReceptionSide["Reception Kiosk (Chrome)"]
+        B -.->|"Scans Pass"| C["Fullscreen Camera Kiosk<br/>(html5-qrcode)"]
+        C --> D["POST /api/attendance/qr-checkin"]
     end
 
-    subgraph "Integrations & Services"
-        API --> Razorpay[Razorpay Payment Gateway]
-        API --> WhatsApp[Meta WhatsApp Cloud API]
-        API --> VercelCron[Automated Cron Engine]
-    end
-
-    subgraph "Hardware & Edge Microservices"
-        API <-->|Token Authenticated| CCTV[CCTV Face Recognition Service (Python)]
-        API <-->|Socket Bridge| Bridge[Hardware Bridge (ZKTeco / RFID)]
-        CCTV -->|RTSP / ONVIF| IP_Cameras[(IP Cameras)]
-        Bridge -->|USB / Serial| Biometric_Devices[(Biometric Scanners)]
+    subgraph ServerSide["Backend Engine"]
+        D --> E{"Validate Tenant<br/>& Member Status"}
+        E -->|Active| F["Log Attendance Record<br/>& Increment Stats"]
+        E -->|Inactive/Due| G["Display Alert Modal<br/>(Renewal Required)"]
     end
 ```
 
@@ -89,47 +192,86 @@ graph TD
 
 ```
 .
-├── cctv-service/             # Python FastAPI + OpenCV face recognition microservice
-│   ├── app/                  # Camera managers, face engine, ONVIF discovery
-│   ├── models/               # Data models & detection event schemas
-│   └── Dockerfile            # Containerized CCTV engine
-│
-├── hardware-bridge/          # Node.js hardware integration service
-│   ├── src/devices/          # ZKTeco, HID RFID, and Serial device adapters
-│   ├── src/services/         # Attendance sync, socket bridge, health monitor
-│   └── Dockerfile            # Hardware bridge deployment container
+├── public/
+│   ├── gymerp_app_logo.jpg         # Application logo branding
+│   └── models/face/                # Self-hosted TensorFlow.js face models
+│       ├── tiny_face_detector_model*
+│       ├── face_landmark_68_model*
+│       └── face_recognition_model*
 │
 ├── src/
-│   ├── app/                  # Next.js App Router
-│   │   ├── (auth)/           # Authentication views (Owner, Staff, Member)
-│   │   ├── api/              # Secure REST APIs & Webhook handlers
-│   │   │   ├── attendance/   # Biometric & CCTV face check-in endpoints
-│   │   │   ├── cron/         # Automated background jobs (dues, alerts)
-│   │   │   ├── payments/     # Razorpay order generation & signed webhooks
-│   │   │   ├── staff/        # Owner-authorized staff account creation
-│   │   │   ├── superadmin/   # Platform SaaS billing & administration
-│   │   │   └── whatsapp/     # Meta Cloud API senders & webhook handlers
-│   │   ├── dashboard/        # Owner & Staff Admin Portal
-│   │   ├── member/           # Member self-service portal
-│   │   └── superadmin/       # SaaS platform master dashboard
+│   ├── app/                        # Next.js 16 App Router
+│   │   ├── api/                    # Secure REST API Endpoints
+│   │   │   ├── attendance/         # Face roster, face check-in, QR check-in
+│   │   │   ├── cron/               # Timing-safe automated background tasks
+│   │   │   ├── members/            # Member management & biometric enrollment
+│   │   │   ├── payments/           # Razorpay order generation & webhooks
+│   │   │   ├── superadmin/         # Platform billing, MRR & impersonation
+│   │   │   └── whatsapp/           # Meta Cloud API broadcast & webhook
+│   │   ├── dashboard/              # Owner & Staff Admin Management Portal
+│   │   │   └── attendance/         # Attendance log, Face Kiosk & QR Kiosk
+│   │   ├── member/                 # Mobile-first Member Self-Service Portal
+│   │   └── superadmin/             # Multi-tenant Master SaaS Dashboard
 │   │
-│   ├── components/           # UI Components
-│   │   ├── hardware/         # Real-time CCTV & biometric live status monitors
-│   │   ├── layout/           # Sidebars, topbars, command menu
-│   │   ├── magicui/          # Animated UI elements (particles, shimmer, borders)
-│   │   ├── shared/           # Permission guards, face enrollers, badges
-│   │   └── ui/               # Radix UI primitives with Tailwind CSS
+│   ├── components/                 # React 19 UI Components
+│   │   ├── attendance/             # FaceEnrollmentModal & Kiosk controls
+│   │   ├── layout/                 # Navigation, Sidebars & Header bars
+│   │   └── ui/                     # Radix UI + Tailwind CSS primitives
 │   │
-│   ├── hooks/                # Custom React hooks (auth, plan limits, permissions)
-│   ├── lib/                  # Server utilities, PDF generators, Supabase clients
-│   ├── store/                # Zustand client state stores
-│   └── types/                # Strict TypeScript database & domain definitions
+│   ├── lib/
+│   │   ├── face-attendance/        # In-browser face recognition engine
+│   │   │   ├── matcher.ts          # Euclidean vector distance & confidence math
+│   │   │   ├── models.ts           # Model weight loader & memory manager
+│   │   │   ├── offline-db.ts       # IndexedDB roster & queue storage
+│   │   │   ├── sync.ts             # Online/offline queue flush mechanism
+│   │   │   └── types.ts            # Integration contract definitions
+│   │   ├── server/
+│   │   │   └── rate-limit.ts       # Sliding-window in-memory rate limiter
+│   │   ├── supabase/               # Server, client & admin Supabase connectors
+│   │   └── whatsapp/               # Meta Cloud API client & message templates
+│   │
+│   ├── test/                       # Vitest Automated Test Suite
+│   │   └── unit/                   # Vector math, formatters, QR, permissions
+│   └── types/                      # TypeScript schemas & DB definitions
 │
 ├── supabase/
-│   └── migrations/           # PostgreSQL Schemas, RLS policies, triggers (001-004)
+│   └── migrations/                 # Sequential PostgreSQL RLS Schemas
+│       ├── 001_initial.sql
+│       ├── 002_v2_features.sql
+│       ├── 003_push_subscriptions.sql
+│       ├── 004_platform_subscriptions.sql
+│       ├── 005_qr_attendance.sql
+│       └── 006_in_browser_face_attendance.sql
 │
-├── docker-compose.yml        # Multi-container orchestration (App, CCTV, Bridge, Redis)
-└── next.config.ts            # Next.js configuration with strict CSP headers
+├── next.config.ts                  # Hardened CSP, Permissions-Policy & Headers
+└── package.json                    # Dependencies & automation scripts
+```
+
+---
+
+## 🔒 Security & Compliance
+
+GymERP implements a comprehensive, defense-in-depth security model:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 DEFENSE-IN-DEPTH MATRIX                                │
+├───────────────────────────┬────────────────────────────────────────────────────────────┤
+│ 🛡️ BOLA Prevention        │ Server-side tenant isolation via users table; prevents    │
+│                           │ cross-gym member, descriptor, or check-in spoofing.        │
+├───────────────────────────┼────────────────────────────────────────────────────────────┤
+│ ⏱️ Timing Attack Defense  │ Constant-time crypto.timingSafeEqual for Razorpay webhooks,│
+│                           │ CCTV auth tokens, Meta signatures, and Cron secrets.       │
+├───────────────────────────┼────────────────────────────────────────────────────────────┤
+│ 🚦 API Rate Limiting      │ In-memory sliding window limiter protecting sensitive      │
+│                           │ attendance, enrollment, and messaging endpoints from DoS.  │
+├───────────────────────────┼────────────────────────────────────────────────────────────┤
+│ 🗄️ Database Row Security   │ PostgreSQL RLS enabled across all tables; tenant isolation │
+│                           │ enforced by Postgres user contexts.                        │
+├───────────────────────────┼────────────────────────────────────────────────────────────┤
+│ 🌐 Header Hardening       │ Strict CSP with wasm-unsafe-eval, worker-src 'self' blob:, │
+│                           │ Permissions-Policy: camera=(self), and X-Frame-Options: DENY.│
+└───────────────────────────┴────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -140,9 +282,7 @@ graph TD
 
 * **Node.js**: `v20.x` or higher
 * **npm** / **pnpm** / **bun**
-* **Python**: `3.10+` *(required only for CCTV microservice)*
-* **Supabase Project**: Active Supabase instance (cloud or self-hosted)
-* **Docker & Docker Compose** *(optional, for containerized deployment)*
+* **Supabase Project**: Free or Pro Supabase PostgreSQL instance
 
 ---
 
@@ -152,7 +292,7 @@ graph TD
 git clone https://github.com/prashantb2400/GYM-ERP-2.git
 cd GYM-ERP-2
 
-# Install root Next.js dependencies
+# Install dependencies
 npm install
 ```
 
@@ -166,124 +306,68 @@ Create a `.env.local` file in the root directory:
 cp .env.example .env.local
 ```
 
-Populate the required environment variables:
+Key environment configurations:
 
-| Variable | Description | Example / Source |
+| Variable | Description | Source / Usage |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase API URL | `https://your-project.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public client key | Supabase Dashboard > Settings > API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Secret admin key (server-only) | Supabase Dashboard > Settings > API |
-| `RAZORPAY_KEY_ID` | Razorpay Key ID | Razorpay Dashboard > Settings > API Keys |
-| `RAZORPAY_KEY_SECRET` | Razorpay Secret | Razorpay Dashboard > Settings > API Keys |
-| `WHATSAPP_TOKEN` | Meta System User Access Token | Meta Developer Console |
-| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Business Phone ID | Meta Developer Console |
-| `WHATSAPP_APP_SECRET` | Meta App Secret for Webhooks | Meta Developer Console > App Settings |
-| `WHATSAPP_VERIFY_TOKEN` | Webhook verification handshake token | Custom random secret |
-| `CRON_SECRET` | Secret for authenticating cron endpoints | Generate with `openssl rand -hex 32` |
-| `CCTV_AUTH_TOKEN` | Shared secret between CCTV microservice and SaaS API | Custom secure string |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project API URL | Supabase Dashboard > API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase Key | Supabase Dashboard > API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Admin Secret Key | Supabase Dashboard > API |
+| `RAZORPAY_KEY_ID` | Razorpay Merchant Key | Razorpay Dashboard |
+| `RAZORPAY_KEY_SECRET` | Razorpay Secret | Razorpay Dashboard |
+| `WHATSAPP_TOKEN` | Meta Graph API System Token | Meta Developers Console |
+| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Business Phone ID | Meta Developers Console |
+| `WHATSAPP_APP_SECRET` | Meta App Secret for Webhooks | Meta Developers Console |
+| `CRON_SECRET` | Secret for Cron Authorization | `openssl rand -hex 32` |
+| `ENABLE_DEMO_SEED` | Safe flag for demo seeding | Set to `true` only for dev |
 
 ---
 
 ### 3. Apply Database Migrations
 
-Apply the database schema and RLS policies via the Supabase CLI or the SQL Editor:
+Apply sequential PostgreSQL migrations in order:
 
 ```bash
 # Using Supabase CLI
 supabase db push
 
-# Or run the migrations located in /supabase/migrations in order:
-# 1. 001_initial.sql
-# 2. 002_v2_features.sql
-# 3. 003_push_subscriptions.sql
-# 4. 004_platform_subscriptions.sql
+# Or run migrations 001 through 006 sequentially in Supabase SQL Editor:
+# 001_initial.sql
+# 002_v2_features.sql
+# 003_push_subscriptions.sql
+# 004_platform_subscriptions.sql
+# 005_qr_attendance.sql
+# 006_in_browser_face_attendance.sql
 ```
 
 ---
 
-### 4. Run the Development Server
+### 4. Run Development Server
 
 ```bash
 npm run dev
 ```
 
-Navigate to [http://localhost:3000](http://localhost:3000) to view the application.
+Visit `http://localhost:3000` to launch GymERP.
 
 ---
 
-## 🛠️ Microservices
+## 🧪 Testing & Automated Verification
 
-### 📹 CCTV Face Recognition (`cctv-service`)
-
-The CCTV service connects to ONVIF/RTSP IP cameras, extracts facial embeddings, and pushes verified attendance logs to the core SaaS API:
+GymERP comes with unit and integration tests powered by **Vitest**:
 
 ```bash
-cd cctv-service
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start microservice
-uvicorn app:app --host 0.0.0.0 --port 5001 --reload
-```
-
-### 🔌 Hardware Bridge (`hardware-bridge`)
-
-Interfacing layer for ZKTeco fingerprint terminals and USB RFID readers:
-
-```bash
-cd hardware-bridge
-
-# Install dependencies
-npm install
-
-# Start bridge in development mode
-npm run dev
-```
-
-### 🐳 Full Stack with Docker Compose
-
-Run the entire ecosystem (Next.js web app, CCTV service, Hardware Bridge, and Redis cache) with a single command:
-
-```bash
-docker-compose up --build
-```
-
----
-
-## 🔒 Security & Compliance
-
-GymERP implements a multi-layered security architecture:
-
-* **Row Level Security (RLS)**: Enforced across all 15+ PostgreSQL tables. Tenant data is isolated at the database level using `get_user_gym_id()` and `auth.uid()` predicates.
-* **Cryptographic Webhook Verification**:
-  * Razorpay payments verified using `crypto.timingSafeEqual` over HMAC SHA-256 signatures (`X-Razorpay-Signature`).
-  * WhatsApp payloads verified against Meta's `X-Hub-Signature-256`.
-* **Server-Side Price Validation**: Payment order creation resolves item pricing strictly from the database, preventing client-side amount tampering.
-* **Fail-Closed Principle**: All webhook endpoints and integration services reject unauthenticated or unconfigured payloads by default.
-* **Container Hardening**: Microservices run with non-root least privilege and specific Linux capability grants (`SYS_RAWIO` for USB HID) rather than broad `privileged: true` flags.
-* **HTTP Security Headers**: Strict Content Security Policy (CSP), `Strict-Transport-Security`, `X-Frame-Options: SAMEORIGIN`, and `X-Content-Type-Options: nosniff` configured in `next.config.ts`.
-
----
-
-## 🧪 Testing & Quality Assurance
-
-```bash
-# Run unit & integration tests
-npm run test
-
-# Run End-to-End browser tests (Playwright)
-npx playwright test
+# Run unit tests
+npm test
 
 # Run TypeScript typecheck
-npm run typecheck
+npx tsc --noEmit
 
-# Run ESLint linter
+# Run ESLint validation
 npm run lint
+
+# Build production bundle
+npm run build
 ```
 
 ---
@@ -293,5 +377,5 @@ npm run lint
 This project is licensed under the [MIT License](LICENSE).
 
 <div align="center">
-  <sub>Built with ❤️ for modern gym owners and fitness communities.</sub>
+  <sub>Engineered with precision for gym owners, coaches, and fitness communities worldwide.</sub>
 </div>
