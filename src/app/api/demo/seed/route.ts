@@ -2,8 +2,8 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ success: false, message: 'Demo seeding is disabled in production' }, { status: 403 });
+  if (process.env.NODE_ENV === 'production' || process.env.ENABLE_DEMO_SEED !== 'true') {
+    return NextResponse.json({ success: false, message: 'Demo seeding is disabled' }, { status: 403 });
   }
 
   try {

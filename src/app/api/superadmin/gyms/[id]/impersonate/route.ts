@@ -31,9 +31,8 @@ export async function POST(
       success: true, 
       impersonation_data: {
         gym_id: id,
-        user_id: gym.owner_id,
         gym_name: gym.name,
-        message: 'Impersonation requires frontend token generation support'
+        message: 'Impersonation requires configured frontend session handover'
       }
     });
   } catch (error: any) {

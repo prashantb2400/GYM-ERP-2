@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import crypto from 'crypto';
 
 function isAuthorized(authHeader: string | null): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return authHeader === `Bearer ${secret}`;
+  if (!secret || !authHeader) return false;
+  const expected = `Bearer ${secret}`;
+  const authBuf = Buffer.from(authHeader);
+  const expBuf = Buffer.from(expected);
+  if (authBuf.length !== expBuf.length) return false;
+  return crypto.timingSafeEqual(authBuf, expBuf);
 }
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   const headersList = await headers();
-  const auth = headersList.get('authorization') ??
-    new URL(request.url).searchParams.get('cron_secret');
+  const auth = headersList.get('authorization');
 
   if (!isAuthorized(auth)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

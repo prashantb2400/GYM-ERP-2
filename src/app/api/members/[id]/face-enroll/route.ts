@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { isSuperAdmin } from '@/lib/platform/auth';
+import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 
 export async function POST(
   request: Request,
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`face-enroll:${ip}`, 30, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } }
+      );
+    }
+
     const params = await props.params;
     const { id: memberId } = params;
 
@@ -14,6 +25,34 @@ export async function POST(
     const { data: { user: sessionUser } } = await supabase.auth.getUser();
     if (!sessionUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Resolve caller's gym for tenant isolation
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('gym_id, role')
+      .eq('auth_id', sessionUser.id)
+      .single();
+
+    const callerGymId = userData?.gym_id;
+    const isPlatformAdmin = !callerGymId ? await isSuperAdmin(sessionUser.id) : false;
+
+    // Verify member exists and belongs to caller's gym
+    let memberQuery = supabaseAdmin
+      .from('members')
+      .select('id, gym_id')
+      .eq('id', memberId);
+
+    if (!isPlatformAdmin) {
+      if (!callerGymId) {
+        return NextResponse.json({ error: 'Forbidden: No gym assigned to this user' }, { status: 403 });
+      }
+      memberQuery = memberQuery.eq('gym_id', callerGymId);
+    }
+
+    const { data: targetMember, error: memberErr } = await memberQuery.single();
+    if (memberErr || !targetMember) {
+      return NextResponse.json({ error: 'Member not found or access denied' }, { status: 404 });
     }
 
     const body = await request.json();
@@ -29,7 +68,7 @@ export async function POST(
 
     const nowIso = new Date().toISOString();
 
-    const { error: updateErr } = await supabaseAdmin
+    let updateQuery = supabaseAdmin
       .from('members')
       .update({
         face_enrolled: true,
@@ -39,6 +78,11 @@ export async function POST(
       })
       .eq('id', memberId);
 
+    if (!isPlatformAdmin && callerGymId) {
+      updateQuery = updateQuery.eq('gym_id', callerGymId);
+    }
+
+    const { error: updateErr } = await updateQuery;
     if (updateErr) throw updateErr;
 
     return NextResponse.json({
@@ -54,10 +98,19 @@ export async function POST(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`face-delete:${ip}`, 30, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } }
+      );
+    }
+
     const params = await props.params;
     const { id: memberId } = params;
 
@@ -67,10 +120,38 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Resolve caller's gym for tenant isolation
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('gym_id, role')
+      .eq('auth_id', sessionUser.id)
+      .single();
+
+    const callerGymId = userData?.gym_id;
+    const isPlatformAdmin = !callerGymId ? await isSuperAdmin(sessionUser.id) : false;
+
+    // Verify member exists and belongs to caller's gym
+    let memberQuery = supabaseAdmin
+      .from('members')
+      .select('id, gym_id')
+      .eq('id', memberId);
+
+    if (!isPlatformAdmin) {
+      if (!callerGymId) {
+        return NextResponse.json({ error: 'Forbidden: No gym assigned to this user' }, { status: 403 });
+      }
+      memberQuery = memberQuery.eq('gym_id', callerGymId);
+    }
+
+    const { data: targetMember, error: memberErr } = await memberQuery.single();
+    if (memberErr || !targetMember) {
+      return NextResponse.json({ error: 'Member not found or access denied' }, { status: 404 });
+    }
+
     const nowIso = new Date().toISOString();
 
     // Right to erasure: permanently delete descriptor
-    const { error: deleteErr } = await supabaseAdmin
+    let deleteQuery = supabaseAdmin
       .from('members')
       .update({
         face_enrolled: false,
@@ -80,6 +161,11 @@ export async function DELETE(
       })
       .eq('id', memberId);
 
+    if (!isPlatformAdmin && callerGymId) {
+      deleteQuery = deleteQuery.eq('gym_id', callerGymId);
+    }
+
+    const { error: deleteErr } = await deleteQuery;
     if (deleteErr) throw deleteErr;
 
     return NextResponse.json({

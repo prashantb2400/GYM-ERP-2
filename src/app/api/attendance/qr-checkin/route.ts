@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { isSuperAdmin } from '@/lib/platform/auth';
+import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`qr-checkin:${ip}`, 60, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please slow down.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } }
+      );
+    }
+
     // 1. Verify the caller is an authenticated staff/owner
     const supabase = await createClient();
     const { data: { user: sessionUser } } = await supabase.auth.getUser();
@@ -11,10 +22,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { qrToken, gymId } = await request.json();
+    const { qrToken, gymId: requestedGymId } = await request.json();
 
-    if (!qrToken || !gymId) {
-      return NextResponse.json({ error: 'Missing qrToken or gymId' }, { status: 400 });
+    if (!qrToken) {
+      return NextResponse.json({ error: 'Missing qrToken' }, { status: 400 });
+    }
+
+    // Tenant isolation: resolve gym_id from caller's account
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('gym_id, role')
+      .eq('auth_id', sessionUser.id)
+      .single();
+
+    let gymId = userData?.gym_id;
+
+    if (!gymId) {
+      const superAdmin = await isSuperAdmin(sessionUser.id);
+      if (superAdmin && requestedGymId) {
+        gymId = requestedGymId;
+      } else {
+        return NextResponse.json({ error: 'Forbidden: No gym assigned to this account' }, { status: 403 });
+      }
+    } else if (requestedGymId && requestedGymId !== gymId) {
+      const superAdmin = await isSuperAdmin(sessionUser.id);
+      if (!superAdmin) {
+        return NextResponse.json({ error: 'Forbidden: Cross-tenant check-in prohibited' }, { status: 403 });
+      }
+      gymId = requestedGymId;
     }
 
     // 2. Look up the member by qr_token + gym_id

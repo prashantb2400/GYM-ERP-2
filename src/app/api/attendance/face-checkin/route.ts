@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { isSuperAdmin } from '@/lib/platform/auth';
+import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`face-checkin:${ip}`, 60, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please slow down.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user: sessionUser } } = await supabase.auth.getUser();
     if (!sessionUser) {
@@ -11,10 +22,34 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { gymId, memberId, confidence, type = 'auto', deviceId } = body;
+    const { gymId: requestedGymId, memberId, confidence, type = 'auto', deviceId } = body;
 
-    if (!gymId || !memberId) {
-      return NextResponse.json({ error: 'Missing required gymId or memberId' }, { status: 400 });
+    if (!memberId) {
+      return NextResponse.json({ error: 'Missing required memberId' }, { status: 400 });
+    }
+
+    // Tenant isolation: resolve gym_id from caller's account
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('gym_id, role')
+      .eq('auth_id', sessionUser.id)
+      .single();
+
+    let gymId = userData?.gym_id;
+
+    if (!gymId) {
+      const superAdmin = await isSuperAdmin(sessionUser.id);
+      if (superAdmin && requestedGymId) {
+        gymId = requestedGymId;
+      } else {
+        return NextResponse.json({ error: 'Forbidden: No gym assigned to this account' }, { status: 403 });
+      }
+    } else if (requestedGymId && requestedGymId !== gymId) {
+      const superAdmin = await isSuperAdmin(sessionUser.id);
+      if (!superAdmin) {
+        return NextResponse.json({ error: 'Forbidden: Cross-tenant check-in prohibited' }, { status: 403 });
+      }
+      gymId = requestedGymId;
     }
 
     // 1. Verify member belongs to this gym and is active
@@ -52,6 +87,13 @@ export async function POST(request: Request) {
 
     // Decision logic for Check-In vs Check-Out
     if (!existingAttendance) {
+      if (type === 'out') {
+        return NextResponse.json({
+          error: 'Cannot check out: Member has not checked in today',
+          member_name: member.name,
+        }, { status: 400 });
+      }
+
       // First scan of the day -> Check-In
       const { error: insertErr } = await supabaseAdmin
         .from('attendance')

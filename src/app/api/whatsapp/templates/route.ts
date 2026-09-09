@@ -6,9 +6,9 @@ import { waClient } from '@/lib/whatsapp/client';
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !session) {
+    if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

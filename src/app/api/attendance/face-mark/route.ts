@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 import crypto from 'crypto';
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`face-mark:${ip}`, 60, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please slow down.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } }
+      );
+    }
+
     const { memberCode, confidence, gymId, token, notes } = await request.json();
 
     if (!memberCode || !gymId || !token) {
