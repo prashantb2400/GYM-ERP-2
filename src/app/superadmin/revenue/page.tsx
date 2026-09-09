@@ -12,7 +12,7 @@ import { BorderBeam } from '@/components/magicui/border-beam';
 import { createClient } from '@/lib/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-const PIE_COLORS = ['#3b82f6', '#9333ea', '#f59e0b', '#10b981'];
+const PIE_COLORS = ['#3b82f6', '#06b6d4', '#f59e0b', '#10b981'];
 
 export default function RevenueAnalyticsPage() {
   const supabase = createClient();
@@ -226,7 +226,7 @@ export default function RevenueAnalyticsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Timeline */}
-        <GlowCard glowColor="purple">
+        <GlowCard glowColor="blue">
           <Card className="border-zinc-800 bg-zinc-900/40 h-full">
             <CardHeader>
               <CardTitle className="text-md font-bold text-zinc-100">Revenue Timeline</CardTitle>
@@ -238,15 +238,15 @@ export default function RevenueAnalyticsPage() {
                 <AreaChart data={revenueTimeline} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#9333ea" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#9333ea" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                   <XAxis dataKey="month" stroke="#71717a" fontSize={11} tickLine={false} />
                   <YAxis stroke="#71717a" fontSize={11} tickLine={false} tickFormatter={(val) => `₹${val/1000}k`} />
                   <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }} />
-                  <Area type="monotone" name="Revenue" dataKey="Revenue" stroke="#9333ea" fill="url(#colorRev)" strokeWidth={2} />
+                  <Area type="monotone" name="Revenue" dataKey="Revenue" stroke="#3b82f6" fill="url(#colorRev)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>

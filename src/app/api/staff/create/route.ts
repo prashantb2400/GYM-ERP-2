@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     // Verify caller is an owner
     const { data: callerData } = await supabase
       .from('users')
-      .select('gym_id, role')
+      .select('id, gym_id, role')
       .eq('auth_id', user.id)
       .single();
     
@@ -33,10 +33,14 @@ export async function POST(request: Request) {
     } = await request.json();
     
     const gymId = callerData.gym_id; // Server-side resolved
-    const createdBy = callerData.gym_id; // Track who created
+    const createdBy = callerData.id; // Track who created (users.id FK)
 
     if (!name || !email || !loginId || !password || !role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (!['receptionist', 'trainer'].includes(role)) {
+      return NextResponse.json({ error: 'Invalid staff role. Allowed: receptionist, trainer' }, { status: 400 });
     }
 
     // 1. Create the user in Supabase Auth using the admin client

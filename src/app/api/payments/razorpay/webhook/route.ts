@@ -17,7 +17,9 @@ export async function POST(request: Request) {
         .update(bodyText)
         .digest('hex');
       
-      if (!crypto.timingSafeEqual(Buffer.from(razorpaySignature), Buffer.from(expectedSig))) {
+      const sigBuffer = Buffer.from(razorpaySignature);
+      const expectedBuffer = Buffer.from(expectedSig);
+      if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
       }
     } else if (keySecret && !razorpaySignature) {

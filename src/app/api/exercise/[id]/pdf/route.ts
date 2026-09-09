@@ -12,94 +12,95 @@ export async function GET(
     const supabase = await createClient();
     const planId = id;
 
-    // Fetch gym profile
-    const { data: gymProfile } = await supabase
-      .from('gym_profiles')
-      .select('*')
-      .limit(1)
+    // Fetch exercise chart or check if planId belongs to a member
+    let { data: chart } = await supabase
+      .from('exercise_charts')
+      .select('*, gyms(*)')
+      .eq('id', planId)
       .single();
 
-    const gymData = gymProfile || {
+    let memberData: any = null;
+    let gymRecord = chart?.gyms as any;
+
+    if (!chart) {
+      const { data: member } = await supabase
+        .from('members')
+        .select('*, exercise_charts(*), gyms(*)')
+        .eq('id', planId)
+        .single();
+      if (member) {
+        memberData = member;
+        chart = member.exercise_charts as any;
+        gymRecord = member.gyms as any;
+      }
+    }
+
+    const gymData = gymRecord || {
       name: 'Gym Name',
       address: 'Gym Address',
       phone: '1234567890',
       email: 'contact@gym.com'
     };
 
-    // Creating mock data since we don't know the exact schema for exercise plans
+    const defaultDays = [
+      {
+        dayName: 'Day 1 - Monday',
+        focus: 'Chest & Triceps',
+        exercises: [
+          {
+            name: 'Barbell Bench Press',
+            sets: 4,
+            reps: '8-10',
+            rest: '90s',
+            muscleGroups: ['Chest', 'Triceps'],
+            notes: 'Focus on slow eccentric movement.'
+          },
+          {
+            name: 'Incline Dumbbell Press',
+            sets: 3,
+            reps: '10-12',
+            rest: '60s',
+            muscleGroups: ['Upper Chest'],
+            notes: ''
+          }
+        ]
+      }
+    ];
+
+    const days = Array.isArray(chart?.days) && chart.days.length > 0
+      ? chart.days.map((d: any) => ({
+          dayName: d.day || d.dayName || 'Workout Day',
+          focus: d.focus || d.name || 'General',
+          exercises: Array.isArray(d.exercises) ? d.exercises.map((ex: any) => ({
+            name: ex.name || 'Exercise',
+            sets: Number(ex.sets) || 3,
+            reps: String(ex.reps || '10-12'),
+            rest: ex.rest_seconds ? `${ex.rest_seconds}s` : (ex.rest || '60s'),
+            muscleGroups: Array.isArray(ex.muscleGroups) ? ex.muscleGroups : [ex.target || 'General'],
+            notes: ex.notes || ''
+          })) : []
+        }))
+      : defaultDays;
+
     const templateData: ExercisePlanData = {
       gym: {
-        name: gymData.name,
-        address: `${gymData.address?.street || ''} ${gymData.address?.city || ''} ${gymData.address?.state || ''} ${gymData.address?.pin || ''}`.trim() || gymData.address || 'Address not provided',
+        name: gymData.business_name || gymData.name,
+        address: typeof gymData.address === 'object' && gymData.address !== null
+          ? `${gymData.address.street || ''} ${gymData.address.city || ''} ${gymData.address.state || ''} ${gymData.address.pin || ''}`.trim() || 'Address not provided'
+          : (gymData.address || 'Address not provided'),
         phone: gymData.phone || 'N/A',
         email: gymData.email || 'N/A',
       },
       member: {
-        id: planId,
-        name: 'John Doe', // Mocked
-        level: 'Intermediate',
-        goal: 'Hypertrophy',
+        id: memberData?.id || planId,
+        name: memberData?.name || chart?.name || 'Member',
+        level: memberData?.fitness_level || 'Intermediate',
+        goal: memberData?.health_goals?.[0] || 'General Fitness',
       },
       dateIssued: new Date().toISOString(),
       trainerName: 'Master Trainer',
       duration: '8 Weeks',
-      days: [
-        {
-          dayName: 'Day 1 - Monday',
-          focus: 'Chest & Triceps',
-          exercises: [
-            {
-              name: 'Barbell Bench Press',
-              sets: 4,
-              reps: '8-10',
-              rest: '90s',
-              muscleGroups: ['Chest', 'Triceps'],
-              notes: 'Focus on slow eccentric movement.'
-            },
-            {
-              name: 'Incline Dumbbell Press',
-              sets: 3,
-              reps: '10-12',
-              rest: '60s',
-              muscleGroups: ['Upper Chest']
-            },
-            {
-              name: 'Tricep Pushdowns',
-              sets: 3,
-              reps: '12-15',
-              rest: '45s',
-              muscleGroups: ['Triceps']
-            }
-          ]
-        },
-        {
-          dayName: 'Day 2 - Wednesday',
-          focus: 'Back & Biceps',
-          exercises: [
-            {
-              name: 'Lat Pulldown',
-              sets: 4,
-              reps: '10-12',
-              rest: '60s',
-              muscleGroups: ['Lats'],
-            },
-            {
-              name: 'Barbell Row',
-              sets: 3,
-              reps: '8-10',
-              rest: '90s',
-              muscleGroups: ['Middle Back'],
-            },
-            {
-              name: 'Barbell Bicep Curl',
-              sets: 3,
-              reps: '12-15',
-              rest: '45s',
-              muscleGroups: ['Biceps']
-            }
-          ]
-        }
-      ]
+      days,
     };
 
     const html = generateExercisePlanHTML(templateData);

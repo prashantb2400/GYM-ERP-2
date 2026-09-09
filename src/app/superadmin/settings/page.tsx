@@ -25,7 +25,7 @@ export default function SettingsPage() {
 
   const [brandingSettings, setBrandingSettings] = useState({
     logoUrl: 'https://gymerp.com/logo.png',
-    primaryColor: '#9333ea',
+    primaryColor: '#3b82f6',
     footerText: '© 2026 GymERP Inc. All rights reserved.',
   });
 
@@ -120,7 +120,7 @@ export default function SettingsPage() {
                   </div>
                   <Switch checked={platformSettings.autoDowngrade} onCheckedChange={c => setPlatformSettings({...platformSettings, autoDowngrade: c})} />
                 </div>
-                <Button onClick={() => handleSaveSettings('Platform')} className="bg-purple-600 hover:bg-purple-700">
+                <Button onClick={() => handleSaveSettings('Platform')}>
                   <Save className="w-4 h-4 mr-2" /> Save Changes
                 </Button>
               </CardContent>
@@ -152,7 +152,7 @@ export default function SettingsPage() {
                     <Textarea value={brandingSettings.footerText} onChange={e => setBrandingSettings({...brandingSettings, footerText: e.target.value})} className="bg-zinc-950 border-zinc-800 text-zinc-100 min-h-[100px]" />
                   </div>
                 </div>
-                <Button onClick={() => handleSaveSettings('Branding')} className="bg-purple-600 hover:bg-purple-700">
+                <Button onClick={() => handleSaveSettings('Branding')}>
                   <Save className="w-4 h-4 mr-2" /> Save Changes
                 </Button>
               </CardContent>
@@ -185,7 +185,7 @@ export default function SettingsPage() {
                     <Input value={paymentSettings.invoicePrefix} onChange={e => setPaymentSettings({...paymentSettings, invoicePrefix: e.target.value})} className="bg-zinc-950 border-zinc-800 text-zinc-100 uppercase" />
                   </div>
                 </div>
-                <Button onClick={() => handleSaveSettings('Payments')} className="bg-purple-600 hover:bg-purple-700">
+                <Button onClick={() => handleSaveSettings('Payments')}>
                   <Save className="w-4 h-4 mr-2" /> Save Changes
                 </Button>
               </CardContent>
@@ -269,7 +269,7 @@ export default function SettingsPage() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setNewAdminModal(false)} className="text-zinc-400">Cancel</Button>
-            <Button onClick={handleAddAdmin} className="bg-purple-600 hover:bg-purple-700">Send Invite</Button>
+            <Button onClick={handleAddAdmin}>Send Invite</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

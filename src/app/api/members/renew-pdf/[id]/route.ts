@@ -1,12 +1,32 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id: memberId } = await params;
+
+    // Verify caller has permission to view this member (either the member themselves or gym staff)
+    const { data: callerUser } = await supabaseAdmin
+      .from('users')
+      .select('gym_id, role')
+      .eq('auth_id', user.id)
+      .single();
+
+    const { data: callerMember } = await supabaseAdmin
+      .from('members')
+      .select('id, gym_id')
+      .eq('auth_id', user.id)
+      .single();
 
     // 1. Fetch member details
     const { data: member, error: memberErr } = await supabaseAdmin
@@ -17,6 +37,14 @@ export async function GET(
 
     if (memberErr || !member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+
+    // Verify access: caller must either be the member themselves or staff/owner in the same gym
+    const isOwnerOrStaff = callerUser && callerUser.gym_id === member.gym_id;
+    const isSelf = callerMember && callerMember.id === member.id;
+
+    if (!isOwnerOrStaff && !isSelf) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // 2. Fetch latest paid invoice for the plan renewal

@@ -1,19 +1,17 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
-          <Link href="/">
-            <Button variant="ghost" className="text-zinc-400 hover:text-zinc-100 flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" /> Back to Home
-            </Button>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Home
           </Link>
         </div>
         
@@ -29,7 +27,7 @@ export default function PrivacyPolicy() {
               (collectively, the "Services").
             </p>
             <p className="text-zinc-300 mt-2">
-              Contact us at: <a href="mailto:support@gymerp.com" className="text-purple-400 hover:text-purple-300">support@gymerp.com</a>
+              Contact us at: <a href="mailto:support@gymerp.com" className="text-primary hover:underline">support@gymerp.com</a>
             </p>
           </section>
 
@@ -114,7 +112,7 @@ export default function PrivacyPolicy() {
               <li>Withdraw your consent for data processing at any time.</li>
             </ul>
             <p className="text-zinc-300 mt-2">
-              To exercise these rights, please contact our Privacy team at <a href="mailto:privacy@gymerp.com" className="text-purple-400 hover:text-purple-300">privacy@gymerp.com</a>.
+              To exercise these rights, please contact our Privacy team at <a href="mailto:privacy@gymerp.com" className="text-primary hover:underline">privacy@gymerp.com</a>.
             </p>
           </section>
         </article>

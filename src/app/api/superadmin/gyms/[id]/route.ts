@@ -32,14 +32,15 @@ export async function GET(
 
     // Get counts
     const { count: memberCount } = await supabaseAdmin
-      .from('gym_members')
+      .from('members')
       .select('id', { count: 'exact', head: true })
       .eq('gym_id', id);
 
     const { count: staffCount } = await supabaseAdmin
-      .from('gym_staff')
+      .from('users')
       .select('id', { count: 'exact', head: true })
-      .eq('gym_id', id);
+      .eq('gym_id', id)
+      .in('role', ['receptionist', 'trainer']);
 
     return NextResponse.json({
       ...gym,

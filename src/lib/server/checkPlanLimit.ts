@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin as supabase } from '@/lib/supabase/admin';
 
 export async function checkMemberLimit(gymId: string): Promise<{ allowed: boolean; current: number; max: number; planName: string }> {
   // Get subscription

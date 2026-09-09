@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     
     if (gymIds.length > 0) {
       const { data: memberData, error: memberError } = await supabaseAdmin
-        .from('gym_members')
+        .from('members')
         .select('gym_id')
         .in('gym_id', gymIds);
         

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import crypto from 'crypto';
 
 export async function POST(request: Request) {
   try {
@@ -10,8 +11,14 @@ export async function POST(request: Request) {
     }
 
     // Verify token
-    const expectedToken = process.env.CCTV_AUTH_TOKEN || 'cctv_secret_token';
-    if (token !== expectedToken) {
+    const expectedToken = process.env.CCTV_AUTH_TOKEN;
+    if (!expectedToken) {
+      return NextResponse.json({ error: 'CCTV service not configured' }, { status: 503 });
+    }
+
+    const tokenBuf = Buffer.from(String(token));
+    const expectedBuf = Buffer.from(expectedToken);
+    if (tokenBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(tokenBuf, expectedBuf)) {
       return NextResponse.json({ error: 'Unauthorized handshake' }, { status: 401 });
     }
 

@@ -72,9 +72,10 @@ export function usePlanLimits(): PlanLimits {
         .neq('status', 'cancelled');
 
       const { count: staffCount } = await supabase
-        .from('staff')
+        .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('gym_id', user.gymId)
+        .in('role', ['receptionist', 'trainer'])
         .eq('is_active', true);
 
       const plan = sub?.platform_plans as any;

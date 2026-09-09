@@ -9,7 +9,7 @@ interface BorderBeamProps {
   delay?: number;
 }
 
-export function BorderBeam({ className, duration = 8, colorFrom = '#9333ea', colorTo = '#818cf8', delay = 0 }: BorderBeamProps) {
+export function BorderBeam({ className, duration = 8, colorFrom = '#3b82f6', colorTo = '#60a5fa', delay = 0 }: BorderBeamProps) {
   return (
     <span
       style={{

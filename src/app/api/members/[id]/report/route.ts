@@ -10,6 +10,11 @@ export async function GET(
   try {
     const { id } = await params;
     const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
     const memberId = id;
 
     // Fetch member details
@@ -24,11 +29,11 @@ export async function GET(
       return new NextResponse('Member not found', { status: 404 });
     }
 
-    // Fetch gym profile
+    // Fetch gym details
     const { data: gymProfile } = await supabase
-      .from('gym_profiles')
+      .from('gyms')
       .select('*')
-      .limit(1)
+      .eq('id', member.gym_id)
       .single();
 
     const gymData = gymProfile || {

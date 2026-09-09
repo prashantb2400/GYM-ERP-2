@@ -24,19 +24,19 @@ export async function GET(
       return new NextResponse('Invoice not found', { status: 404 });
     }
 
-    // Fetch gym profile (assuming a single gym setup or fetching by gym_id if multitenant)
-    // Here we'll just try to fetch the first gym profile or a default one
+    // Fetch gym details
     const { data: gymProfile } = await supabase
-      .from('gym_profiles')
+      .from('gyms')
       .select('*')
-      .limit(1)
+      .eq('id', invoice.gym_id)
       .single();
 
     const gymData = gymProfile || {
       name: 'Gym Name',
       address: 'Gym Address',
       phone: '1234567890',
-      email: 'contact@gym.com'
+      email: 'contact@gym.com',
+      settings: {},
     };
 
     // Convert line items

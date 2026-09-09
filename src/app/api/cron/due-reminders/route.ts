@@ -2,18 +2,19 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
-function isAuthorized(authHeader: string | null): boolean {
+function isAuthorized(authHeader: string | null, querySecret: string | null): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
+  if (querySecret && querySecret === secret) return true;
   return authHeader === `Bearer ${secret}`;
 }
 
 export async function GET(request: Request) {
   const headersList = await headers();
-  const auth = headersList.get('authorization') ??
-    new URL(request.url).searchParams.get('cron_secret');
+  const authHeader = headersList.get('authorization');
+  const querySecret = new URL(request.url).searchParams.get('cron_secret');
 
-  if (!isAuthorized(auth)) {
+  if (!isAuthorized(authHeader, querySecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

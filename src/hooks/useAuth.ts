@@ -42,14 +42,7 @@ export function useAuth() {
           };
 
           if (userData.role === 'trainer') {
-            const { data: staffRecord } = await supabase
-              .from('staff')
-              .select('id')
-              .eq('auth_id', supabaseUser.id)
-              .single();
-            if (staffRecord) {
-              authUser.staffRecordId = staffRecord.id;
-            }
+            authUser.staffRecordId = userData.id;
           }
 
           setSession({ user: authUser, member: null });

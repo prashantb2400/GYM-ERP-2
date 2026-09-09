@@ -457,7 +457,7 @@ export default function DashboardHome() {
                     contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
                     labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
                   />
-                  <Bar dataKey="count" fill="#9333ea" radius={[4, 4, 0, 0]} maxBarSize={45} />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45} />
                 </BarChart>
               </ResponsiveContainer>
             )}

@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { NumberTicker, SpotlightCard, BorderBeam, GlowCard, BlurInText, GradientText } from '@/components/magicui';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function MemberDashboardPage() {
   const supabase = createClient();
@@ -173,31 +174,27 @@ export default function MemberDashboardPage() {
           </div>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-          {/* Visual QR Code Generator placeholder */}
-          <div className="bg-white p-3.5 rounded-xl shadow-lg border border-zinc-200 flex flex-col items-center justify-center relative">
-            <div className="grid grid-cols-5 gap-1.5 w-32 h-32 opacity-85">
-              {Array.from({ length: 25 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`rounded-[2px] ${
-                    (i % 2 === 0 && i % 3 === 0) || i === 0 || i === 4 || i === 20 || i === 24 || i % 7 === 0
-                      ? 'bg-zinc-950'
-                      : 'bg-zinc-100'
-                  }`}
-                />
-              ))}
-            </div>
-            <div className="absolute bg-white p-1 rounded-md border border-zinc-100">
-              <div className="bg-purple-600 h-6 w-6 rounded flex items-center justify-center text-white text-[9px] font-black">
-                GE
+          {/* Real scannable QR Code */}
+          <div className="bg-white p-4 rounded-xl shadow-lg border border-zinc-200">
+            {member?.qr_token ? (
+              <QRCodeSVG
+                value={`gymerp://checkin/${member.qr_token}`}
+                size={160}
+                level="M"
+                bgColor="#ffffff"
+                fgColor="#09090b"
+              />
+            ) : (
+              <div className="w-40 h-40 flex items-center justify-center text-zinc-400 text-xs">
+                Loading QR...
               </div>
-            </div>
+            )}
           </div>
           
           <span className="text-xs font-bold text-zinc-300 mt-4 tracking-wider uppercase font-mono bg-zinc-950 px-3 py-1 rounded border border-zinc-800">
             {member?.member_code}
           </span>
-          <p className="text-[10px] text-zinc-500 mt-2">Hold this QR Code code in front of the reception webcam camera to log attendance.</p>
+          <p className="text-[10px] text-zinc-500 mt-2">Show this QR code at reception to check in.</p>
         </CardContent>
       </Card>
 

@@ -224,7 +224,10 @@ export interface Member {
   last_attendance: string | null;
   attendance_count: number;
   face_enrolled: boolean;
+  face_descriptor?: number[] | null;
+  consent_given_at?: string | null;
   biometric_enrolled: boolean;
+  qr_token: string;
   kyc_status: 'pending' | 'verified' | 'rejected';
   birthday_notified_year: number | null;
   anniversary_notified_year: number | null;
@@ -278,7 +281,8 @@ export interface Attendance {
   member_name: string;
   date: string;
   check_in_time: string;
-  method: 'manual' | 'face_recognition' | 'fingerprint';
+  check_out_time?: string | null;
+  method: 'manual' | 'face_recognition' | 'fingerprint' | 'qr_scan';
   device_id: string | null;
   device_name: string | null;
   confidence: number | null;

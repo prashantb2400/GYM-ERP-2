@@ -62,11 +62,13 @@ export function getDaysRemaining(endDate: string | Date): number {
 }
 
 export function calculateBMI(weightKg: number, heightCm: number): number {
+  if (!heightCm || heightCm <= 0 || !weightKg || weightKg <= 0) return 0;
   const heightM = heightCm / 100;
   return Math.round((weightKg / (heightM * heightM)) * 10) / 10;
 }
 
 export function getBMICategory(bmi: number): string {
+  if (bmi <= 0) return 'Unknown';
   if (bmi < 18.5) return 'Underweight';
   if (bmi < 25) return 'Normal';
   if (bmi < 30) return 'Overweight';
@@ -74,7 +76,9 @@ export function getBMICategory(bmi: number): string {
 }
 
 export function calculateGST(subtotal: number, discountAmount: number = 0): { cgst: number; sgst: number; total: number } {
-  const taxableAmount = subtotal - discountAmount;
+  const safeSubtotal = Math.max(0, subtotal || 0);
+  const safeDiscount = Math.max(0, discountAmount || 0);
+  const taxableAmount = Math.max(0, safeSubtotal - safeDiscount);
   const cgst = Math.round(taxableAmount * 0.09 * 100) / 100;
   const sgst = Math.round(taxableAmount * 0.09 * 100) / 100;
   return {

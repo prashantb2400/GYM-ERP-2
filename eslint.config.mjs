@@ -17,12 +17,17 @@ const eslintConfig = defineConfig([
     "cctv-service/**",
     // Setup/seed scripts — run in Node.js context, not browser/Next.js
     "scripts/**",
+    // Submodules, external skills, and temporary root patch scripts
+    ".agents/**",
+    "skills/**",
+    "patch*.js",
   ]),
   // ── Rule overrides ──────────────────────────────────────────────────────
   // These are code-quality hints, not build-breaking bugs.
   // Downgrade from "error" to "warn" so CI stays green during rapid iteration.
   // Revisit and tighten when sprint pace slows.
   {
+    files: ["**/*.{js,jsx,ts,tsx}"],
     rules: {
       // TypeScript
       "@typescript-eslint/no-explicit-any": "warn",       // 191 occurrences — typed gradually

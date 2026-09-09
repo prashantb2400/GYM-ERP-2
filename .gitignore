@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Nested duplicate — should not be committed
 GYM-ERP-2/
+
+# Local agent skills & assistant configs
+.agents/

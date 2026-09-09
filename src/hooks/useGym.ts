@@ -70,6 +70,6 @@ export function useGym() {
     loading,
     error,
     updateGymSettings,
-    brandColor: gym?.settings?.whatsapp_enabled ? '#9333ea' : '#3b82f6', // default fallback color
+    brandColor: '#3b82f6', // default primary token from DESIGN.md
   };
 }

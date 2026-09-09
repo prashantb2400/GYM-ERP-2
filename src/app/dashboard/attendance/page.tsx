@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Member, Attendance } from '@/types/database';
-import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX } from 'lucide-react';
+import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace } from 'lucide-react';
+import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,6 +18,7 @@ import { formatPhone, getInitials, getDaysRemaining, formatCurrency } from '@/li
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 export default function AttendancePage() {
   const supabase = createClient();
@@ -30,6 +32,7 @@ export default function AttendancePage() {
   const [todayLogs, setTodayLogs] = useState<(Attendance & { members?: { name: string; photo_url?: string | null; member_code?: string | null } })[]>([]);
   const [checkedInMemberIds, setCheckedInMemberIds] = useState<Set<string>>(new Set());
   const [checkingInId, setCheckingInId] = useState<string | null>(null);
+  const [enrollingMember, setEnrollingMember] = useState<Member | null>(null);
   
   const [absentees, setAbsentees] = useState<Member[]>([]);
   const [loadingAbsent, setLoadingAbsent] = useState(false);
@@ -61,7 +64,7 @@ export default function AttendancePage() {
         setIsSearching(true);
         let query = supabase
           .from('members')
-          .select('id, name, phone, member_code, status, plan_end_date, total_due, photo_url')
+          .select('id, name, phone, member_code, status, plan_end_date, total_due, photo_url, face_enrolled')
           .eq('gym_id', user.gymId);
 
         if (user.role === 'trainer' && user.staffRecordId) {
@@ -337,7 +340,21 @@ export default function AttendancePage() {
                             {formatCurrency(member.total_due)} due
                           </div>
                         )}
-                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEnrollingMember(member)}
+                          className={cn(
+                            'gap-1.5 text-xs rounded-xl px-3 py-5 border',
+                            member.face_enrolled
+                              ? 'border-cyan-500/30 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20'
+                              : 'border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                          )}
+                        >
+                          <ScanFace className="w-4 h-4" />
+                          <span>{member.face_enrolled ? 'Face ID ✓' : 'Enroll Face'}</span>
+                        </Button>
+
                         {isCheckedIn ? (
                           <div className="flex items-center gap-2 text-green-400 bg-green-400/10 px-4 py-2.5 rounded-xl border border-green-400/20 font-medium w-full sm:w-auto justify-center">
                             <CheckCircle2 className="w-5 h-5" />
@@ -439,18 +456,24 @@ export default function AttendancePage() {
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium text-zinc-200">{log.members?.name || log.member_name}</p>
-                      <p className="text-xs text-zinc-500">{formatTime(log.check_in_time)}</p>
+                      <p className="text-xs text-zinc-500">
+                        {formatTime(log.check_in_time)}
+                        {log.check_out_time && (
+                          <span className="text-amber-400/80 ml-1.5">→ Out {formatTime(log.check_out_time)}</span>
+                        )}
+                      </p>
                     </div>
                   </div>
                   <Badge 
                     variant="outline" 
                     className={`text-[10px] ${
+                      log.method === 'qr_scan' ? 'text-blue-400 border-blue-400/20 bg-blue-400/10' :
                       log.method === 'face_recognition' ? 'text-cyan-400 border-cyan-400/20 bg-cyan-400/10' :
                       log.method === 'fingerprint' ? 'text-purple-400 border-purple-400/20 bg-purple-400/10' :
                       'text-zinc-400 border-zinc-800 bg-zinc-900'
                     }`}
                   >
-                    {log.method === 'face_recognition' ? 'Face ID' : log.method === 'fingerprint' ? 'Biometric' : 'Manual'}
+                    {log.method === 'qr_scan' ? 'QR Kiosk' : log.method === 'face_recognition' ? 'Face ID' : log.method === 'fingerprint' ? 'Biometric' : 'Manual'}
                   </Badge>
                 </div>
               ))}
@@ -519,9 +542,25 @@ export default function AttendancePage() {
     <div className="relative min-h-[calc(100vh-8rem)]">
       <GridPattern className="absolute inset-0 opacity-10 pointer-events-none -z-10" />
       
-      <div className="mb-8">
-        <GradientText className="text-3xl font-bold tracking-tight">⚡ Quick Check-In</GradientText>
-        <p className="text-zinc-500 mt-1">Search members or scan biometrics to log attendance.</p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <GradientText className="text-3xl font-bold tracking-tight">⚡ Quick Check-In</GradientText>
+          <p className="text-zinc-500 mt-1">Search members or scan QR codes to log attendance.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/dashboard/attendance/face-kiosk">
+            <Button variant="outline" className="gap-2 shadow-lg border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300">
+              <ScanFace className="h-4 w-4" />
+              AI Face Kiosk
+            </Button>
+          </Link>
+          <Link href="/dashboard/attendance/kiosk">
+            <Button className="gap-2 shadow-lg">
+              <Camera className="h-4 w-4" />
+              Open QR Kiosk
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Desktop Layout */}
@@ -556,6 +595,19 @@ export default function AttendancePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {enrollingMember && (
+        <FaceEnrollmentModal
+          isOpen={!!enrollingMember}
+          member={enrollingMember}
+          onClose={() => setEnrollingMember(null)}
+          onSuccess={() => {
+            // refresh search results so face_enrolled badge updates
+            setDebouncedQuery(q => q + ' ');
+            setTimeout(() => setDebouncedQuery(q => q.trim()), 50);
+          }}
+        />
+      )}
     </div>
   );
 }

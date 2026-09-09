@@ -140,7 +140,7 @@ export default function MemberPlanPage() {
           contact: member.phone,
         },
         theme: {
-          color: '#9333ea', // purple brand accent
+          color: '#3b82f6', // primary brand token (Blue-500) from DESIGN.md
         },
       };
 

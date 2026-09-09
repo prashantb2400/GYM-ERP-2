@@ -49,12 +49,26 @@ describe('Indian Locale & Health Formatters', () => {
       expect(sgst).toBe(72);
       expect(total).toBe(944);
     });
+
+    it('should clamp GST calculation to 0 when discount exceeds subtotal', () => {
+      const { cgst, sgst, total } = calculateGST(500, 700);
+      expect(cgst).toBe(0);
+      expect(sgst).toBe(0);
+      expect(total).toBe(0);
+    });
   });
 
   describe('calculateBMI & Category', () => {
     it('should compute correct BMI value', () => {
       const bmi = calculateBMI(70, 175);
       expect(bmi).toBe(22.9);
+    });
+
+    it('should return 0 for zero or negative heights and weights', () => {
+      expect(calculateBMI(70, 0)).toBe(0);
+      expect(calculateBMI(0, 175)).toBe(0);
+      expect(calculateBMI(-70, 175)).toBe(0);
+      expect(getBMICategory(0)).toBe('Unknown');
     });
 
     it('should match category classification', () => {

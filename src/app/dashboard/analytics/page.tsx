@@ -29,7 +29,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
 
-const COLORS = ['#9333ea', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1'];
+const COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#6366f1'];
 
 export default function AnalyticsPage() {
   const supabase = createClient();
@@ -314,8 +314,8 @@ export default function AnalyticsPage() {
               <AreaChart data={revenueTimeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#9333ea" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#9333ea" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
@@ -330,7 +330,7 @@ export default function AnalyticsPage() {
                   labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
                 />
                 <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#a1a1aa' }} />
-                <Area type="monotone" name="Revenue" dataKey="Revenue" stroke="#9333ea" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
+                <Area type="monotone" name="Revenue" dataKey="Revenue" stroke="#3b82f6" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
                 <Area type="monotone" name="Expenses" dataKey="Expenses" stroke="#ef4444" fillOpacity={1} fill="url(#colorExp)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
