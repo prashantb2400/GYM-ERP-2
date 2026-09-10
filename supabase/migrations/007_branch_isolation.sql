@@ -5,8 +5,16 @@
 -- 1. Helper function to retrieve authenticated user's branch_id
 CREATE OR REPLACE FUNCTION get_user_branch_id()
 RETURNS UUID AS $$
-  SELECT branch_id FROM public.users WHERE auth_id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+DECLARE
+  v_branch_id UUID;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN NULL;
+  END IF;
+  SELECT branch_id INTO v_branch_id FROM public.users WHERE auth_id = auth.uid() LIMIT 1;
+  RETURN v_branch_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 2. Add branch_id to operational tables that were missing it
 ALTER TABLE public.attendance 

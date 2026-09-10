@@ -42,7 +42,7 @@ export default function OnboardingPage() {
         .from('users')
         .select('gym_id')
         .eq('auth_id', authUser.id)
-        .single();
+        .maybeSingle();
 
       if (userData?.gym_id) {
         router.push('/dashboard');
@@ -65,111 +65,23 @@ export default function OnboardingPage() {
     try {
       setLoading(true);
 
-      // 1. Create Gym row
-      const { data: gymData, error: gymError } = await supabase
-        .from('gyms')
-        .insert({
-          name: gymName.trim(),
+      const res = await fetch('/api/gym/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gymName: gymName.trim(),
           phone: phone.trim() || null,
           email: email.trim() || null,
           tagline: tagline.trim() || null,
-          address: { city: city.trim(), state: state.trim() },
-          owner_id: user.id,
-          subscription_tier: 'free',
-          is_setup_complete: true,
-        })
-        .select()
-        .single();
+          city: city.trim(),
+          state: state.trim(),
+        }),
+      });
 
-      if (gymError || !gymData) {
-        throw new Error(gymError?.message || 'Failed to create gym workspace');
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create gym workspace');
       }
-
-      // 1b. Create Default Branch for the gym
-      const { data: branchData, error: branchError } = await supabase
-        .from('branches')
-        .insert({
-          gym_id: gymData.id,
-          name: `${gymName.trim()} Main Branch`,
-          phone: phone.trim() || null,
-          address: { city: city.trim(), state: state.trim() },
-          is_active: true,
-        })
-        .select()
-        .single();
-
-      if (branchError) {
-        console.error('Failed to create default branch:', branchError);
-      }
-
-      // 2. Create Counter row for GYM0001 codes
-      const { error: counterError } = await supabase
-        .from('counters')
-        .insert({
-          gym_id: gymData.id,
-          member_count: 0,
-          invoice_count: 0,
-        });
-
-      if (counterError) throw counterError;
-
-      // 3. Create Subscription row
-      const { error: subError } = await supabase
-        .from('subscriptions')
-        .insert({
-          gym_id: gymData.id,
-          tier: 'free',
-          max_members: 50,
-          is_active: true,
-        });
-
-      if (subError) throw subError;
-
-      // 3b. Assign Free platform plan
-      // First, find the Free platform plan
-      const { data: freePlan } = await supabase
-        .from('platform_plans')
-        .select('id')
-        .eq('slug', 'free')
-        .single();
-      
-      if (freePlan) {
-        const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + 14); // 14-day Pro trial
-        
-        // Find the Pro plan for the trial
-        const { data: proPlan } = await supabase
-          .from('platform_plans')
-          .select('id')
-          .eq('slug', 'pro')
-          .single();
-        
-        await supabase.from('platform_subscriptions').insert({
-          gym_id: gymData.id,
-          plan_id: proPlan?.id || freePlan.id, // Start with Pro trial, fallback to Free
-          status: proPlan ? 'trialing' : 'active',
-          billing_cycle: 'monthly',
-          current_period_start: new Date().toISOString(),
-          current_period_end: trialEnd.toISOString(),
-          trial_end: proPlan ? trialEnd.toISOString() : null,
-        });
-      }
-
-      // 4. Create User profile row (Owner)
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          auth_id: user.id,
-          gym_id: gymData.id,
-          branch_id: branchData?.id || null,
-          name: user.user_metadata?.full_name || email.split('@')[0] || 'Gym Owner',
-          email: email,
-          role: 'owner',
-          permissions: ['*'], // Owner gets wildcard bypass
-          is_active: true,
-        });
-
-      if (userError) throw userError;
 
       toast.success('Workspace created! You have a 14-day Pro trial. 🎉');
       window.location.href = '/dashboard';
