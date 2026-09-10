@@ -1,4 +1,4 @@
--- Migration 004: In-Browser Face Recognition Attendance
+-- Migration 006: In-Browser Face Recognition Attendance
 -- Adds 128-d face descriptor vector and DPDP consent tracking to members
 -- Adds check_out_time to attendance for automatic In/Out tracking
 
