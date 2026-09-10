@@ -41,13 +41,20 @@ export async function POST(request: Request) {
 
     const gymId = scope.gymId;
 
-    // 2. Look up the member by qr_token + gym_id
-    const { data: member, error: memberErr } = await supabaseAdmin
+    // 2. Look up the member by qr_token, id, or member_code + gym_id
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(qrToken);
+    let memberQuery = supabaseAdmin
       .from('members')
       .select('id, name, member_code, status, photo_url, attendance_count, branch_id')
-      .eq('gym_id', gymId)
-      .eq('qr_token', qrToken)
-      .single();
+      .eq('gym_id', gymId);
+
+    if (isUuid) {
+      memberQuery = memberQuery.or(`qr_token.eq.${qrToken},id.eq.${qrToken}`);
+    } else {
+      memberQuery = memberQuery.or(`qr_token.eq.${qrToken},member_code.eq.${qrToken}`);
+    }
+
+    const { data: member, error: memberErr } = await memberQuery.limit(1).maybeSingle();
 
     if (memberErr || !member) {
       return NextResponse.json({ error: 'Member not found. Invalid QR code.' }, { status: 404 });

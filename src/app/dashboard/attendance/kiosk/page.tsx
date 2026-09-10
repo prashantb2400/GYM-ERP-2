@@ -77,10 +77,13 @@ export default function KioskPage() {
     if (decodedText === lastScannedRef.current) return;
 
     // Parse the QR payload
+    let qrToken = decodedText.trim();
     const match = decodedText.match(/^gymerp:\/\/checkin\/(.+)$/);
-    if (!match) return; // Not our QR format, ignore
+    if (match) {
+      qrToken = match[1].trim();
+    }
+    if (!qrToken) return;
 
-    const qrToken = match[1];
     lastScannedRef.current = decodedText;
     setIsProcessing(true);
 

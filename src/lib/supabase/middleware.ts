@@ -89,20 +89,82 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthPage && !isSuperAdminRoute) {
     // If user is already logged in, redirect away from login pages
-    // Query role to determine appropriate dashboard redirection
-    const { data: userData } = await supabase
+    // Query role using admin client to eliminate RLS/cookie timing issues
+    const { data: userData } = await supabaseAdmin
       .from('users')
-      .select('role')
+      .select('role, gym_id')
       .eq('auth_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (userData?.role === 'owner' || userData?.role === 'receptionist') {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    } else if (userData?.role === 'trainer') {
-      return NextResponse.redirect(new URL('/dashboard/trainers', request.url));
-    } else {
-      // Check if it's a gym member
+    if (userData) {
+      if (!userData.gym_id) {
+        return NextResponse.redirect(new URL('/dashboard/onboarding', request.url));
+      }
+      if (userData.role === 'owner' || userData.role === 'receptionist') {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      } else if (userData.role === 'trainer') {
+        return NextResponse.redirect(new URL('/dashboard/trainers', request.url));
+      }
+    }
+
+    // Check if user is a member
+    const { data: memberData } = await supabaseAdmin
+      .from('members')
+      .select('id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    if (memberData || path.startsWith('/member')) {
       return NextResponse.redirect(new URL('/member/dashboard', request.url));
+    }
+
+    // Default for /login or /staff/login when no user row exists yet -> onboarding
+    return NextResponse.redirect(new URL('/dashboard/onboarding', request.url));
+  }
+
+  // Cross-portal protection: ensure owners/staff stay in /dashboard and members stay in /member
+  if (user && isMemberPage) {
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('role, gym_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    if (userData) {
+      if (!userData.gym_id) {
+        return NextResponse.redirect(new URL('/dashboard/onboarding', request.url));
+      }
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
+
+  if (user && isDashboardPage && !path.startsWith('/dashboard/suspended') && !path.startsWith('/dashboard/onboarding')) {
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('role, gym_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    if (!userData) {
+      // Check if platform super admin
+      const { data: superAdmin } = await supabaseAdmin
+        .from('super_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!superAdmin) {
+        const { data: memberData } = await supabaseAdmin
+          .from('members')
+          .select('id')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
+        if (memberData) {
+          return NextResponse.redirect(new URL('/member/dashboard', request.url));
+        }
+      }
     }
   }
 
@@ -119,19 +181,19 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Check if gym is suspended
-  if (user && path.startsWith('/dashboard') && !path.startsWith('/dashboard/suspended')) {
-    const { data: userData } = await supabase
+  if (user && path.startsWith('/dashboard') && !path.startsWith('/dashboard/suspended') && !path.startsWith('/dashboard/onboarding')) {
+    const { data: userData } = await supabaseAdmin
       .from('users')
       .select('gym_id')
       .eq('auth_id', user.id)
-      .single();
+      .maybeSingle();
     
     if (userData?.gym_id) {
-      const { data: gymData } = await supabase
+      const { data: gymData } = await supabaseAdmin
         .from('gyms')
         .select('is_suspended')
         .eq('id', userData.gym_id)
-        .single();
+        .maybeSingle();
       
       if (gymData?.is_suspended === true) {
         return NextResponse.redirect(new URL('/dashboard/suspended', request.url));

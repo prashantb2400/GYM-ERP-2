@@ -35,22 +35,33 @@ export default function MemberPortalLayout({ children }: { children: React.React
           return;
         }
 
-        // Fetch corresponding member record by matching phone / email or authId
+        // Fetch corresponding member record by matching phone, email, or authId
+        const cleanPhone = authUser.phone ? authUser.phone.replace(/\D/g, '').slice(-10) : null;
+        const filterParts = [`auth_id.eq.${authUser.id}`];
+        if (authUser.email) filterParts.push(`email.eq.${authUser.email}`);
+        if (cleanPhone) filterParts.push(`phone.eq.${cleanPhone}`);
+
         const { data, error } = await supabase
           .from('members')
           .select('*, plans(name)')
-          .or(`auth_id.eq.${authUser.id},email.eq.${authUser.email}`)
-          .single();
+          .or(filterParts.join(','))
+          .limit(1)
+          .maybeSingle();
 
         if (error || !data) {
           // Fallback mockup member profile for testing if DB migration auth link isn't fully completed
           setMember({
+            id: authUser.id,
+            qr_token: authUser.id,
             name: authUser.user_metadata?.full_name || 'Athletic Member',
             member_code: 'GYM0088',
             phone: authUser.phone || '9876543210',
             status: 'active',
           });
         } else {
+          if (!data.auth_id) {
+            supabase.from('members').update({ auth_id: authUser.id }).eq('id', data.id).then();
+          }
           setMember(data);
         }
       } catch (err) {

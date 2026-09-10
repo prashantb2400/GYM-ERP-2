@@ -42,17 +42,36 @@ export default function MemberDashboardPage() {
         if (!authUser) return;
 
         // Fetch corresponding member record joined with plans, diet, and exercise
+        const cleanPhone = authUser.phone ? authUser.phone.replace(/\D/g, '').slice(-10) : null;
+        const filterParts = [`auth_id.eq.${authUser.id}`];
+        if (authUser.email) filterParts.push(`email.eq.${authUser.email}`);
+        if (cleanPhone) filterParts.push(`phone.eq.${cleanPhone}`);
+
         const { data, error } = await supabase
           .from('members')
           .select('*, plans(*), diet_charts(*), exercise_charts(*)')
-          .or(`auth_id.eq.${authUser.id},email.eq.${authUser.email}`)
-          .single();
+          .or(filterParts.join(','))
+          .limit(1)
+          .maybeSingle();
 
         if (data) {
+          // Link auth_id if missing
+          if (!data.auth_id) {
+            supabase.from('members').update({ auth_id: authUser.id }).eq('id', data.id).then();
+          }
+          // Ensure qr_token exists
+          if (!data.qr_token) {
+            const token = crypto.randomUUID();
+            data.qr_token = token;
+            supabase.from('members').update({ qr_token: token }).eq('id', data.id).then();
+          }
           setMember(data);
         } else {
           // Mock data fallback for standalone layout testing
+          const fallbackToken = authUser.id || 'gym-member-pass';
           setMember({
+            id: authUser.id,
+            qr_token: fallbackToken,
             name: authUser.user_metadata?.full_name || 'Athletic Pro',
             member_code: 'GYM0099',
             status: 'active',
@@ -176,17 +195,18 @@ export default function MemberDashboardPage() {
         <CardContent className="flex flex-col items-center justify-center p-6 text-center">
           {/* Real scannable QR Code */}
           <div className="bg-white p-4 rounded-xl shadow-lg border border-zinc-200">
-            {member?.qr_token ? (
+            {member?.qr_token || member?.id || member?.member_code ? (
               <QRCodeSVG
-                value={`gymerp://checkin/${member.qr_token}`}
+                value={`gymerp://checkin/${member?.qr_token || member?.id || member?.member_code}`}
                 size={160}
                 level="M"
                 bgColor="#ffffff"
                 fgColor="#09090b"
               />
             ) : (
-              <div className="w-40 h-40 flex items-center justify-center text-zinc-400 text-xs">
-                Loading QR...
+              <div className="w-40 h-40 flex flex-col items-center justify-center text-zinc-400 text-xs gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
+                <span>Loading QR...</span>
               </div>
             )}
           </div>

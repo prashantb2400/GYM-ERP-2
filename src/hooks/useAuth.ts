@@ -49,17 +49,26 @@ export function useAuth() {
           return;
         }
 
-        // If not user, check members table
+        // If not user, check members table (by auth_id, phone, or email)
+        const cleanPhone = supabaseUser.phone ? supabaseUser.phone.replace(/\D/g, '').slice(-10) : null;
+        const memberFilters = [`auth_id.eq.${supabaseUser.id}`];
+        if (supabaseUser.email) memberFilters.push(`email.eq.${supabaseUser.email}`);
+        if (cleanPhone) memberFilters.push(`phone.eq.${cleanPhone}`);
+
         const { data: memberData, error: memberError } = await supabase
           .from('members')
           .select('*')
-          .eq('auth_id', supabaseUser.id)
-          .single();
+          .or(memberFilters.join(','))
+          .limit(1)
+          .maybeSingle();
 
         if (memberData) {
+          if (!memberData.auth_id) {
+            supabase.from('members').update({ auth_id: supabaseUser.id }).eq('id', memberData.id).then();
+          }
           const authMember: AuthMember = {
             id: memberData.id,
-            authId: memberData.auth_id,
+            authId: memberData.auth_id || supabaseUser.id,
             gymId: memberData.gym_id,
             branchId: memberData.branch_id,
             name: memberData.name,
@@ -72,8 +81,8 @@ export function useAuth() {
         }
 
         // If not found in either, they might be a newly signed-up owner
-        // Check if there are metadata properties indicating signup role
-        const isNewOwner = supabaseUser.app_metadata?.provider === 'google' || supabaseUser.user_metadata?.iss;
+        // Check if there are metadata properties or email indicating signup role
+        const isNewOwner = supabaseUser.app_metadata?.provider === 'google' || supabaseUser.user_metadata?.iss || !!supabaseUser.email;
         if (isNewOwner) {
           // Creating dynamic session for owner setup
           const authUser: AuthUser = {
