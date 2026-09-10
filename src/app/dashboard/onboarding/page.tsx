@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dumbbell, Loader2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/store/authStore';
 
 export default function OnboardingPage() {
   const supabase = createClient();
@@ -26,7 +27,7 @@ export default function OnboardingPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // Check if user is logged in
+    // Check if user is logged in and whether they already have a gym assigned
     const checkUser = async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) {
@@ -37,16 +38,18 @@ export default function OnboardingPage() {
       setUser(authUser);
       setEmail(authUser.email || '');
 
-      // Check if they already have a gym assigned in users table
-      const { data: userData } = await supabase
-        .from('users')
-        .select('gym_id')
-        .eq('auth_id', authUser.id)
-        .maybeSingle();
-
-      if (userData?.gym_id) {
-        router.push('/dashboard');
-        return;
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const authData = await res.json();
+          if (authData.user?.gymId) {
+            useAuthStore.getState().setSession({ user: authData.user, member: null });
+            router.replace('/dashboard');
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to verify existing session:', err);
       }
       
       setChecking(false);
@@ -81,6 +84,29 @@ export default function OnboardingPage() {
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Failed to create gym workspace');
+      }
+
+      // Sync active session from /api/auth/me so store and layout recognize gymId immediately
+      try {
+        const meRes = await fetch('/api/auth/me');
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.user) {
+            useAuthStore.getState().setSession({ user: meData.user, member: null });
+          }
+        }
+      } catch {
+        const currentStore = useAuthStore.getState();
+        if (currentStore.user) {
+          currentStore.setSession({
+            user: {
+              ...currentStore.user,
+              gymId: data.gymId,
+              branchId: data.branchId || null,
+            },
+            member: null,
+          });
+        }
       }
 
       toast.success('Workspace created! You have a 14-day Pro trial. 🎉');

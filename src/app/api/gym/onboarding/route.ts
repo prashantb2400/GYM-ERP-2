@@ -46,105 +46,142 @@ export async function POST(request: Request) {
       state: state?.trim() || '',
     };
 
-    // 1. Create Gym workspace
-    const { data: gymData, error: gymError } = await supabaseAdmin
+    // 1. Resolve or Create Gym workspace
+    let gymId: string;
+    const { data: existingGym } = await supabaseAdmin
       .from('gyms')
-      .insert({
-        name: gymName.trim(),
-        phone: contactPhone,
-        email: contactEmail,
-        tagline: tagline?.trim() || null,
-        address: addressObj,
-        owner_id: user.id,
-        subscription_tier: 'free',
-        is_setup_complete: true,
-      })
-      .select()
-      .single();
+      .select('id, name')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (gymError || !gymData) {
-      console.error('Error creating gym workspace:', gymError);
-      return NextResponse.json({ error: gymError?.message || 'Failed to create gym workspace' }, { status: 500 });
+    if (existingGym) {
+      gymId = existingGym.id;
+    } else {
+      const { data: gymData, error: gymError } = await supabaseAdmin
+        .from('gyms')
+        .insert({
+          name: gymName.trim(),
+          phone: contactPhone,
+          email: contactEmail,
+          tagline: tagline?.trim() || null,
+          address: addressObj,
+          owner_id: user.id,
+          subscription_tier: 'free',
+          is_setup_complete: true,
+        })
+        .select()
+        .single();
+
+      if (gymError || !gymData) {
+        console.error('Error creating gym workspace:', gymError);
+        return NextResponse.json({ error: gymError?.message || 'Failed to create gym workspace' }, { status: 500 });
+      }
+
+      gymId = gymData.id;
     }
 
-    const gymId = gymData.id;
-
-    // 2. Create Default Main Branch
-    const { data: branchData, error: branchError } = await supabaseAdmin
+    // 2. Resolve or Create Default Main Branch
+    let branchId: string | null = null;
+    const { data: existingBranch } = await supabaseAdmin
       .from('branches')
-      .insert({
-        gym_id: gymId,
-        name: `${gymName.trim()} Main Branch`,
-        phone: contactPhone,
-        address: addressObj,
-        is_active: true,
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('gym_id', gymId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
 
-    if (branchError) {
-      console.error('Failed to create default branch:', branchError);
+    if (existingBranch) {
+      branchId = existingBranch.id;
+    } else {
+      const { data: branchData, error: branchError } = await supabaseAdmin
+        .from('branches')
+        .insert({
+          gym_id: gymId,
+          name: `${gymName.trim()} Main Branch`,
+          phone: contactPhone,
+          address: addressObj,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (branchError) {
+        console.error('Failed to create default branch:', branchError);
+      }
+      branchId = branchData?.id || null;
     }
 
-    const branchId = branchData?.id || null;
-
-    // 3. Create Counters row
-    const { error: counterError } = await supabaseAdmin
+    // 3. Ensure Counters row
+    const { data: existingCounter } = await supabaseAdmin
       .from('counters')
-      .insert({
+      .select('id')
+      .eq('gym_id', gymId)
+      .maybeSingle();
+
+    if (!existingCounter) {
+      await supabaseAdmin.from('counters').insert({
         gym_id: gymId,
         member_count: 0,
         invoice_count: 0,
       });
-
-    if (counterError) {
-      console.error('Failed to initialize counters:', counterError);
     }
 
-    // 4. Create Subscriptions row
-    const { error: subError } = await supabaseAdmin
+    // 4. Ensure Subscriptions row
+    const { data: existingSub } = await supabaseAdmin
       .from('subscriptions')
-      .insert({
+      .select('id')
+      .eq('gym_id', gymId)
+      .maybeSingle();
+
+    if (!existingSub) {
+      await supabaseAdmin.from('subscriptions').insert({
         gym_id: gymId,
         tier: 'free',
         max_members: 50,
         is_active: true,
       });
-
-    if (subError) {
-      console.error('Failed to create initial subscription:', subError);
     }
 
     // 5. Setup Platform Subscription (14-day Pro trial)
     try {
-      const { data: proPlan } = await supabaseAdmin
-        .from('platform_plans')
+      const { data: existingPlatformSub } = await supabaseAdmin
+        .from('platform_subscriptions')
         .select('id')
-        .eq('slug', 'pro')
+        .eq('gym_id', gymId)
         .maybeSingle();
 
-      const { data: freePlan } = await supabaseAdmin
-        .from('platform_plans')
-        .select('id')
-        .eq('slug', 'free')
-        .maybeSingle();
+      if (!existingPlatformSub) {
+        const { data: proPlan } = await supabaseAdmin
+          .from('platform_plans')
+          .select('id')
+          .eq('slug', 'pro')
+          .maybeSingle();
 
-      const planId = proPlan?.id || freePlan?.id;
-      if (planId) {
-        const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + 14);
+        const { data: freePlan } = await supabaseAdmin
+          .from('platform_plans')
+          .select('id')
+          .eq('slug', 'free')
+          .maybeSingle();
 
-        await supabaseAdmin
-          .from('platform_subscriptions')
-          .insert({
-            gym_id: gymId,
-            plan_id: planId,
-            status: proPlan ? 'trialing' : 'active',
-            billing_cycle: 'monthly',
-            current_period_start: new Date().toISOString(),
-            current_period_end: trialEnd.toISOString(),
-            trial_end: proPlan ? trialEnd.toISOString() : null,
-          });
+        const planId = proPlan?.id || freePlan?.id;
+        if (planId) {
+          const trialEnd = new Date();
+          trialEnd.setDate(trialEnd.getDate() + 14);
+
+          await supabaseAdmin
+            .from('platform_subscriptions')
+            .insert({
+              gym_id: gymId,
+              plan_id: planId,
+              status: proPlan ? 'trialing' : 'active',
+              billing_cycle: 'monthly',
+              current_period_start: new Date().toISOString(),
+              current_period_end: trialEnd.toISOString(),
+              trial_end: proPlan ? trialEnd.toISOString() : null,
+            });
+        }
       }
     } catch (platformSubErr) {
       console.error('Failed to assign platform subscription trial:', platformSubErr);
