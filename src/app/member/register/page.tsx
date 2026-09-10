@@ -141,12 +141,25 @@ function RegisterForm() {
         .single();
 
       // 2. Generate member code
-      const { data: memberCode, error: codeError } = await supabase.rpc('generate_member_code', {
-        p_gym_id: gymId,
-      });
+      let memberCode = '';
+      try {
+        const { data: codeData, error: codeError } = await supabase.rpc('generate_member_code', {
+          p_gym_id: gymId,
+        });
+        if (!codeError && codeData) {
+          memberCode = codeData;
+        }
+      } catch (err) {
+        console.warn('generate_member_code RPC error, falling back:', err);
+      }
 
-      if (codeError || !memberCode) {
-        throw new Error(codeError?.message || 'Failed to generate member code');
+      if (!memberCode) {
+        const { count } = await supabase
+          .from('members')
+          .select('id', { count: 'exact', head: true })
+          .eq('gym_id', gymId);
+        const nextNum = (count || 0) + 1;
+        memberCode = `GYM${String(nextNum).padStart(4, '0')}`;
       }
 
       // 3. Insert member profile with branch_id

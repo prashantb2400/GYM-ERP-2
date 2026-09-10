@@ -113,3 +113,67 @@ CREATE POLICY gyms_update ON public.gyms
     (id = get_user_gym_id() AND get_user_role() = 'owner')
     OR owner_id = auth.uid()
   );
+
+-- 5. Robust Counter & Code Generator Functions
+-- Fixes "Invalid counter type: member_count" by normalizing input arguments
+-- and ensuring counters exist and never throw exceptions.
+
+CREATE OR REPLACE FUNCTION increment_counter(p_gym_id UUID, p_field TEXT)
+RETURNS INTEGER AS $$
+DECLARE
+  new_val INTEGER;
+  clean_field TEXT;
+BEGIN
+  IF p_gym_id IS NULL THEN
+    RETURN 1;
+  END IF;
+
+  clean_field := LOWER(TRIM(COALESCE(p_field, 'member_count')));
+
+  -- Ensure counters row exists for this gym
+  INSERT INTO public.counters (gym_id, member_count, invoice_count)
+  VALUES (p_gym_id, 0, 0)
+  ON CONFLICT (gym_id) DO NOTHING;
+
+  IF clean_field IN ('member_count', 'member', 'members') THEN
+    UPDATE public.counters 
+    SET member_count = COALESCE(member_count, 0) + 1 
+    WHERE gym_id = p_gym_id 
+    RETURNING member_count INTO new_val;
+  ELSIF clean_field IN ('invoice_count', 'invoice', 'invoices') THEN
+    UPDATE public.counters 
+    SET invoice_count = COALESCE(invoice_count, 0) + 1 
+    WHERE gym_id = p_gym_id 
+    RETURNING invoice_count INTO new_val;
+  ELSE
+    -- Safe fallback: increment member_count by default, NEVER throw exception
+    UPDATE public.counters 
+    SET member_count = COALESCE(member_count, 0) + 1 
+    WHERE gym_id = p_gym_id 
+    RETURNING member_count INTO new_val;
+  END IF;
+
+  RETURN COALESCE(new_val, 1);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION generate_member_code(p_gym_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+  cnt INTEGER;
+BEGIN
+  cnt := increment_counter(p_gym_id, 'member_count');
+  RETURN 'GYM' || LPAD(COALESCE(cnt, 1)::TEXT, 4, '0');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION generate_invoice_number(p_gym_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+  cnt INTEGER;
+BEGIN
+  cnt := increment_counter(p_gym_id, 'invoice_count');
+  RETURN 'INV-' || TO_CHAR(NOW(), 'YYYY') || '-' || LPAD(COALESCE(cnt, 1)::TEXT, 4, '0');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+

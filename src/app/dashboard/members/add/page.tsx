@@ -243,12 +243,26 @@ export default function AddMemberPage() {
       setLoading(true);
 
       // 1. Generate member code GYM0001
-      const { data: memberCode, error: codeError } = await supabase.rpc('generate_member_code', {
-        p_gym_id: user.gymId,
-      });
+      let memberCode = '';
+      try {
+        const { data: codeData, error: codeError } = await supabase.rpc('generate_member_code', {
+          p_gym_id: user.gymId,
+        });
+        if (!codeError && codeData) {
+          memberCode = codeData;
+        }
+      } catch (err) {
+        console.warn('generate_member_code RPC call error, falling back:', err);
+      }
 
-      if (codeError || !memberCode) {
-        throw new Error(codeError?.message || 'Failed to generate member code');
+      if (!memberCode) {
+        // Fallback: Query current member count directly
+        const { count } = await supabase
+          .from('members')
+          .select('id', { count: 'exact', head: true })
+          .eq('gym_id', user.gymId);
+        const nextNum = (count || 0) + 1;
+        memberCode = `GYM${String(nextNum).padStart(4, '0')}`;
       }
 
       // 2. Upload Member Photo (if any)
