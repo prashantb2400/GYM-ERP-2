@@ -3,10 +3,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useGym } from '@/hooks/useGym';
+import { useBranch } from '@/hooks/useBranch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils/format';
-import { Bell, Wifi, Menu, Search, Sun, Moon } from 'lucide-react';
+import { Bell, Wifi, Menu, Search, Sun, Moon, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTheme } from 'next-themes';
 import { CommandMenu } from './CommandMenu';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -19,6 +22,7 @@ interface AdminTopbarProps {
 export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
   const { user } = useAuth();
   const { gym } = useGym();
+  const { branches, selectedBranchId, selectedBranch, setSelectedBranchId, isOwner } = useBranch();
   const supabase = createClient();
   const { theme, setTheme } = useTheme();
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -136,6 +140,33 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
             </p>
           )}
         </div>
+
+        {/* Branch Selector for Owner, or Branch Badge for Staff */}
+        {isOwner && branches.length > 0 ? (
+          <div className="hidden sm:flex items-center gap-1.5 ml-2">
+            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select
+              value={selectedBranchId || 'all'}
+              onValueChange={(val) => setSelectedBranchId(val === 'all' ? null : val)}
+            >
+              <SelectTrigger className="h-8 text-xs bg-secondary/50 border-border/60 w-[160px]">
+                <SelectValue placeholder="All Branches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">🌐 All Branches</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    📍 {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : selectedBranch ? (
+          <Badge variant="outline" className="hidden sm:inline-flex text-[10px] bg-secondary/40 text-muted-foreground border-border/60 ml-2">
+            📍 {selectedBranch.name}
+          </Badge>
+        ) : null}
       </div>
 
       {/* Center global search shortcut bar (clickable) */}

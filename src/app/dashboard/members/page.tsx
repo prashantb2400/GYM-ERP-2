@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useBranch } from '@/hooks/useBranch';
 import type { Member } from '@/types/database';
 import { usePermission } from '@/hooks/usePermission';
 import {
@@ -43,6 +44,7 @@ export default function MembersListPage() {
   const supabase = createClient();
   const { user } = useAuth();
   const { can } = usePermission();
+  const { selectedBranchId, isOwner } = useBranch();
 
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<(Member & { plans?: { name: string } | null })[]>([]);
@@ -90,6 +92,12 @@ export default function MembersListPage() {
         .select('*, plans(name)', { count: 'exact' })
         .eq('gym_id', user.gymId)
         .order('created_at', { ascending: false });
+
+      // Branch isolation: staff sees their branch, owner sees selected branch or all
+      const effectiveBranchId = !isOwner ? user?.branchId : selectedBranchId;
+      if (effectiveBranchId) {
+        query = query.eq('branch_id', effectiveBranchId);
+      }
 
       if (user.role === 'trainer' && user.staffRecordId) {
         query = query.eq('trainer_id', user.staffRecordId);
@@ -139,7 +147,7 @@ export default function MembersListPage() {
   useEffect(() => {
     setSelectedIds(new Set());
     fetchMembers();
-  }, [user?.gymId, statusFilter, biometricFilter, debouncedSearch, page]);
+  }, [user?.gymId, selectedBranchId, user?.branchId, statusFilter, biometricFilter, debouncedSearch, page]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

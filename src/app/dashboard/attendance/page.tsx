@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useBranch } from '@/hooks/useBranch';
 import type { Member, Attendance } from '@/types/database';
 import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace } from 'lucide-react';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
@@ -23,6 +24,9 @@ import Link from 'next/link';
 export default function AttendancePage() {
   const supabase = createClient();
   const { user } = useAuth();
+  const { selectedBranchId, isOwner } = useBranch();
+  
+  const effectiveBranchId = !isOwner ? user?.branchId : selectedBranchId;
   
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -64,8 +68,12 @@ export default function AttendancePage() {
         setIsSearching(true);
         let query = supabase
           .from('members')
-          .select('id, name, phone, member_code, status, plan_end_date, total_due, photo_url, face_enrolled')
+          .select('id, name, phone, member_code, status, plan_end_date, total_due, photo_url, face_enrolled, branch_id')
           .eq('gym_id', user.gymId);
+
+        if (effectiveBranchId) {
+          query = query.eq('branch_id', effectiveBranchId);
+        }
 
         if (user.role === 'trainer' && user.staffRecordId) {
           query = query.eq('trainer_id', user.staffRecordId);
@@ -86,7 +94,7 @@ export default function AttendancePage() {
     }
 
     searchMembers();
-  }, [debouncedQuery, user?.gymId]);
+  }, [debouncedQuery, user?.gymId, effectiveBranchId]);
 
   // Load today's logs & stats
   const fetchTodayData = async () => {
@@ -98,10 +106,14 @@ export default function AttendancePage() {
       // Get today's attendance
       let logsQuery = supabase
         .from('attendance')
-        .select('*, members!inner(name, member_code, photo_url, trainer_id)')
+        .select('*, members!inner(name, member_code, photo_url, trainer_id, branch_id)')
         .eq('gym_id', user.gymId)
         .eq('date', today)
         .order('check_in_time', { ascending: false });
+
+      if (effectiveBranchId) {
+        logsQuery = logsQuery.eq('branch_id', effectiveBranchId);
+      }
 
       if (user.role === 'trainer' && user.staffRecordId) {
         logsQuery = logsQuery.eq('members.trainer_id', user.staffRecordId);
@@ -122,6 +134,10 @@ export default function AttendancePage() {
         .select('id', { count: 'exact', head: true })
         .eq('gym_id', user.gymId)
         .eq('status', 'active');
+
+      if (effectiveBranchId) {
+        countQuery = countQuery.eq('branch_id', effectiveBranchId);
+      }
 
       if (user.role === 'trainer' && user.staffRecordId) {
         countQuery = countQuery.eq('trainer_id', user.staffRecordId);
@@ -166,9 +182,13 @@ export default function AttendancePage() {
     try {
       let query = supabase
         .from('members')
-        .select('id, name, phone, member_code, plan_end_date, total_due, photo_url, last_attendance')
+        .select('id, name, phone, member_code, plan_end_date, total_due, photo_url, last_attendance, branch_id')
         .eq('gym_id', user.gymId)
         .eq('status', 'active');
+
+      if (effectiveBranchId) {
+        query = query.eq('branch_id', effectiveBranchId);
+      }
 
       if (user.role === 'trainer' && user.staffRecordId) {
         query = query.eq('trainer_id', user.staffRecordId);
@@ -177,11 +197,17 @@ export default function AttendancePage() {
       const { data: activeMembers } = await query.order('name', { ascending: true });
 
       // Get today's checked-in member IDs
-      const { data: todayChecked } = await supabase
+      let todayCheckedQuery = supabase
         .from('attendance')
         .select('member_id')
         .eq('gym_id', user.gymId)
         .eq('date', today);
+
+      if (effectiveBranchId) {
+        todayCheckedQuery = todayCheckedQuery.eq('branch_id', effectiveBranchId);
+      }
+
+      const { data: todayChecked } = await todayCheckedQuery;
 
       const checkedIds = new Set((todayChecked || []).map(r => r.member_id));
       const absent = (activeMembers || []).filter(m => !checkedIds.has(m.id));
@@ -189,7 +215,7 @@ export default function AttendancePage() {
     } finally {
       setLoadingAbsent(false);
     }
-  }, [user?.gymId, supabase]);
+  }, [user?.gymId, effectiveBranchId, supabase]);
 
   useEffect(() => {
     fetchTodayData();
@@ -214,7 +240,7 @@ export default function AttendancePage() {
         supabase.removeChannel(channel);
       };
     }
-  }, [user?.gymId, loadAbsentees]);
+  }, [user?.gymId, effectiveBranchId, loadAbsentees]);
 
   const handleCheckIn = async (member: Member) => {
     if (!user?.gymId) return;
@@ -223,11 +249,13 @@ export default function AttendancePage() {
       setCheckingInId(member.id);
       const today = new Date().toISOString().split('T')[0];
       const now = new Date().toISOString();
+      const branchToAssign = effectiveBranchId || member.branch_id || null;
       
       const { error } = await supabase
         .from('attendance')
         .insert({
           gym_id: user.gymId,
+          branch_id: branchToAssign,
           member_id: member.id,
           member_name: member.name,
           date: today,

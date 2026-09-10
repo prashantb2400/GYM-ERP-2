@@ -5,6 +5,7 @@ import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { AdminTopbar } from '@/components/layout/AdminTopbar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
+import { BranchProvider } from '@/hooks/useBranch';
 import { Loader2 } from 'lucide-react';
 
 export default function AdminDashboardLayout({
@@ -33,26 +34,28 @@ export default function AdminDashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
-      {/* Desktop Sidebar (hidden on mobile) */}
-      <div className="hidden lg:block">
-        <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-      </div>
+    <BranchProvider>
+      <div className="flex h-screen overflow-hidden bg-zinc-950">
+        {/* Desktop Sidebar (hidden on mobile) */}
+        <div className="hidden lg:block">
+          <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+        </div>
 
-      {/* Mobile Drawer Sidebar */}
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 bg-zinc-900 border-zinc-800 w-[260px] text-white">
-          <AdminSidebar collapsed={false} setCollapsed={() => {}} />
-        </SheetContent>
-      </Sheet>
+        {/* Mobile Drawer Sidebar */}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent side="left" className="p-0 bg-zinc-900 border-zinc-800 w-[260px] text-white">
+            <AdminSidebar collapsed={false} setCollapsed={() => {}} />
+          </SheetContent>
+        </Sheet>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <AdminTopbar onMenuClick={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto bg-zinc-950 p-6 lg:p-8 pb-12">
-          {children}
-        </main>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+          <AdminTopbar onMenuClick={() => setMobileOpen(true)} />
+          <main className="flex-1 overflow-y-auto bg-zinc-950 p-6 lg:p-8 pb-12">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </BranchProvider>
   );
 }

@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { memberCode, confidence, gymId, token, notes } = await request.json();
+    const { memberCode, confidence, gymId, branchId, token, notes } = await request.json();
 
     if (!memberCode || !gymId || !token) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
@@ -76,6 +76,7 @@ export async function POST(request: Request) {
       .from('attendance')
       .insert({
         gym_id: gymId,
+        branch_id: branchId || member.branch_id || null,
         member_id: member.id,
         member_name: member.name,
         date: todayString,

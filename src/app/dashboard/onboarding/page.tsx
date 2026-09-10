@@ -82,7 +82,24 @@ export default function OnboardingPage() {
         .single();
 
       if (gymError || !gymData) {
-        throw new Error(gymError?.message || 'Failed to create gym branch');
+        throw new Error(gymError?.message || 'Failed to create gym workspace');
+      }
+
+      // 1b. Create Default Branch for the gym
+      const { data: branchData, error: branchError } = await supabase
+        .from('branches')
+        .insert({
+          gym_id: gymData.id,
+          name: `${gymName.trim()} Main Branch`,
+          phone: phone.trim() || null,
+          address: { city: city.trim(), state: state.trim() },
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (branchError) {
+        console.error('Failed to create default branch:', branchError);
       }
 
       // 2. Create Counter row for GYM0001 codes
@@ -144,6 +161,7 @@ export default function OnboardingPage() {
         .insert({
           auth_id: user.id,
           gym_id: gymData.id,
+          branch_id: branchData?.id || null,
           name: user.user_metadata?.full_name || email.split('@')[0] || 'Gym Owner',
           email: email,
           role: 'owner',

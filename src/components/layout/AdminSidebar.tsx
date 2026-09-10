@@ -28,6 +28,7 @@ import {
   LogOut,
   Wallet,
   Package,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { GridPattern } from '@/components/magicui/grid-pattern';
@@ -52,6 +53,7 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   Settings,
   Wallet,
   Package,
+  Building2,
 };
 
 interface AdminSidebarProps {

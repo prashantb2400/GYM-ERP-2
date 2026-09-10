@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
+import { useBranch } from '@/hooks/useBranch';
 import {
   Package,
   PlusCircle,
@@ -34,6 +35,7 @@ export default function InventoryManagementPage() {
   const supabase = createClient();
   const { user } = useAuth();
   const { can } = usePermission();
+  const { selectedBranchId, isOwner, branches } = useBranch();
 
   const [loading, setLoading] = useState(true);
   const [inventoryList, setInventoryList] = useState<any[]>([]);
@@ -91,6 +93,11 @@ export default function InventoryManagementPage() {
         .eq('gym_id', user.gymId)
         .order('name', { ascending: true });
 
+      const effectiveBranchId = !isOwner ? user?.branchId : selectedBranchId;
+      if (effectiveBranchId) {
+        query = query.eq('branch_id', effectiveBranchId);
+      }
+
       if (categoryFilter !== 'all') {
         query = query.eq('category', categoryFilter);
       }
@@ -107,11 +114,16 @@ export default function InventoryManagementPage() {
       setTotalCount(count || 0);
 
       // 2. Compute items under reorder level
-      const { data: reorderCountData } = await supabase
+      let reorderQuery = supabase
         .from('inventory')
         .select('id, stock_quantity, reorder_level')
         .eq('gym_id', user.gymId);
 
+      if (effectiveBranchId) {
+        reorderQuery = reorderQuery.eq('branch_id', effectiveBranchId);
+      }
+
+      const { data: reorderCountData } = await reorderQuery;
       const reorderCount = reorderCountData?.filter(i => Number(i.stock_quantity) <= Number(i.reorder_level)).length || 0;
       setItemsToReorder(reorderCount);
 
@@ -125,7 +137,7 @@ export default function InventoryManagementPage() {
 
   useEffect(() => {
     fetchInventory();
-  }, [user?.gymId, categoryFilter, debouncedSearch, page]);
+  }, [user?.gymId, selectedBranchId, user?.branchId, categoryFilter, debouncedSearch, page]);
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,11 +148,12 @@ export default function InventoryManagementPage() {
 
     try {
       setAdding(true);
+      const branchToAssign = (!isOwner ? user?.branchId : selectedBranchId) || branches[0]?.id || null;
       const { error } = await supabase
         .from('inventory')
         .insert({
           gym_id: user?.gymId,
-          branch_id: user?.branchId,
+          branch_id: branchToAssign,
           name,
           sku: sku || null,
           category,

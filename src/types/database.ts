@@ -246,6 +246,7 @@ export type MemberUpdate = Partial<MemberInsert>;
 export interface Invoice {
   id: string;
   gym_id: string;
+  branch_id: string | null;
   invoice_number: string;
   member_id: string;
   member_name: string;
@@ -277,6 +278,7 @@ export type InvoiceUpdate = Partial<InvoiceInsert>;
 export interface Attendance {
   id: string;
   gym_id: string;
+  branch_id: string | null;
   member_id: string;
   member_name: string;
   date: string;

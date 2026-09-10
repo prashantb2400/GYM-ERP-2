@@ -64,7 +64,7 @@ function RegisterForm() {
     const cleanPhone = phone.replace(/\D/g, '');
     
     if (!gymId) {
-      setError('Please select a gym branch');
+      setError('Please select a gym');
       return;
     }
     if (!name.trim()) {
@@ -89,7 +89,7 @@ function RegisterForm() {
         .limit(1);
 
       if (existingMember && existingMember.length > 0) {
-        throw new Error('This phone number is already registered at this gym branch.');
+        throw new Error('This phone number is already registered at this gym.');
       }
 
       // Send OTP to phone
@@ -131,9 +131,16 @@ function RegisterForm() {
         throw new Error(verifyError?.message || 'Invalid or expired OTP');
       }
 
-      // We have a user session. Let's create the member profile row!
-      // First let's get the next member counter value for code GYM0001
-      // We can call supabase function 'generate_member_code'
+      // 1. Resolve gym's primary branch
+      const { data: primaryBranch } = await supabase
+        .from('branches')
+        .select('id')
+        .eq('gym_id', gymId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      // 2. Generate member code
       const { data: memberCode, error: codeError } = await supabase.rpc('generate_member_code', {
         p_gym_id: gymId,
       });
@@ -142,10 +149,11 @@ function RegisterForm() {
         throw new Error(codeError?.message || 'Failed to generate member code');
       }
 
-      // Insert member profile
+      // 3. Insert member profile with branch_id
       const { error: insertError } = await supabase.from('members').insert({
         auth_id: authData.user.id,
         gym_id: gymId,
+        branch_id: primaryBranch?.id || null,
         member_code: memberCode,
         name: name.trim(),
         phone: cleanPhone,
@@ -202,7 +210,7 @@ function RegisterForm() {
           Member Registration
         </CardTitle>
         <CardDescription className="text-zinc-400 text-center lg:text-left">
-          {gymName ? `Registering at branch: ${gymName}` : 'Fill in details below to register at your gym branch.'}
+          {gymName ? `Registering at: ${gymName}` : 'Fill in details below to register at your gym.'}
         </CardDescription>
       </CardHeader>
       {!otpSent ? (
@@ -216,10 +224,10 @@ function RegisterForm() {
             
             {!gymName && (
               <div className="grid gap-2">
-                <Label htmlFor="gymSelect" className="text-zinc-300 text-sm">Select Gym Branch</Label>
+                <Label htmlFor="gymSelect" className="text-zinc-300 text-sm">Select Gym</Label>
                 <Select value={gymId} onValueChange={setGymId} disabled={loading}>
                   <SelectTrigger id="gymSelect" className="border-zinc-800 bg-zinc-950 text-zinc-100">
-                    <SelectValue placeholder="Choose a gym branch" />
+                    <SelectValue placeholder="Choose your gym" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
                     {gyms.map(g => (

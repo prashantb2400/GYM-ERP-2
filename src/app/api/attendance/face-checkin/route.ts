@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { isSuperAdmin } from '@/lib/platform/auth';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 
 export async function POST(request: Request) {
   try {
@@ -22,46 +23,43 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { gymId: requestedGymId, memberId, confidence, type = 'auto', deviceId } = body;
+    const { gymId: requestedGymId, branchId: requestedBranchId, memberId, confidence, type = 'auto', deviceId } = body;
 
     if (!memberId) {
       return NextResponse.json({ error: 'Missing required memberId' }, { status: 400 });
     }
 
-    // Tenant isolation: resolve gym_id from caller's account
-    const { data: userData } = await supabaseAdmin
-      .from('users')
-      .select('gym_id, role')
-      .eq('auth_id', sessionUser.id)
-      .single();
+    // Tenant & Branch isolation: resolve scope from caller's account
+    const scope = await getBranchScope(sessionUser.id, {
+      requestedGymId,
+      requestedBranchId,
+    });
 
-    let gymId = userData?.gym_id;
-
-    if (!gymId) {
-      const superAdmin = await isSuperAdmin(sessionUser.id);
-      if (superAdmin && requestedGymId) {
-        gymId = requestedGymId;
-      } else {
-        return NextResponse.json({ error: 'Forbidden: No gym assigned to this account' }, { status: 403 });
-      }
-    } else if (requestedGymId && requestedGymId !== gymId) {
-      const superAdmin = await isSuperAdmin(sessionUser.id);
-      if (!superAdmin) {
-        return NextResponse.json({ error: 'Forbidden: Cross-tenant check-in prohibited' }, { status: 403 });
-      }
-      gymId = requestedGymId;
+    if (isBranchScopeError(scope)) {
+      return NextResponse.json({ error: scope.error }, { status: scope.status });
     }
+
+    const gymId = scope.gymId;
 
     // 1. Verify member belongs to this gym and is active
     const { data: member, error: memberErr } = await supabaseAdmin
       .from('members')
-      .select('id, name, member_code, status, photo_url, attendance_count')
+      .select('id, name, member_code, status, photo_url, attendance_count, branch_id')
       .eq('gym_id', gymId)
       .eq('id', memberId)
       .single();
 
     if (memberErr || !member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+
+    // Verify branch confinement: staff can only check in members assigned to their branch
+    if (scope.branchId && member.branch_id && member.branch_id !== scope.branchId) {
+      return NextResponse.json({
+        error: 'Access denied: Member is registered at another branch',
+        member_name: member.name,
+        status: member.status,
+      }, { status: 403 });
     }
 
     if (member.status !== 'active') {
@@ -99,6 +97,7 @@ export async function POST(request: Request) {
         .from('attendance')
         .insert({
           gym_id: gymId,
+          branch_id: scope.branchId || member.branch_id || null,
           member_id: member.id,
           member_name: member.name,
           date: todayString,

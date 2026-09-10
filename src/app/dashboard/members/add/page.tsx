@@ -28,17 +28,28 @@ import { INDIAN_STATES, BLOOD_GROUPS, GENDER_OPTIONS, FITNESS_LEVELS, PAYMENT_MO
 import { calculateGST } from '@/lib/utils/format';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
+import { useBranch } from '@/hooks/useBranch';
 
 export default function AddMemberPage() {
   const supabase = createClient();
   const router = useRouter();
   const { user } = useAuth();
   const { canAddMember, maxMembers, usage, planName } = usePlanLimits();
+  const { branches, selectedBranchId, isOwner } = useBranch();
 
   const [step, setStep] = useState(1);
   const [plans, setPlans] = useState<any[]>([]);
   const [trainers, setTrainers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [memberBranchId, setMemberBranchId] = useState('');
+
+  useEffect(() => {
+    if (selectedBranchId) {
+      setMemberBranchId(selectedBranchId);
+    } else if (branches.length > 0) {
+      setMemberBranchId(user?.branchId || branches[0].id);
+    }
+  }, [selectedBranchId, branches, user?.branchId]);
 
   // --- Step 1: Personal Info ---
   const [name, setName] = useState('');
@@ -284,10 +295,13 @@ export default function AddMemberPage() {
       }
 
       // 5. Insert member record
+      const branchToAssign = memberBranchId || user.branchId || branches[0]?.id || null;
+
       const { data: memberData, error: memberError } = await supabase
         .from('members')
         .insert({
           gym_id: user.gymId,
+          branch_id: branchToAssign,
           member_code: memberCode,
           name: name.trim(),
           phone: phone,
@@ -338,6 +352,7 @@ export default function AddMemberPage() {
         .from('invoices')
         .insert({
           gym_id: user.gymId,
+          branch_id: branchToAssign,
           invoice_number: invNumber || `INV-${new Date().getFullYear()}-0001`,
           member_id: memberData.id,
           member_name: memberData.name,
@@ -484,6 +499,31 @@ export default function AddMemberPage() {
 
                 {/* Personal inputs */}
                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {branches.length > 1 && (
+                    <div className="grid gap-2 sm:col-span-2">
+                      <Label htmlFor="memberBranch" className="text-zinc-300 text-sm">Enrollment Branch *</Label>
+                      <Select
+                        value={memberBranchId}
+                        onValueChange={setMemberBranchId}
+                        disabled={!isOwner}
+                      >
+                        <SelectTrigger id="memberBranch" className="border-zinc-800 bg-zinc-950 text-zinc-100">
+                          <SelectValue placeholder="Select Branch" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                          {branches.map((b) => (
+                            <SelectItem key={b.id} value={b.id}>
+                              📍 {b.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {!isOwner && (
+                        <p className="text-[11px] text-zinc-500">Staff members can only onboard to their assigned branch.</p>
+                      )}
+                    </div>
+                  )}
+
                   <div className="grid gap-2">
                     <Label htmlFor="name" className="text-zinc-300 text-sm">Full Name *</Label>
                     <Input

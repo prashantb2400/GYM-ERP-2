@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useBranch } from '@/hooks/useBranch';
 import type { Expense } from '@/types/database';
 import { usePermission } from '@/hooks/usePermission';
 import {
@@ -32,6 +33,7 @@ export default function ExpenseTrackerPage() {
   const supabase = createClient();
   const { user } = useAuth();
   const { can } = usePermission();
+  const { selectedBranchId, isOwner, branches } = useBranch();
 
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -62,6 +64,7 @@ export default function ExpenseTrackerPage() {
       setDebouncedSearch(search);
       setPage(1);
     }, 300);
+
     return () => clearTimeout(handler);
   }, [search]);
 
@@ -79,6 +82,11 @@ export default function ExpenseTrackerPage() {
         .select('*', { count: 'exact' })
         .eq('gym_id', user.gymId)
         .order('date', { ascending: false });
+
+      const effectiveBranchId = !isOwner ? user?.branchId : selectedBranchId;
+      if (effectiveBranchId) {
+        query = query.eq('branch_id', effectiveBranchId);
+      }
 
       if (categoryFilter !== 'all') {
         query = query.eq('category', categoryFilter);
@@ -100,11 +108,17 @@ export default function ExpenseTrackerPage() {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { data: currentMonthData } = await supabase
+      let monthQuery = supabase
         .from('expenses')
         .select('amount')
         .eq('gym_id', user.gymId)
         .gte('date', startOfMonth.toISOString().split('T')[0]);
+
+      if (effectiveBranchId) {
+        monthQuery = monthQuery.eq('branch_id', effectiveBranchId);
+      }
+
+      const { data: currentMonthData } = await monthQuery;
 
       const sum = currentMonthData?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
       setTotalExpensesThisMonth(sum);
@@ -119,7 +133,7 @@ export default function ExpenseTrackerPage() {
 
   useEffect(() => {
     fetchExpenses();
-  }, [user?.gymId, categoryFilter, debouncedSearch, page]);
+  }, [user?.gymId, selectedBranchId, user?.branchId, categoryFilter, debouncedSearch, page]);
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,11 +144,12 @@ export default function ExpenseTrackerPage() {
 
     try {
       setAdding(true);
+      const branchToAssign = (!isOwner ? user?.branchId : selectedBranchId) || branches[0]?.id || null;
       const { error } = await supabase
         .from('expenses')
         .insert({
           gym_id: user?.gymId,
-          branch_id: user?.branchId,
+          branch_id: branchToAssign,
           title,
           category,
           amount: Number(amount),

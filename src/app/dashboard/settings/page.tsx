@@ -18,7 +18,9 @@ import {
   MessageSquare,
   Fingerprint,
   Trash2,
+  Building2,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,7 +184,7 @@ export default function SettingsPage() {
         .eq('id', user?.gymId);
 
       if (error) throw error;
-      toast.success('Branch configuration updated successfully!');
+      toast.success('Gym settings updated successfully!');
       fetchGymSettings();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -227,9 +229,14 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Branch Configuration</h2>
-          <p className="text-zinc-500 text-xs mt-1">Configure brand details, GST numbers, operating hours, and CCTV integrations.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Gym & Organization Settings</h2>
+          <p className="text-zinc-500 text-xs mt-1">Configure brand details, legal & tax registration, default operating hours, and CCTV integrations.</p>
         </div>
+        <Link href="/dashboard/branches">
+          <Button variant="outline" className="border-zinc-800 text-zinc-300 hover:text-zinc-100 text-xs gap-2">
+            <Building2 className="h-4 w-4 text-purple-400" /> Manage Physical Branches
+          </Button>
+        </Link>
       </div>
 
       <form onSubmit={handleSaveSettings} className="space-y-6">

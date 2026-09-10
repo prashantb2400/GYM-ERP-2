@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       password,
       role,
       permissions,
+      branchId,
     } = await request.json();
     
     const gymId = callerData.gym_id; // Server-side resolved
@@ -41,6 +42,32 @@ export async function POST(request: Request) {
 
     if (!['receptionist', 'trainer'].includes(role)) {
       return NextResponse.json({ error: 'Invalid staff role. Allowed: receptionist, trainer' }, { status: 400 });
+    }
+
+    // Resolve branch assignment
+    let resolvedBranchId: string | null = null;
+    if (branchId) {
+      const { data: branch } = await supabaseAdmin
+        .from('branches')
+        .select('id')
+        .eq('id', branchId)
+        .eq('gym_id', gymId)
+        .single();
+
+      if (!branch) {
+        return NextResponse.json({ error: 'Invalid branch selected for this gym' }, { status: 400 });
+      }
+      resolvedBranchId = branch.id;
+    } else {
+      // Fallback to gym's primary branch
+      const { data: primaryBranch } = await supabaseAdmin
+        .from('branches')
+        .select('id')
+        .eq('gym_id', gymId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+      resolvedBranchId = primaryBranch?.id || null;
     }
 
     // 1. Create the user in Supabase Auth using the admin client
@@ -59,6 +86,7 @@ export async function POST(request: Request) {
     const { error: dbError } = await supabaseAdmin.from('users').insert({
       auth_id: authData.user.id,
       gym_id: gymId,
+      branch_id: resolvedBranchId,
       name,
       email,
       phone: phone || null,

@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { isSuperAdmin } from '@/lib/platform/auth';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 
 export async function GET(request: Request) {
   try {
@@ -23,41 +24,32 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const requestedGymId = searchParams.get('gymId');
+    const requestedBranchId = searchParams.get('branchId');
 
-    // Tenant isolation: resolve gym_id from caller's account
-    const { data: userData } = await supabaseAdmin
-      .from('users')
-      .select('gym_id, role')
-      .eq('auth_id', sessionUser.id)
-      .single();
+    // Tenant & Branch isolation: resolve scope from caller's account
+    const scope = await getBranchScope(sessionUser.id, {
+      requestedGymId,
+      requestedBranchId,
+    });
 
-    let gymId = userData?.gym_id;
-
-    if (!gymId) {
-      // Check if superadmin
-      const superAdmin = await isSuperAdmin(sessionUser.id);
-      if (superAdmin && requestedGymId) {
-        gymId = requestedGymId;
-      } else {
-        return NextResponse.json({ error: 'Forbidden: No gym assigned to this account' }, { status: 403 });
-      }
-    } else if (requestedGymId && requestedGymId !== gymId) {
-      // If caller specifies a different gymId, check if superadmin
-      const superAdmin = await isSuperAdmin(sessionUser.id);
-      if (!superAdmin) {
-        return NextResponse.json({ error: 'Forbidden: Cross-tenant access denied' }, { status: 403 });
-      }
-      gymId = requestedGymId;
+    if (isBranchScopeError(scope)) {
+      return NextResponse.json({ error: scope.error }, { status: scope.status });
     }
 
-    // Fetch active members with enrolled face descriptors for this gym only
-    const { data: members, error } = await supabaseAdmin
+    // Fetch active members with enrolled face descriptors for this branch/gym
+    let query = supabaseAdmin
       .from('members')
-      .select('id, name, member_code, photo_url, face_descriptor')
-      .eq('gym_id', gymId)
+      .select('id, name, member_code, photo_url, face_descriptor, branch_id')
+      .eq('gym_id', scope.gymId)
       .eq('status', 'active')
       .eq('face_enrolled', true)
       .not('face_descriptor', 'is', null);
+
+    if (scope.branchId) {
+      query = query.eq('branch_id', scope.branchId);
+    }
+
+    const { data: members, error } = await query;
 
     if (error) throw error;
 

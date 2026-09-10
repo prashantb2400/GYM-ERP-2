@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
+import { useBranch } from '@/hooks/useBranch';
 import {
   UserCog,
   Plus,
@@ -14,6 +15,7 @@ import {
   UserCheck,
   UserX,
   ShieldCheck,
+  Building2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,6 +72,7 @@ export default function StaffCRUDPage() {
   const supabase = createClient();
   const { user } = useAuth();
   const { can } = usePermission();
+  const { branches } = useBranch();
 
   const [loading, setLoading] = useState(true);
   const [staffList, setStaffList] = useState<any[]>([]);
@@ -83,6 +86,7 @@ export default function StaffCRUDPage() {
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'receptionist' | 'trainer' | ''>('');
+  const [branchId, setBranchId] = useState<string>('');
 
   // Edit Permissions Modal states
   const [openPermsModal, setOpenPermsModal] = useState(false);
@@ -98,7 +102,7 @@ export default function StaffCRUDPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('*, branches(name)')
         .eq('gym_id', user.gymId)
         .order('role', { ascending: true });
 
@@ -127,6 +131,7 @@ export default function StaffCRUDPage() {
     setLoginId('');
     setPassword('');
     setRole('');
+    setBranchId(branches[0]?.id || '');
     setOpenAddModal(true);
   };
 
@@ -172,6 +177,7 @@ export default function StaffCRUDPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gymId: user?.gymId,
+          branchId: branchId || undefined,
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim(),
@@ -323,6 +329,11 @@ export default function StaffCRUDPage() {
                       </Badge>
                     </div>
                     <span className="text-[10px] text-zinc-500 block mt-0.5">ID: {staff.login_id || 'Google Auth'}</span>
+                    {staff.branches?.name && (
+                      <span className="text-[10px] text-purple-400/90 font-medium block mt-0.5">
+                        📍 {staff.branches.name}
+                      </span>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -463,6 +474,24 @@ export default function StaffCRUDPage() {
                 </Select>
               </div>
             </div>
+
+            {branches.length > 0 && (
+              <div className="grid gap-2">
+                <Label htmlFor="staffBranch" className="text-zinc-300 text-xs">Assigned Branch *</Label>
+                <Select value={branchId} onValueChange={setBranchId}>
+                  <SelectTrigger id="staffBranch" className="border-zinc-800 bg-zinc-950 text-zinc-100 text-xs">
+                    <SelectValue placeholder="Select assigned branch" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100 text-xs">
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        📍 {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="staffPass" className="text-zinc-300 text-xs">Workspace Password *</Label>

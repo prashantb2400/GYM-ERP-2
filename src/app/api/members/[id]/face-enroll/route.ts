@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { isSuperAdmin } from '@/lib/platform/auth';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 
 export async function POST(
   request: Request,
@@ -27,32 +28,27 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Resolve caller's gym for tenant isolation
-    const { data: userData } = await supabaseAdmin
-      .from('users')
-      .select('gym_id, role')
-      .eq('auth_id', sessionUser.id)
-      .single();
-
-    const callerGymId = userData?.gym_id;
-    const isPlatformAdmin = !callerGymId ? await isSuperAdmin(sessionUser.id) : false;
-
-    // Verify member exists and belongs to caller's gym
-    let memberQuery = supabaseAdmin
-      .from('members')
-      .select('id, gym_id')
-      .eq('id', memberId);
-
-    if (!isPlatformAdmin) {
-      if (!callerGymId) {
-        return NextResponse.json({ error: 'Forbidden: No gym assigned to this user' }, { status: 403 });
-      }
-      memberQuery = memberQuery.eq('gym_id', callerGymId);
+    // Resolve caller's scope for tenant & branch isolation
+    const scope = await getBranchScope(sessionUser.id);
+    if (isBranchScopeError(scope)) {
+      return NextResponse.json({ error: scope.error }, { status: scope.status });
     }
 
-    const { data: targetMember, error: memberErr } = await memberQuery.single();
+    // Verify member exists and belongs to caller's gym
+    const { data: targetMember, error: memberErr } = await supabaseAdmin
+      .from('members')
+      .select('id, gym_id, branch_id')
+      .eq('id', memberId)
+      .eq('gym_id', scope.gymId)
+      .single();
+
     if (memberErr || !targetMember) {
       return NextResponse.json({ error: 'Member not found or access denied' }, { status: 404 });
+    }
+
+    // Branch isolation: staff can only enroll biometrics for members of their branch
+    if (scope.branchId && targetMember.branch_id && targetMember.branch_id !== scope.branchId) {
+      return NextResponse.json({ error: 'Forbidden: Member belongs to a different branch' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -68,7 +64,7 @@ export async function POST(
 
     const nowIso = new Date().toISOString();
 
-    let updateQuery = supabaseAdmin
+    const { error: updateErr } = await supabaseAdmin
       .from('members')
       .update({
         face_enrolled: true,
@@ -76,13 +72,9 @@ export async function POST(
         consent_given_at: nowIso,
         updated_at: nowIso,
       })
-      .eq('id', memberId);
+      .eq('id', memberId)
+      .eq('gym_id', scope.gymId);
 
-    if (!isPlatformAdmin && callerGymId) {
-      updateQuery = updateQuery.eq('gym_id', callerGymId);
-    }
-
-    const { error: updateErr } = await updateQuery;
     if (updateErr) throw updateErr;
 
     return NextResponse.json({
@@ -120,38 +112,33 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Resolve caller's gym for tenant isolation
-    const { data: userData } = await supabaseAdmin
-      .from('users')
-      .select('gym_id, role')
-      .eq('auth_id', sessionUser.id)
-      .single();
-
-    const callerGymId = userData?.gym_id;
-    const isPlatformAdmin = !callerGymId ? await isSuperAdmin(sessionUser.id) : false;
-
-    // Verify member exists and belongs to caller's gym
-    let memberQuery = supabaseAdmin
-      .from('members')
-      .select('id, gym_id')
-      .eq('id', memberId);
-
-    if (!isPlatformAdmin) {
-      if (!callerGymId) {
-        return NextResponse.json({ error: 'Forbidden: No gym assigned to this user' }, { status: 403 });
-      }
-      memberQuery = memberQuery.eq('gym_id', callerGymId);
+    // Resolve caller's scope for tenant & branch isolation
+    const scope = await getBranchScope(sessionUser.id);
+    if (isBranchScopeError(scope)) {
+      return NextResponse.json({ error: scope.error }, { status: scope.status });
     }
 
-    const { data: targetMember, error: memberErr } = await memberQuery.single();
+    // Verify member exists and belongs to caller's gym
+    const { data: targetMember, error: memberErr } = await supabaseAdmin
+      .from('members')
+      .select('id, gym_id, branch_id')
+      .eq('id', memberId)
+      .eq('gym_id', scope.gymId)
+      .single();
+
     if (memberErr || !targetMember) {
       return NextResponse.json({ error: 'Member not found or access denied' }, { status: 404 });
+    }
+
+    // Branch isolation: staff can only delete biometrics for members of their branch
+    if (scope.branchId && targetMember.branch_id && targetMember.branch_id !== scope.branchId) {
+      return NextResponse.json({ error: 'Forbidden: Member belongs to a different branch' }, { status: 403 });
     }
 
     const nowIso = new Date().toISOString();
 
     // Right to erasure: permanently delete descriptor
-    let deleteQuery = supabaseAdmin
+    const { error: deleteErr } = await supabaseAdmin
       .from('members')
       .update({
         face_enrolled: false,
@@ -159,13 +146,9 @@ export async function DELETE(
         consent_given_at: null,
         updated_at: nowIso,
       })
-      .eq('id', memberId);
+      .eq('id', memberId)
+      .eq('gym_id', scope.gymId);
 
-    if (!isPlatformAdmin && callerGymId) {
-      deleteQuery = deleteQuery.eq('gym_id', callerGymId);
-    }
-
-    const { error: deleteErr } = await deleteQuery;
     if (deleteErr) throw deleteErr;
 
     return NextResponse.json({
