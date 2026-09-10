@@ -48,18 +48,17 @@ export default function PlansCRUDPage() {
   const [isPopular, setIsPopular] = useState(false);
 
   const fetchPlans = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('plans')
-        .select('*')
-        .eq('gym_id', user.gymId)
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-      setPlans(data || []);
+      const res = await fetch(`/api/plans?gymId=${user.gymId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch plans');
+      setPlans(data.plans || []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       toast.error(msg);
@@ -120,7 +119,6 @@ export default function PlansCRUDPage() {
       setSaving(true);
       
       const planPayload = {
-        gym_id: user?.gymId,
         name: name.trim(),
         duration_days: parseInt(duration),
         price: parseFloat(price),
@@ -130,25 +128,24 @@ export default function PlansCRUDPage() {
       };
 
       if (planId) {
-        // Edit existing plan
-        const { error } = await supabase
-          .from('plans')
-          .update(planPayload)
-          .eq('id', planId)
-          .eq('gym_id', user?.gymId);
-
-        if (error) throw error;
+        // Edit existing plan via API
+        const res = await fetch('/api/plans', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: planId, ...planPayload }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to update plan');
         toast.success('Membership plan updated');
       } else {
-        // Add new plan
-        const { error } = await supabase
-          .from('plans')
-          .insert({
-            ...planPayload,
-            display_order: plans.length + 1,
-          });
-
-        if (error) throw error;
+        // Add new plan via API
+        const res = await fetch('/api/plans', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...planPayload, display_order: plans.length + 1 }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to create plan');
         toast.success('Membership plan created');
       }
 
@@ -169,15 +166,15 @@ export default function PlansCRUDPage() {
     }
 
     try {
-      const { error } = await supabase
-        .from('plans')
-        .update({ is_active: !currentVal })
-        .eq('id', id)
-        .eq('gym_id', user?.gymId);
+      const res = await fetch('/api/plans', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_active: !currentVal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update plan status');
 
-      if (error) throw error;
       toast.success(currentVal ? 'Plan deactivated' : 'Plan activated');
-      
       setPlans(prev => prev.map(p => p.id === id ? { ...p, is_active: !currentVal } : p));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -193,13 +190,10 @@ export default function PlansCRUDPage() {
     if (!confirm(`Are you sure you want to delete plan: ${name}?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('plans')
-        .delete()
-        .eq('id', id)
-        .eq('gym_id', user?.gymId);
+      const res = await fetch(`/api/plans?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete plan');
 
-      if (error) throw error;
       toast.success('Plan deleted');
       setPlans(prev => prev.filter(p => p.id !== id));
     } catch (err: unknown) {
@@ -244,22 +238,27 @@ export default function PlansCRUDPage() {
               <button
                 key={template.name}
                 onClick={async () => {
-                  const { error } = await supabase.from('plans').insert({
-                    gym_id: user?.gymId,
-                    name: template.name,
-                    duration_days: template.days,
-                    price: template.price,
-                    features: ['Full gym access', 'Locker', 'WiFi'],
-                    highlights: [],
-                    is_active: true,
-                    is_popular: template.name === 'Quarterly',
-                    display_order: ['Monthly','Quarterly','Annual'].indexOf(template.name),
-                  });
-                  if (!error) {
+                  try {
+                    const res = await fetch('/api/plans', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        name: template.name,
+                        duration_days: template.days,
+                        price: template.price,
+                        features: ['Full gym access', 'Locker', 'WiFi'],
+                        highlights: [],
+                        is_active: true,
+                        is_popular: template.name === 'Quarterly',
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Failed to create plan');
                     toast.success(`${template.name} plan created!`);
                     fetchPlans(); // refresh
-                  } else {
-                    toast.error('Failed to create plan');
+                  } catch (err: unknown) {
+                    const msg = err instanceof Error ? err.message : 'Failed to create plan';
+                    toast.error(msg);
                   }
                 }}
                 className="rounded-xl border border-zinc-700 hover:border-purple-500/50 bg-zinc-900 hover:bg-purple-950/20 p-4 text-left transition-all group"

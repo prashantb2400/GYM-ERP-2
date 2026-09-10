@@ -96,7 +96,10 @@ export default function StaffCRUDPage() {
   const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>([]);
 
   const fetchStaff = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);

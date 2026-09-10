@@ -50,7 +50,10 @@ export default function InvoicesPage() {
   const [sendingWa, setSendingWa] = useState<string | null>(null);
 
   const fetchInvoices = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);

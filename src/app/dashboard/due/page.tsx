@@ -52,7 +52,10 @@ export default function DueCollectionPage() {
   const [notes, setNotes] = useState('');
 
   const fetchDues = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);

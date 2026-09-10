@@ -46,7 +46,10 @@ export default function KycPage() {
   const [savingRejection, setSavingRejection] = useState(false);
 
   const fetchDocuments = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);

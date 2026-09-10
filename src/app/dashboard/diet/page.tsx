@@ -66,7 +66,10 @@ export default function DietChartsPage() {
   const [itemPro, setItemPro] = useState('');
 
   const fetchDiets = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);

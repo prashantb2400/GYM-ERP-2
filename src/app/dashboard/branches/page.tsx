@@ -49,7 +49,10 @@ export default function BranchesPage() {
   const [isActive, setIsActive] = useState(true);
 
   const fetchStats = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
 

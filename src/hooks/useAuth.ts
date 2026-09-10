@@ -20,10 +20,10 @@ export function useAuth() {
 
       const currentStore = useAuthStore.getState();
       if (
-        (currentStore.user && currentStore.user.authId === supabaseUser.id) ||
+        (currentStore.user && currentStore.user.authId === supabaseUser.id && currentStore.user.gymId) ||
         (currentStore.member && currentStore.member.authId === supabaseUser.id)
       ) {
-        // Session already loaded and active for this user
+        // Session already loaded with valid gymId and active for this user
         return;
       }
 

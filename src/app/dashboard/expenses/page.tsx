@@ -69,7 +69,10 @@ export default function ExpenseTrackerPage() {
   }, [search]);
 
   const fetchExpenses = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);

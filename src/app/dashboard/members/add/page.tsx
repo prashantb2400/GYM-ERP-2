@@ -29,6 +29,7 @@ import { calculateGST } from '@/lib/utils/format';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
 import { useBranch } from '@/hooks/useBranch';
+import { CameraCaptureModal } from '@/components/shared/CameraCaptureModal';
 
 export default function AddMemberPage() {
   const supabase = createClient();
@@ -65,6 +66,7 @@ export default function AddMemberPage() {
   const [pin, setPin] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
   
   // Emergency Contact
   const [emergencyName, setEmergencyName] = useState('');
@@ -479,13 +481,24 @@ export default function AddMemberPage() {
                     {photoPreview ? (
                       <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
                     ) : (
-                      <Camera className="h-8 w-8 text-zinc-700" />
+                      <User className="h-12 w-12 text-zinc-700" />
                     )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCameraModalOpen(true)}
+                      className="text-xs border-zinc-700 hover:bg-zinc-800 text-zinc-200 gap-1.5 h-8 px-3"
+                    >
+                      <Camera className="h-3.5 w-3.5 text-purple-400" /> Take Photo
+                    </Button>
                     <Label
                       htmlFor="photo-upload"
-                      className="absolute bottom-0 inset-x-0 h-8 bg-black/60 hover:bg-black/80 flex items-center justify-center cursor-pointer text-[10px] text-zinc-300"
+                      className="inline-flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 h-8 text-xs font-medium text-zinc-200 hover:bg-zinc-800 cursor-pointer gap-1.5 transition-colors"
                     >
-                      <Upload className="h-3 w-3 mr-1" /> Browse
+                      <Upload className="h-3.5 w-3.5 text-zinc-400" /> Browse
                     </Label>
                   </div>
                   <input
@@ -1114,6 +1127,16 @@ export default function AddMemberPage() {
           )}
         </CardFooter>
       </Card>
+
+      <CameraCaptureModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        onCapture={(file, previewUrl) => {
+          setPhotoFile(file);
+          setPhotoPreview(previewUrl);
+        }}
+        title="Capture Member Profile Snapshot"
+      />
     </div>
   );
 }

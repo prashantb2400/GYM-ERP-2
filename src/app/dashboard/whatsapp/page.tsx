@@ -53,7 +53,10 @@ export default function WhatsAppLogsPage() {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]); // Array of member IDs
 
   const fetchLogs = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);

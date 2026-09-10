@@ -52,7 +52,10 @@ export default function AnalyticsPage() {
   });
 
   useEffect(() => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchAnalytics = async () => {
       try {

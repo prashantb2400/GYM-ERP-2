@@ -12,9 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, ArrowLeft, Save } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, Camera, Upload, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { INDIAN_STATES, BLOOD_GROUPS, GENDER_OPTIONS, FITNESS_LEVELS, MEMBER_STATUSES } from '@/lib/utils/constants';
+import { CameraCaptureModal } from '@/components/shared/CameraCaptureModal';
 
 export default function EditMemberPage() {
   const supabase = createClient();
@@ -28,6 +29,10 @@ export default function EditMemberPage() {
   const [saving, setSaving] = useState(false);
   const [plans, setPlans] = useState<any[]>([]);
   const [trainers, setTrainers] = useState<any[]>([]);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -60,7 +65,10 @@ export default function EditMemberPage() {
 
   // Load data
   useEffect(() => {
-    if (!user?.gymId || !memberId) return;
+    if (!user?.gymId || !memberId) {
+      setLoading(false);
+      return;
+    }
 
     const loadData = async () => {
       try {
@@ -117,18 +125,31 @@ export default function EditMemberPage() {
         setMedicalConditions(memberData.medical_conditions || '');
         setHasLocker(memberData.has_locker || false);
         setLockerNumber(memberData.locker_number || '');
+        setPhotoUrl(memberData.photo_url || null);
+        setPhotoPreview(memberData.photo_url || null);
 
       } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
-      toast.error(msg);
-        router.push('/dashboard/members');
+        const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+        toast.error(msg);
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [user?.gymId, memberId, supabase]);
+  }, [user?.gymId, memberId]);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Plan duration date recalculation
   useEffect(() => {
@@ -155,6 +176,25 @@ export default function EditMemberPage() {
     try {
       setSaving(true);
       
+      // Upload new photo if captured/selected
+      let finalPhotoUrl = photoUrl;
+      if (photoFile && user?.gymId) {
+        const fileExt = photoFile.name.split('.').pop() || 'jpg';
+        const fileName = `${memberId}_profile_${Date.now()}.${fileExt}`;
+        const filePath = `${user.gymId}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('members')
+          .upload(filePath, photoFile, { upsert: true });
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('members')
+            .getPublicUrl(filePath);
+          finalPhotoUrl = publicUrl;
+        }
+      }
+
       // Calculate BMI
       let bmi: number | null = null;
       if (weightKg && heightCm) {
@@ -176,6 +216,7 @@ export default function EditMemberPage() {
           city: city.trim() || null,
           state: state.trim() || null,
           pin: pin.trim() || null,
+          photo_url: finalPhotoUrl,
           status: status || 'active',
           current_plan_id: selectedPlanId || null,
           plan_start_date: planStartDate || null,
@@ -237,6 +278,45 @@ export default function EditMemberPage() {
                 <CardTitle className="text-sm font-bold text-zinc-200">Personal Information</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Profile Snapshot */}
+                <div className="sm:col-span-2 flex items-center gap-5 p-4 rounded-xl border border-zinc-800/80 bg-zinc-950/60 mb-2">
+                  <div className="relative h-20 w-20 rounded-full border-2 border-zinc-700 bg-zinc-900 flex items-center justify-center overflow-hidden shrink-0">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-8 w-8 text-zinc-600" />
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-zinc-200 text-xs font-semibold">Profile Snapshot</Label>
+                    <p className="text-[11px] text-zinc-500">Update photo with your live webcam or browse an image file.</p>
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCameraModalOpen(true)}
+                        className="text-xs border-zinc-700 hover:bg-zinc-800 text-zinc-200 gap-1.5 h-7 px-2.5"
+                      >
+                        <Camera className="h-3 w-3 text-purple-400" /> Take Photo
+                      </Button>
+                      <Label
+                        htmlFor="edit-photo-upload"
+                        className="inline-flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-2.5 h-7 text-xs font-medium text-zinc-200 hover:bg-zinc-800 cursor-pointer gap-1.5 transition-colors"
+                      >
+                        <Upload className="h-3 w-3 text-zinc-400" /> Browse
+                      </Label>
+                    </div>
+                  </div>
+                  <input
+                    id="edit-photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                  />
+                </div>
+
                 <div className="grid gap-2">
                   <Label htmlFor="name" className="text-zinc-300 text-sm">Full Name *</Label>
                   <Input
@@ -564,6 +644,16 @@ export default function EditMemberPage() {
           </Button>
         </div>
       </form>
+
+      <CameraCaptureModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        onCapture={(file, previewUrl) => {
+          setPhotoFile(file);
+          setPhotoPreview(previewUrl);
+        }}
+        title="Update Member Profile Snapshot"
+      />
     </div>
   );
 }

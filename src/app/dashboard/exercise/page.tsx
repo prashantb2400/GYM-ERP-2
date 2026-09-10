@@ -64,7 +64,10 @@ export default function ExercisePlansPage() {
   const [exNotes, setExNotes] = useState('');
 
   const fetchExercises = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
