@@ -17,7 +17,7 @@ export default function AdminDashboardLayout({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (loading) {
+  if (loading && !isAuthenticated) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
         <div className="text-center">
@@ -29,7 +29,7 @@ export default function AdminDashboardLayout({
   }
 
   // Fallback protection (in case middleware takes a second to redirect)
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !loading) {
     return null;
   }
 

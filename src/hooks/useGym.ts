@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Gym } from '@/types/database';
 import { useAuth } from './useAuth';
@@ -13,6 +13,7 @@ export function useGym() {
   const [error, setError] = useState<string | null>(null);
 
   const gymId = user?.gymId || member?.gymId;
+  const fetchedGymIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!gymId) {
@@ -20,9 +21,13 @@ export function useGym() {
       return;
     }
 
+    if (fetchedGymIdRef.current === gymId && gym?.id === gymId) {
+      return;
+    }
+
     const fetchGymDetails = async () => {
       try {
-        setLoading(true);
+        if (!gym) setLoading(true);
         const { data, error: fetchError } = await supabase
           .from('gyms')
           .select('*')
@@ -31,8 +36,9 @@ export function useGym() {
 
         if (fetchError) throw fetchError;
         setGym(data);
+        fetchedGymIdRef.current = gymId;
       } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+        const msg = err instanceof Error ? err.message : 'An unknown error occurred';
         setError(msg || 'Error fetching gym details');
       } finally {
         setLoading(false);
@@ -40,7 +46,7 @@ export function useGym() {
     };
 
     fetchGymDetails();
-  }, [gymId, supabase]);
+  }, [gymId]);
 
   const updateGymSettings = async (updates: Partial<Gym>) => {
     if (!gymId) return { error: 'No gym ID found in current session' };

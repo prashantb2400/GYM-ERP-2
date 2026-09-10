@@ -34,11 +34,19 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
   const [selectedBranchId, setSelectedBranchIdState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isOwner = user?.role === 'owner';
+  const gymId = user?.gymId;
+  const userRole = user?.role;
+  const userBranchId = user?.branchId;
+  const isOwner = userRole === 'owner';
+  const fetchedGymIdRef = React.useRef<string | null>(null);
 
-  const fetchBranches = useCallback(async () => {
-    if (!user?.gymId) {
+  const fetchBranches = useCallback(async (force = false) => {
+    if (!gymId) {
       setLoading(false);
+      return;
+    }
+
+    if (!force && fetchedGymIdRef.current === gymId) {
       return;
     }
 
@@ -47,7 +55,7 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('branches')
         .select('*')
-        .eq('gym_id', user.gymId)
+        .eq('gym_id', gymId)
         .eq('is_active', true)
         .order('created_at', { ascending: true });
 
@@ -55,6 +63,7 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
 
       const branchList = (data as Branch[]) || [];
       setBranches(branchList);
+      fetchedGymIdRef.current = gymId;
 
       if (isOwner) {
         // Retrieve persisted branch preference for owner
@@ -66,14 +75,14 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         // Staff is strictly pinned to their assigned branch
-        setSelectedBranchIdState(user?.branchId || (branchList[0]?.id ?? null));
+        setSelectedBranchIdState(userBranchId || (branchList[0]?.id ?? null));
       }
     } catch (err) {
       console.error('Failed to load branches:', err);
     } finally {
       setLoading(false);
     }
-  }, [user, isOwner, supabase]);
+  }, [gymId, isOwner, userBranchId]);
 
   useEffect(() => {
     fetchBranches();
@@ -101,7 +110,7 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
         selectedBranch,
         setSelectedBranchId,
         loading,
-        refreshBranches: fetchBranches,
+        refreshBranches: () => fetchBranches(true),
         isOwner,
       }}
     >

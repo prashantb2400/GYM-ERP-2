@@ -18,8 +18,19 @@ export function useAuth() {
         return;
       }
 
+      const currentStore = useAuthStore.getState();
+      if (
+        (currentStore.user && currentStore.user.authId === supabaseUser.id) ||
+        (currentStore.member && currentStore.member.authId === supabaseUser.id)
+      ) {
+        // Session already loaded and active for this user
+        return;
+      }
+
       try {
-        setLoading(true);
+        if (!currentStore.user && !currentStore.member) {
+          setLoading(true);
+        }
         // Query users table first to check if they are owner/staff
         const { data: userData, error: userError } = await supabase
           .from('users')
@@ -130,7 +141,7 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase, setSession, setLoading, setError, logout, router]);
+  }, [setSession, setLoading, setError, logout, router]);
 
   const signOut = async () => {
     setLoading(true);

@@ -54,6 +54,7 @@ export default function DashboardHome() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [demoSeeded, setDemoSeeded] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const hasLoadedRef = React.useRef(false);
 
   useEffect(() => {
     if (gym?.settings?.demo_seeded) {
@@ -85,7 +86,9 @@ export default function DashboardHome() {
 
     const fetchDashboardData = async () => {
       try {
-        setLoading(true);
+        if (!hasLoadedRef.current) {
+          setLoading(true);
+        }
 
         // 1. Fetch counts
         const { count: activeCount } = await supabase
@@ -199,6 +202,7 @@ export default function DashboardHome() {
       } catch (err) {
         console.error('Error fetching dashboard stats:', err);
       } finally {
+        hasLoadedRef.current = true;
         setLoading(false);
       }
     };
@@ -227,9 +231,9 @@ export default function DashboardHome() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.gymId, supabase]);
+  }, [user?.gymId]);
 
-  if (loading) {
+  if (loading && !hasLoadedRef.current) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
