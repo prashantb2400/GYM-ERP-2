@@ -118,6 +118,11 @@ CREATE POLICY gyms_update ON public.gyms
 -- Fixes "Invalid counter type: member_count" by normalizing input arguments
 -- and ensuring counters exist and never throw exceptions.
 
+-- Must DROP first because PostgreSQL cannot rename parameters via CREATE OR REPLACE
+DROP FUNCTION IF EXISTS increment_counter(UUID, TEXT);
+DROP FUNCTION IF EXISTS generate_member_code(UUID);
+DROP FUNCTION IF EXISTS generate_invoice_number(UUID);
+
 CREATE OR REPLACE FUNCTION increment_counter(p_gym_id UUID, p_field TEXT)
 RETURNS INTEGER AS $$
 DECLARE
