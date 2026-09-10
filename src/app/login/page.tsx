@@ -128,7 +128,7 @@ function OwnerLoginForm() {
       setLoading(true);
       setError(null);
 
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: signUpEmail.trim(),
         password: signUpPassword,
         options: {
@@ -139,14 +139,22 @@ function OwnerLoginForm() {
 
       if (signUpError) throw signUpError;
 
+      // If email confirmation is disabled in Supabase, user is immediately authenticated
+      if (signUpData?.session) {
+        router.push('/dashboard/onboarding');
+        return;
+      }
+
       setSignUpSuccess(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
-      setError(
-        msg.includes('already registered')
-          ? 'An account with this email already exists. Please sign in.'
-          : msg || 'Sign up failed. Please try again.'
-      );
+      if (msg.toLowerCase().includes('rate limit')) {
+        setError('Supabase email rate limit exceeded (built-in service is limited to 3-4 emails/hr). Please disable "Confirm email" in your Supabase Auth settings or configure custom SMTP.');
+      } else if (msg.includes('already registered')) {
+        setError('An account with this email already exists. Please sign in.');
+      } else {
+        setError(msg || 'Sign up failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
