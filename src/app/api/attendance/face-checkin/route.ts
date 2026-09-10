@@ -53,15 +53,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });
     }
 
-    // Verify branch confinement: staff can only check in members assigned to their branch
-    if (scope.branchId && member.branch_id && member.branch_id !== scope.branchId) {
-      return NextResponse.json({
-        error: 'Access denied: Member is registered at another branch',
-        member_name: member.name,
-        status: member.status,
-      }, { status: 403 });
-    }
-
     if (member.status !== 'active') {
       return NextResponse.json({
         error: `Membership is ${member.status}`,

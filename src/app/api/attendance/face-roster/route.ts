@@ -36,7 +36,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: scope.error }, { status: scope.status });
     }
 
-    // Fetch active members with enrolled face descriptors for this branch/gym
+    const branchOnly = searchParams.get('branchOnly') === 'true';
+
+    // Fetch active members with enrolled face descriptors.
+    // By default, loads active members across the entire gym so members can check in at any branch.
+    // If branchOnly=true is explicitly requested, restricts to that branch.
     let query = supabaseAdmin
       .from('members')
       .select('id, name, member_code, photo_url, face_descriptor, branch_id')
@@ -45,7 +49,7 @@ export async function GET(request: Request) {
       .eq('face_enrolled', true)
       .not('face_descriptor', 'is', null);
 
-    if (scope.branchId) {
+    if (branchOnly && scope.branchId) {
       query = query.eq('branch_id', scope.branchId);
     }
 
@@ -59,6 +63,7 @@ export async function GET(request: Request) {
       memberCode: m.member_code,
       photoUrl: m.photo_url,
       descriptor: m.face_descriptor,
+      branchId: m.branch_id,
     }));
 
     return NextResponse.json(roster);

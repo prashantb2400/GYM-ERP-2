@@ -101,15 +101,15 @@ DROP POLICY IF EXISTS branch_update_inventory ON public.inventory;
 -- 7. RECREATE BRANCH-ISOLATED POLICIES
 
 -- MEMBERS:
+-- Members can check in at any branch of their gym.
+-- Therefore, all staff of the gym can view (SELECT) members of their gym for
+-- check-in verification, kiosk roster matching, and attendance joins.
+-- Members can view their own profile.
+-- Data modification (INSERT/UPDATE/DELETE) remains strictly branch-isolated via branch_manage_members.
 CREATE POLICY branch_select_members ON public.members
   FOR SELECT USING (
     auth_id = auth.uid()
-    OR (
-      gym_id = get_user_gym_id() AND (
-        get_user_role() = 'owner'
-        OR branch_id = get_user_branch_id()
-      )
-    )
+    OR gym_id = get_user_gym_id()
   );
 
 CREATE POLICY branch_manage_members ON public.members

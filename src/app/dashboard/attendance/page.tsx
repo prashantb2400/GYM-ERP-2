@@ -24,7 +24,7 @@ import Link from 'next/link';
 export default function AttendancePage() {
   const supabase = createClient();
   const { user } = useAuth();
-  const { selectedBranchId, isOwner } = useBranch();
+  const { selectedBranchId, isOwner, branches } = useBranch();
   
   const effectiveBranchId = !isOwner ? user?.branchId : selectedBranchId;
   
@@ -56,7 +56,7 @@ export default function AttendancePage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Search members
+  // Search members (gym-wide since members can check in at any branch)
   useEffect(() => {
     async function searchMembers() {
       if (!user?.gymId || !debouncedQuery.trim()) {
@@ -70,10 +70,6 @@ export default function AttendancePage() {
           .from('members')
           .select('id, name, phone, member_code, status, plan_end_date, total_due, photo_url, face_enrolled, branch_id')
           .eq('gym_id', user.gymId);
-
-        if (effectiveBranchId) {
-          query = query.eq('branch_id', effectiveBranchId);
-        }
 
         if (user.role === 'trainer' && user.staffRecordId) {
           query = query.eq('trainer_id', user.staffRecordId);
@@ -351,12 +347,20 @@ export default function AttendancePage() {
                               {member.member_code}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 mt-1">
+                          <div className="flex items-center gap-3 mt-1 flex-wrap">
                             <span className="text-sm text-zinc-400">{formatPhone(member.phone)}</span>
                             <span className="text-zinc-600">•</span>
                             <Badge variant="outline" className={`border ${statusInfo.color}`}>
                               {statusInfo.text}
                             </Badge>
+                            {member.branch_id && effectiveBranchId && member.branch_id !== effectiveBranchId && (
+                              <>
+                                <span className="text-zinc-600">•</span>
+                                <Badge variant="outline" className="border-blue-500/30 text-blue-400 bg-blue-500/10 text-xs font-normal">
+                                  Home: {branches.find(b => b.id === member.branch_id)?.name || 'Other Branch'}
+                                </Badge>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
