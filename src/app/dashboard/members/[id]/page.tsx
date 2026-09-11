@@ -512,62 +512,9 @@ export default function MemberDetailPage() {
         {/* LEFT COLUMN: QR Pass, Face ID, Contacts, Emergency */}
         <div className="space-y-6 lg:col-span-1">
           
-          {/* Quick QR Check-in Pass Card */}
-          <Card className="border-zinc-800 bg-zinc-900/40 overflow-hidden relative">
-            <CardHeader className="pb-3 border-b border-zinc-800/80">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold text-zinc-200 flex items-center gap-2">
-                  <QrCode className="h-4 w-4 text-purple-400" />
-                  QR Attendance Pass
-                </CardTitle>
-                <Badge variant="outline" className="border-purple-500/30 text-purple-400 text-[10px] font-mono">
-                  Active
-                </Badge>
-              </div>
-              <CardDescription className="text-xs text-zinc-400">
-                Scannable token for contactless turnstiles and kiosk tablets.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-              <div 
-                onClick={() => setPrintIdOpen(true)}
-                className="bg-white p-3.5 rounded-2xl shadow-xl border border-zinc-200 cursor-pointer hover:scale-105 transition-transform group relative"
-                title="Click to preview & print ID badge"
-              >
-                <QRCodeSVG
-                  value={qrPassValue}
-                  size={150}
-                  level="M"
-                  bgColor="#ffffff"
-                  fgColor="#09090b"
-                />
-              </div>
-
-              <div className="mt-3 flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-zinc-200 bg-zinc-950 px-3 py-1 rounded-lg border border-zinc-800">
-                  {member.member_code}
-                </span>
-              </div>
-
-              <p className="text-[11px] text-zinc-500 mt-2">
-                Scan this code on the kiosk scanner camera to mark instant check-in.
-              </p>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPrintIdOpen(true)}
-                className="w-full mt-4 border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-xs gap-2"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                Preview & Print Member ID
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Biometric Fingerprint Status Card */}
+          {/* Biometric Fingerprint Status Card (Primary Biometric) */}
           <Card className="border-zinc-800 bg-zinc-900/40">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 border-b border-zinc-800/80">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-bold text-zinc-200 flex items-center gap-2">
                   <Fingerprint className="h-4 w-4 text-purple-400" />
@@ -581,25 +528,32 @@ export default function MemberDetailPage() {
                 </Badge>
               </div>
               <CardDescription className="text-xs text-zinc-400 mt-1">
-                High-accuracy optical minutiae template for turnstile and kiosk check-in.
+                Primary biometric for one-touch optical kiosk check-in (Left Thumb default).
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 text-xs">
+            <CardContent className="space-y-3 text-xs pt-4">
               {member.biometric_enrolled ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <div className="flex items-center gap-2 text-green-400 bg-green-950/20 border border-green-900/30 p-2.5 rounded-xl">
                     <ShieldCheck className="h-4 w-4 shrink-0" />
                     <span className="text-[11px]">Ready for one-touch biometric scanner check-in.</span>
                   </div>
-                  <div className="text-[10px] text-zinc-400 space-y-0.5">
-                    {member.fingerprint_finger && (
-                      <p>Enrolled Finger: <strong className="text-zinc-200 capitalize">{member.fingerprint_finger.replace('_', ' ')}</strong></p>
-                    )}
+                  <div className="text-[10px] text-zinc-400 space-y-1 bg-zinc-950/60 p-2.5 rounded-xl border border-zinc-800/80">
+                    <div className="flex justify-between">
+                      <span>Enrolled Finger:</span>
+                      <strong className="text-zinc-200 capitalize">{(member.fingerprint_finger || 'left_thumb').replace('_', ' ')}</strong>
+                    </div>
                     {member.fingerprint_quality && (
-                      <p>Quality Score: <strong className="text-green-400">{member.fingerprint_quality}%</strong></p>
+                      <div className="flex justify-between">
+                        <span>Quality Score:</span>
+                        <strong className="text-green-400">{member.fingerprint_quality}%</strong>
+                      </div>
                     )}
                     {member.fingerprint_enrolled_at && (
-                      <p className="text-zinc-500">Enrolled: {formatDate(member.fingerprint_enrolled_at)}</p>
+                      <div className="flex justify-between text-zinc-500">
+                        <span>Enrolled Date:</span>
+                        <span>{formatDate(member.fingerprint_enrolled_at)}</span>
+                      </div>
                     )}
                   </div>
                   <Button
@@ -615,7 +569,7 @@ export default function MemberDetailPage() {
               ) : (
                 <div className="space-y-3">
                   <p className="text-zinc-400 text-[11px] leading-relaxed">
-                    Capture member's thumbprint to enable one-touch attendance on the kiosk.
+                    Capture member's left thumb to enable instant one-touch attendance on the kiosk.
                   </p>
                   <Button
                     size="sm"
@@ -630,29 +584,29 @@ export default function MemberDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Biometric Face ID Status Card */}
+          {/* Biometric Face ID Status Card (Secondary Biometric) */}
           <Card className="border-zinc-800 bg-zinc-900/40">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 border-b border-zinc-800/80">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-bold text-zinc-200 flex items-center gap-2">
-                  <ScanFace className="h-4 w-4 text-purple-400" />
+                  <ScanFace className="h-4 w-4 text-cyan-400" />
                   Biometric Face ID
                 </CardTitle>
                 <Badge className={member.face_enrolled 
                   ? "bg-green-500/10 text-green-400 border-green-500/20 text-[10px]" 
                   : "bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px]"
                 }>
-                  {member.face_enrolled ? 'Enrolled ✓' : 'Not Enrolled'}
+                  {member.face_enrolled ? 'Enrolled ✓' : 'Secondary'}
                 </Badge>
               </div>
               <CardDescription className="text-xs text-zinc-400 mt-1">
-                DPDP Act compliant 128-d mathematical vector. Photos are never stored.
+                Secondary contactless biometric for AI camera walk-through kiosks.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 text-xs">
+            <CardContent className="space-y-3 text-xs pt-4">
               {member.face_enrolled ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-green-400 bg-green-950/20 border border-green-900/30 p-2.5 rounded-xl">
+                  <div className="flex items-center gap-2 text-cyan-400 bg-cyan-950/20 border border-cyan-900/30 p-2.5 rounded-xl">
                     <ShieldCheck className="h-4 w-4 shrink-0" />
                     <span className="text-[11px]">Ready for AI face recognition kiosk walk-throughs.</span>
                   </div>
@@ -667,27 +621,77 @@ export default function MemberDetailPage() {
                     onClick={() => setFaceEnrollOpen(true)}
                     className="w-full gap-2 border-zinc-800 hover:bg-zinc-800 text-zinc-200 text-xs"
                   >
-                    <ScanFace className="h-3.5 w-3.5 text-purple-400" />
+                    <ScanFace className="h-3.5 w-3.5 text-cyan-400" />
                     Manage / Re-enroll Face
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <p className="text-zinc-400 text-[11px] leading-relaxed">
-                    Enroll 5 rapid camera frames so this member can walk through the kiosk without touching any screen.
+                    Enroll 5 camera frames so this member can walk through the AI face kiosk.
                   </p>
                   <Button
                     size="sm"
+                    variant="outline"
                     onClick={() => setFaceEnrollOpen(true)}
-                    className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold"
+                    className="w-full gap-2 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 text-xs font-semibold"
                   >
                     <ScanFace className="h-3.5 w-3.5" />
-                    Enroll Face ID Now
+                    Enroll Face ID
                   </Button>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Printable Member ID Badge Card */}
+          <Card className="border-zinc-800 bg-zinc-900/40 overflow-hidden relative">
+            <CardHeader className="pb-3 border-b border-zinc-800/80">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold text-zinc-200 flex items-center gap-2">
+                  <Printer className="h-4 w-4 text-purple-400" />
+                  Print Member ID Card
+                </CardTitle>
+                <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">
+                  Physical Badge
+                </Badge>
+              </div>
+              <CardDescription className="text-xs text-zinc-400">
+                Official badge with gym branding, member photo, and QR pass.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center p-5 text-center">
+              <div 
+                onClick={() => setPrintIdOpen(true)}
+                className="bg-white p-3 rounded-2xl shadow-xl border border-zinc-200 cursor-pointer hover:scale-105 transition-transform group relative"
+                title="Click to preview & print ID badge"
+              >
+                <QRCodeSVG
+                  value={qrPassValue}
+                  size={120}
+                  level="M"
+                  bgColor="#ffffff"
+                  fgColor="#09090b"
+                />
+              </div>
+
+              <span className="mt-2 text-xs font-mono font-bold text-zinc-300 bg-zinc-950 px-2.5 py-0.5 rounded border border-zinc-800">
+                {member.member_code}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPrintIdOpen(true)}
+                className="w-full mt-3 border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-xs gap-2"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Preview & Print Member ID Card
+              </Button>
+            </CardContent>
+          </Card>
+
+
 
           {/* Contact Details Card with WhatsApp Integration */}
           <Card className="border-zinc-800 bg-zinc-900/40">

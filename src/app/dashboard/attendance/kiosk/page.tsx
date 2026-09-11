@@ -24,6 +24,7 @@ import {
   Search,
   Users,
   ShieldCheck,
+  ScanFace,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
@@ -171,7 +172,7 @@ export default function FingerprintKioskPage() {
   }, [detectHardware, loadRoster, fetchTodayCount]);
 
   // Process live scan from sensor
-  const handleScanTouch = async (finger: FingerType = 'right_thumb') => {
+  const handleScanTouch = async (finger: FingerType = 'left_thumb') => {
     if (isHandlingScanRef.current) return;
     isHandlingScanRef.current = true;
     setIsScanning(true);
@@ -367,6 +368,18 @@ export default function FingerprintKioskPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          {/* Secondary Kiosk: AI Face Recognition */}
+          <Link href="/dashboard/attendance/face-kiosk">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 gap-1.5 hidden sm:inline-flex"
+            >
+              <ScanFace className="h-3.5 w-3.5" />
+              AI Face Kiosk
+            </Button>
+          </Link>
+
           {/* Driver Switcher / Status */}
           <Select
             value={deviceInfo?.driverId || 'virtual'}
@@ -420,7 +433,7 @@ export default function FingerprintKioskPage() {
         <div className="flex flex-col items-center justify-center">
           {/* Circular scanner prism */}
           <div
-            onClick={() => handleScanTouch('right_thumb')}
+            onClick={() => handleScanTouch('left_thumb')}
             className={cn(
               'relative h-56 w-56 sm:h-64 sm:w-64 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-500 group select-none shadow-2xl',
               isScanning
@@ -466,7 +479,7 @@ export default function FingerprintKioskPage() {
           </div>
 
           <p className="text-xs text-zinc-500 mt-4 text-center">
-            {deviceInfo?.name} • Place registered thumb firmly on optical sensor
+            {deviceInfo?.name} • Place registered left thumb firmly on optical sensor
           </p>
         </div>
 

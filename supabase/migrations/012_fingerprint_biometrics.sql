@@ -5,7 +5,7 @@
 -- 1. Add fingerprint columns to public.members
 ALTER TABLE public.members
   ADD COLUMN IF NOT EXISTS fingerprint_template JSONB DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS fingerprint_finger VARCHAR(30) DEFAULT 'right_thumb',
+  ADD COLUMN IF NOT EXISTS fingerprint_finger VARCHAR(30) DEFAULT 'left_thumb',
   ADD COLUMN IF NOT EXISTS fingerprint_quality INTEGER DEFAULT 0,
   ADD COLUMN IF NOT EXISTS fingerprint_enrolled_at TIMESTAMPTZ DEFAULT NULL;
 

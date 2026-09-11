@@ -27,12 +27,12 @@ interface FingerprintEnrollmentModalProps {
 }
 
 const FINGER_OPTIONS: { id: FingerType; label: string }[] = [
-  { id: 'right_thumb', label: 'Right Thumb (Recommended)' },
-  { id: 'right_index', label: 'Right Index Finger' },
-  { id: 'left_thumb', label: 'Left Thumb' },
+  { id: 'left_thumb', label: 'Left Thumb (Default)' },
+  { id: 'right_thumb', label: 'Right Thumb' },
   { id: 'left_index', label: 'Left Index Finger' },
-  { id: 'right_middle', label: 'Right Middle Finger' },
+  { id: 'right_index', label: 'Right Index Finger' },
   { id: 'left_middle', label: 'Left Middle Finger' },
+  { id: 'right_middle', label: 'Right Middle Finger' },
 ];
 
 export function FingerprintEnrollmentModal({
@@ -43,7 +43,7 @@ export function FingerprintEnrollmentModal({
 }: FingerprintEnrollmentModalProps) {
   const [consentGiven, setConsentGiven] = useState(false);
   const [selectedFinger, setSelectedFinger] = useState<FingerType>(
-    (member.fingerprint_finger as FingerType) || 'right_thumb'
+    (member.fingerprint_finger as FingerType) || 'left_thumb'
   );
   const [deviceInfo, setDeviceInfo] = useState<ScannerDeviceInfo | null>(null);
   const [isDetectingDevice, setIsDetectingDevice] = useState(true);

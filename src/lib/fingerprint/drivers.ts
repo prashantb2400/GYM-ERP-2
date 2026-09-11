@@ -393,7 +393,7 @@ export class FingerprintScannerManager {
   /**
    * Performs biometric capture on the active driver
    */
-  async capture(finger: FingerType = 'right_thumb', timeoutMs = 10000): Promise<CaptureResult> {
+  async capture(finger: FingerType = 'left_thumb', timeoutMs = 10000): Promise<CaptureResult> {
     if (!this.activeDriver) {
       await this.detectActiveScanner();
     }
