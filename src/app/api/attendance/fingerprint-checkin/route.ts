@@ -73,22 +73,65 @@ export async function POST(request: Request) {
     // 2. Check if already checked in today
     const { data: existing } = await supabaseAdmin
       .from('attendance')
-      .select('id, check_in_time')
+      .select('id, check_in_time, check_out_time')
       .eq('gym_id', gymId)
       .eq('member_id', member.id)
       .eq('date', todayString)
       .single();
 
     if (existing) {
+      if (existing.check_out_time) {
+        return NextResponse.json({
+          success: true,
+          already_completed: true,
+          action: 'already_completed',
+          message: 'Already checked in and checked out for today',
+          member_name: member.name,
+          member_photo: member.photo_url,
+          member_code: member.member_code,
+        });
+      }
+
+      const checkInMs = new Date(existing.check_in_time).getTime();
+      const elapsedMinutes = (Date.now() - checkInMs) / (1000 * 60);
+
+      if (elapsedMinutes < 5) {
+        return NextResponse.json({
+          success: true,
+          already_marked: true,
+          action: 'check_in_duplicate',
+          message: `Already checked in ${Math.round(elapsedMinutes)}m ago`,
+          member_name: member.name,
+          member_photo: member.photo_url,
+          member_code: member.member_code,
+          check_in_time: existing.check_in_time,
+          total_due: member.total_due,
+        });
+      }
+
+      // Check-out scan (> 5 minutes after check-in)
+      const nowIso = new Date().toISOString();
+      const durationMin = Math.round(elapsedMinutes);
+
+      const { error: updateErr } = await supabaseAdmin
+        .from('attendance')
+        .update({
+          check_out_time: nowIso,
+          notes: `Check-out via Fingerprint (Workout: ${durationMin}m)`,
+        })
+        .eq('id', existing.id);
+
+      if (updateErr) throw updateErr;
+
       return NextResponse.json({
         success: true,
-        already_marked: true,
-        message: 'Already checked in today',
+        action: 'check_out',
         member_name: member.name,
         member_photo: member.photo_url,
         member_code: member.member_code,
-        check_in_time: existing.check_in_time,
-        total_due: member.total_due,
+        time: new Date().toLocaleTimeString('en-IN'),
+        duration: durationMin,
+        message: `Checked out! Workout duration: ${durationMin} min`,
       });
     }
 

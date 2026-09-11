@@ -598,15 +598,19 @@ export default function AttendancePage() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link href="/dashboard/attendance/face-kiosk">
-            <Button variant="outline" className="gap-2 shadow-lg border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300">
-              <ScanFace className="h-4 w-4" />
-              AI Face Kiosk
+            <Button className="gap-2 shadow-xl bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:via-indigo-500 hover:to-purple-500 text-white font-semibold border-0">
+              <div className="flex items-center -space-x-1">
+                <ScanFace className="h-4 w-4" />
+                <Fingerprint className="h-4 w-4 text-purple-200" />
+              </div>
+              Dual Biometric Kiosk
+              <Badge className="bg-white/20 text-white text-[10px] px-1 py-0 border-0 ml-1">Live</Badge>
             </Button>
           </Link>
           <Link href="/dashboard/attendance/kiosk">
-            <Button className="gap-2 shadow-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold">
+            <Button variant="outline" className="gap-1.5 border-purple-500/30 text-purple-400 hover:bg-purple-500/10">
               <Fingerprint className="h-4 w-4" />
-              Fingerprint Kiosk
+              Fingerprint Station
             </Button>
           </Link>
         </div>

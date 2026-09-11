@@ -23,11 +23,11 @@ describe('Auth Me Auto-Heal & Gym Adoption Logic', () => {
   });
 
   it('preserves cached gym ID when present in storage', () => {
-    const cached = '00000000-0000-0000-0000-000000000001';
+    const cached: string | null = '00000000-0000-0000-0000-000000000001';
     const isValid = cached && cached !== 'null' && cached !== 'undefined';
     expect(Boolean(isValid)).toBe(true);
 
-    const invalidCached = 'null';
+    const invalidCached: string | null = 'null';
     const isInvalidValid = invalidCached && invalidCached !== 'null' && invalidCached !== 'undefined';
     expect(Boolean(isInvalidValid)).toBe(false);
   });

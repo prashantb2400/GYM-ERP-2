@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   ArrowLeft,
   Camera,
@@ -21,10 +22,19 @@ import {
   LogIn,
   Wifi,
   WifiOff,
+  Fingerprint,
+  Cpu,
+  Sparkles,
+  XCircle,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { toast } from 'sonner';
+import { fetchWithAuth } from '@/lib/utils/api-client';
+import { FingerprintScannerManager } from '@/lib/fingerprint/drivers';
+import { identifyMemberFromRoster } from '@/lib/fingerprint/matcher';
+import type { RosterMemberFingerprint, ScannerDeviceInfo, ScannerDriverId, FingerType } from '@/lib/fingerprint/types';
 
 import {
   loadFaceApiModels,
@@ -47,6 +57,15 @@ interface RecognitionBanner {
   action?: 'check_in' | 'check_out' | 'check_in_duplicate' | 'already_completed';
   time?: string;
   message?: string;
+  method?: 'face_recognition' | 'fingerprint';
+}
+
+interface RecentEvent {
+  name: string;
+  time: string;
+  action: string;
+  photo?: string | null;
+  method?: 'face_recognition' | 'fingerprint';
 }
 
 function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -67,33 +86,28 @@ export default function FaceKioskPage() {
   const [pendingQueueCount, setPendingQueueCount] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
 
+  // Face Recognition State
   const [roster, setRoster] = useState<FaceDescriptorRecord[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
 
+  // Fingerprint State
+  const [fpRoster, setFpRoster] = useState<RosterMemberFingerprint[]>([]);
+  const [loadingFpRoster, setLoadingFpRoster] = useState(true);
+  const [fpDeviceInfo, setFpDeviceInfo] = useState<ScannerDeviceInfo | null>(null);
+  const [isFpScanning, setIsFpScanning] = useState(false);
+  const [selectedFpDriver, setSelectedFpDriver] = useState<ScannerDriverId>('virtual');
+
+  // Shared Output State
   const [recognitionBanner, setRecognitionBanner] = useState<RecognitionBanner>({ state: 'idle' });
-  const [recentEvents, setRecentEvents] = useState<Array<{ name: string; time: string; action: string; photo?: string | null }>>([]);
+  const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const faceApiRef = useRef<any>(null);
-
-  const handleRefreshRoster = async () => {
-    if (!gymId) return;
-    setIsRefreshing(true);
-    try {
-      const { roster: loadedRoster, isOffline } = await syncRoster(gymId, user?.branchId || undefined);
-      setRoster(loadedRoster);
-      setIsOnline(!isOffline);
-    } catch (err) {
-      console.error('Manual roster refresh failed:', err);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
 
   const isDetectingRef = useRef(false);
   const cooldownMapRef = useRef<Map<string, number>>(new Map());
@@ -101,6 +115,9 @@ export default function FaceKioskPage() {
     new ConsensusTracker({ windowMs: 1200, highConfidenceRequiredFrames: 2, mediumConfidenceRequiredFrames: 3 })
   );
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scannerManager = FingerprintScannerManager.getInstance();
+  const isHandlingFpScanRef = useRef(false);
 
   const supabase = createClient();
 
@@ -118,20 +135,37 @@ export default function FaceKioskPage() {
       });
   }, [gymId, supabase]);
 
-  // Play audio chime using Web Audio API
-  const playChime = useCallback((success: boolean) => {
+  // Multi-harmonic Web Audio chime feedback
+  const playChime = useCallback((success: boolean, type: 'success' | 'already' | 'error' = 'success') => {
     if (!soundEnabled) return;
     try {
-      const ctx = new AudioContext();
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.frequency.value = success ? 880 : 380;
-      osc.type = 'sine';
-      gain.gain.value = 0.25;
-      osc.start();
-      osc.stop(ctx.currentTime + (success ? 0.2 : 0.4));
+
+      if (type === 'already') {
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } else if (success) {
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
+        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.16);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      } else {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      }
     } catch {
       // Audio not supported or blocked
     }
@@ -170,7 +204,62 @@ export default function FaceKioskPage() {
     setIsCameraActive(false);
   }, []);
 
-  // Initial setup: Load neural models and download/sync roster
+  // Detect fingerprint scanner hardware
+  const detectFpHardware = useCallback(async () => {
+    try {
+      const info = await scannerManager.detectActiveScanner();
+      setFpDeviceInfo(info);
+      setSelectedFpDriver(info.driverId);
+    } catch {
+      setFpDeviceInfo({
+        driverId: 'virtual',
+        name: 'Virtual Optical Sensor (Simulator)',
+        connected: true,
+      });
+      setSelectedFpDriver('virtual');
+    }
+  }, [scannerManager]);
+
+  // Load roster of enrolled fingerprint templates
+  const loadFpRoster = useCallback(async () => {
+    if (!gymId) return;
+    setLoadingFpRoster(true);
+    try {
+      const branchParam = user?.branchId ? `&branchId=${user.branchId}` : '';
+      const res = await fetchWithAuth(`/api/attendance/fingerprint-roster?gymId=${gymId}${branchParam}`);
+      const data = await res.json();
+      if (res.ok && data.roster) {
+        setFpRoster(data.roster);
+      }
+    } catch (err) {
+      console.error('Failed to load fingerprint roster:', err);
+    } finally {
+      setLoadingFpRoster(false);
+    }
+  }, [gymId, user?.branchId]);
+
+  // Unified Roster & Hardware Refresh
+  const handleRefreshRoster = async () => {
+    if (!gymId) return;
+    setIsRefreshing(true);
+    try {
+      const [{ roster: loadedRoster, isOffline }] = await Promise.all([
+        syncRoster(gymId, user?.branchId || undefined),
+        loadFpRoster(),
+        detectFpHardware(),
+      ]);
+      setRoster(loadedRoster);
+      setIsOnline(!isOffline);
+      toast.success('Rosters & biometric hardware refreshed');
+    } catch (err) {
+      console.error('Manual roster refresh failed:', err);
+      toast.error('Failed to refresh biometric data');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Initial setup: Load neural models, camera, fingerprint templates & hardware
   useEffect(() => {
     let mounted = true;
 
@@ -200,6 +289,10 @@ export default function FaceKioskPage() {
       }
     })();
 
+    // Initialize Fingerprint scanner hardware and download template cache
+    detectFpHardware();
+    loadFpRoster();
+
     // Online/Offline status listeners
     const handleOnline = () => {
       setIsOnline(true);
@@ -227,7 +320,7 @@ export default function FaceKioskPage() {
       window.removeEventListener('offline', handleOffline);
       clearInterval(syncInterval);
     };
-  }, [gymId, startCamera, stopCamera]);
+  }, [gymId, user?.branchId, startCamera, stopCamera, detectFpHardware, loadFpRoster]);
 
   // Main real-time face detection & matching loop (throttled at ~8-10 FPS)
   useEffect(() => {
@@ -300,8 +393,6 @@ export default function FaceKioskPage() {
 
               // Draw vigilance biometric square & identity plates on canvas
               if (canvasCtx) {
-                // Video is mirrored horizontally with CSS scale-x-[-1] for a natural selfie/kiosk view.
-                // Since canvas overlay is unmirrored, we compute mirrored X coordinate:
                 const x = canvasWidth - (box.x + box.width);
                 const y = box.y;
                 const w = box.width;
@@ -318,7 +409,7 @@ export default function FaceKioskPage() {
                   ? '#06b6d4' // Candidate Locked: Cyber Cyan
                   : '#8b5cf6'; // Initial recognition: Violet
 
-                // 1. Sleek Vigilance Corner Brackets (The Live Square)
+                // 1. Sleek Vigilance Corner Brackets
                 const len = Math.max(18, Math.min(32, w * 0.25));
                 canvasCtx.save();
                 canvasCtx.strokeStyle = hudColor;
@@ -362,7 +453,6 @@ export default function FaceKioskPage() {
                 const plateY = Math.max(6, y - plateHeight - 8);
 
                 canvasCtx.save();
-                // Plate Background & Glowing Cyber Border
                 canvasCtx.fillStyle = 'rgba(9, 9, 13, 0.92)';
                 canvasCtx.strokeStyle = hudColor;
                 canvasCtx.lineWidth = 1.5;
@@ -373,7 +463,7 @@ export default function FaceKioskPage() {
                 canvasCtx.fill();
                 canvasCtx.stroke();
 
-                // Left Status Indicator Dot (Solid green if verified, pulsing cyan if matching)
+                // Left Status Dot
                 canvasCtx.beginPath();
                 canvasCtx.arc(plateX + 12, plateY + plateHeight / 2, 4, 0, Math.PI * 2);
                 canvasCtx.fillStyle = hudColor;
@@ -384,7 +474,7 @@ export default function FaceKioskPage() {
                 canvasCtx.font = 'bold 12px system-ui, -apple-system, sans-serif';
                 canvasCtx.fillText(nameLabel, plateX + 22, plateY + 17);
 
-                // Member Code / Status Badge on Right
+                // Member Code / Status Badge
                 const badgeX = plateX + plateWidth - codeWidth - 14;
                 const badgeY = plateY + 4;
                 canvasCtx.fillStyle = `${hudColor}26`;
@@ -426,7 +516,6 @@ export default function FaceKioskPage() {
                     canvasCtx.font = 'bold 9px system-ui, sans-serif';
                     canvasCtx.fillText(`IDENTIFYING · ${pct}%`, bannerX + 8, bannerY + 11);
 
-                    // Mini Progress Track & Bar
                     const trackX = bannerX + 8;
                     const trackY = bannerY + 14;
                     const trackWidth = bannerWidth - 16;
@@ -442,13 +531,11 @@ export default function FaceKioskPage() {
               if (isReadyToLog) {
                 const lastScanned = cooldownMapRef.current.get(match.memberId) || 0;
                 const elapsedMs = currentTime - lastScanned;
-                const COOLDOWN_MS = 2000; // 2 seconds minimal debounce to prevent burst network calls
+                const COOLDOWN_MS = 2000; // 2s minimal debounce for network safety
 
                 if (elapsedMs > COOLDOWN_MS) {
-                  // Member recognized through multi-frame consensus and ready to log!
                   cooldownMapRef.current.set(match.memberId, currentTime);
 
-                  // Determine attendance event payload
                   const eventPayload: AttendanceEvent = {
                     gymId: gymId || '',
                     branchId: user?.branchId || undefined,
@@ -460,15 +547,13 @@ export default function FaceKioskPage() {
                     method: 'face_recognition',
                   };
 
-                  // Clear previous banner timeout
                   if (bannerTimeoutRef.current) {
                     clearTimeout(bannerTimeoutRef.current);
                   }
 
-                  // Record event
                   recordAttendanceEvent(eventPayload).then(({ success, isOffline, event: resEvent }) => {
                     if (success) {
-                      playChime(true);
+                      playChime(true, 'success');
 
                       const anyRes = resEvent as any;
                       const action = anyRes.action || 'check_in';
@@ -481,6 +566,7 @@ export default function FaceKioskPage() {
                         memberPhoto: match.photoUrl,
                         action,
                         time: timeStr,
+                        method: 'face_recognition',
                       });
 
                       if (action === 'check_in') {
@@ -488,8 +574,8 @@ export default function FaceKioskPage() {
                       }
 
                       setRecentEvents(prev => [
-                        { name: match.name, time: timeStr, action, photo: match.photoUrl },
-                        ...prev.slice(0, 4),
+                        { name: match.name, time: timeStr, action, photo: match.photoUrl, method: 'face_recognition' },
+                        ...prev.slice(0, 5),
                       ]);
 
                       if (isOffline) {
@@ -498,16 +584,15 @@ export default function FaceKioskPage() {
                     }
                   });
 
-                  // Auto-clear banner after 2.5 seconds
                   bannerTimeoutRef.current = setTimeout(() => {
                     setRecognitionBanner({ state: 'idle' });
-                  }, 2500);
+                  }, 3000);
 
-                  break; // Process one member per loop cycle to maintain clean UI
+                  break;
                 }
               }
             } else if (canvasCtx) {
-              // Unrecognized face candidate (Visitor or non-enrolled person)
+              // Unrecognized face candidate
               const x = canvasWidth - (box.x + box.width);
               const y = box.y;
               const w = box.width;
@@ -518,10 +603,9 @@ export default function FaceKioskPage() {
               canvasCtx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
               canvasCtx.lineWidth = 1.8;
               canvasCtx.lineCap = 'round';
-              canvasCtx.setLineDash([4, 4]); // Dashed reticle for unverified faces
+              canvasCtx.setLineDash([4, 4]);
 
               canvasCtx.beginPath();
-              // 4 Corner Brackets
               canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
               canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
               canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
@@ -530,7 +614,6 @@ export default function FaceKioskPage() {
               canvasCtx.restore();
 
               if (w >= 75) {
-                // Header Banner Above Face
                 canvasCtx.save();
                 const plateWidth = 145;
                 const plateHeight = 22;
@@ -568,27 +651,165 @@ export default function FaceKioskPage() {
       cancelAnimationFrame(animationFrameId);
       if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
     };
-  }, [roster, mode, gymId, playChime]);
+  }, [roster, mode, gymId, playChime, user?.branchId]);
+
+  // Fingerprint Scanner Scan Handler
+  const handleFingerprintScan = async (finger: FingerType = 'left_thumb') => {
+    if (isHandlingFpScanRef.current) return;
+    isHandlingFpScanRef.current = true;
+    setIsFpScanning(true);
+
+    if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+
+    try {
+      // 1. Capture fingerprint via active driver
+      const capture = await scannerManager.capture(finger);
+      if (!capture.success || !capture.template) {
+        throw new Error(capture.error || 'Optical sensor could not read print');
+      }
+
+      // 2. Perform 1:N minutiae matching against cached fingerprint roster
+      const match = identifyMemberFromRoster(capture.template, fpRoster);
+
+      if (!match.matched || !match.member) {
+        setRecognitionBanner({
+          state: 'error',
+          message: 'Fingerprint not recognized. Please enroll or try again.',
+          method: 'fingerprint',
+        });
+        playChime(false, 'error');
+        return;
+      }
+
+      const matchedMember = match.member;
+      const score = match.matchResult?.score || 88;
+
+      // 3. Post check-in/out to server
+      const checkinRes = await fetchWithAuth('/api/attendance/fingerprint-checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gymId,
+          branchId: user?.branchId || undefined,
+          memberId: matchedMember.id,
+          score,
+          driverId: capture.driverId,
+        }),
+      });
+
+      const checkinData = await checkinRes.json();
+
+      if (!checkinRes.ok) {
+        setRecognitionBanner({
+          state: 'error',
+          memberName: checkinData.member_name || matchedMember.name,
+          memberCode: checkinData.member_code || matchedMember.member_code,
+          memberPhoto: checkinData.member_photo || matchedMember.photo_url,
+          message: checkinData.error || 'Check-in failed',
+          method: 'fingerprint',
+        });
+        playChime(false, 'error');
+      } else if (checkinData.action === 'check_out') {
+        const timeStr = checkinData.time || new Date().toLocaleTimeString('en-IN');
+        setRecognitionBanner({
+          state: 'success',
+          memberName: checkinData.member_name,
+          memberCode: checkinData.member_code,
+          memberPhoto: checkinData.member_photo,
+          action: 'check_out',
+          time: timeStr,
+          method: 'fingerprint',
+          message: checkinData.message,
+        });
+        playChime(true, 'success');
+        setRecentEvents(prev => [
+          { name: checkinData.member_name, time: timeStr, action: 'check_out', photo: checkinData.member_photo, method: 'fingerprint' },
+          ...prev.slice(0, 5),
+        ]);
+      } else if (checkinData.action === 'already_completed' || checkinData.already_marked) {
+        const timeStr = new Date().toLocaleTimeString('en-IN');
+        setRecognitionBanner({
+          state: 'already',
+          memberName: checkinData.member_name,
+          memberCode: checkinData.member_code,
+          memberPhoto: checkinData.member_photo,
+          action: 'check_in_duplicate',
+          time: timeStr,
+          method: 'fingerprint',
+          message: checkinData.message || 'Already checked in today',
+        });
+        playChime(true, 'already');
+      } else {
+        // Successful check-in
+        const timeStr = checkinData.checked_in_at || new Date().toLocaleTimeString('en-IN');
+        setRecognitionBanner({
+          state: 'success',
+          memberName: checkinData.member_name,
+          memberCode: checkinData.member_code,
+          memberPhoto: checkinData.member_photo,
+          action: 'check_in',
+          time: timeStr,
+          method: 'fingerprint',
+        });
+        playChime(true, 'success');
+        setTodayCount(c => c + 1);
+        setRecentEvents(prev => [
+          { name: checkinData.member_name, time: timeStr, action: 'check_in', photo: checkinData.member_photo, method: 'fingerprint' },
+          ...prev.slice(0, 5),
+        ]);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Sensor read failed';
+      setRecognitionBanner({
+        state: 'error',
+        message: msg,
+        method: 'fingerprint',
+      });
+      playChime(false, 'error');
+    } finally {
+      setIsFpScanning(false);
+      isHandlingFpScanRef.current = false;
+      bannerTimeoutRef.current = setTimeout(() => {
+        setRecognitionBanner({ state: 'idle' });
+      }, 3500);
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden text-zinc-100">
-      {/* Top Header Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/80 border-b border-zinc-800 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden text-zinc-100 select-none">
+      {/* Top Navigation / Status Header Bar */}
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/attendance">
-            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1.5">
+            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1.5 h-8">
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Exit</span>
             </Button>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <ScanFace className="h-5 w-5 text-primary" />
-            <span className="font-bold text-sm sm:text-base tracking-tight">AI Face Kiosk</span>
+          <div className="flex items-center gap-2.5">
+            <div className="flex -space-x-1 items-center">
+              <div className="h-7 w-7 rounded-lg bg-cyan-950/80 border border-cyan-800/60 flex items-center justify-center shadow-xs">
+                <ScanFace className="h-4 w-4 text-cyan-400" />
+              </div>
+              <div className="h-7 w-7 rounded-lg bg-purple-950/80 border border-purple-800/60 flex items-center justify-center shadow-xs">
+                <Fingerprint className="h-4 w-4 text-purple-400" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm sm:text-base tracking-tight text-zinc-100">
+                  Dual-Biometric Kiosk
+                </span>
+                <Badge className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-zinc-200 border-cyan-500/30 text-[10px] px-1.5 py-0 font-semibold hidden sm:inline-flex">
+                  Simultaneous
+                </Badge>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Mode Selector (Auto / Check-In / Check-Out) */}
+        {/* Mode Selector (Auto / In Only / Out Only) */}
         <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs">
           <button
             onClick={() => setMode('auto')}
@@ -619,39 +840,72 @@ export default function FaceKioskPage() {
           </button>
         </div>
 
-        {/* Status Indicators */}
-        <div className="flex items-center gap-3">
-          {/* Online / Offline Status */}
+        {/* Status Indicators & Controls */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Face ID Status */}
           <Badge
             variant="outline"
             className={cn(
-              'gap-1 text-xs font-semibold',
-              isOnline ? 'text-green-400 border-green-500/20 bg-green-500/10' : 'text-amber-400 border-amber-500/20 bg-amber-500/10'
+              'gap-1 text-xs font-semibold hidden md:flex',
+              isOnline ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : 'text-amber-400 border-amber-500/20 bg-amber-500/10'
             )}
           >
-            {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-            {isOnline ? `${roster.length} Synced` : `Offline (${pendingQueueCount} queued)`}
+            <ScanFace className="h-3 w-3" />
+            <span>{roster.length} Faces</span>
           </Badge>
 
-          {/* Refresh Roster Button */}
+          {/* Fingerprint Status */}
+          <Badge
+            variant="outline"
+            className="gap-1 text-xs font-semibold text-purple-400 border-purple-500/20 bg-purple-500/10 hidden md:flex"
+          >
+            <Fingerprint className="h-3 w-3" />
+            <span>{fpRoster.length} Prints</span>
+          </Badge>
+
+          {/* Optical Scanner Driver Switcher */}
+          <div className="hidden sm:block">
+            <Select
+              value={selectedFpDriver}
+              onValueChange={(val) => {
+                const driverId = val as ScannerDriverId;
+                setSelectedFpDriver(driverId);
+                scannerManager.setActiveDriver(driverId);
+                detectFpHardware();
+              }}
+            >
+              <SelectTrigger className="h-7 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 w-32 md:w-36">
+                <SelectValue placeholder="Driver" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                <SelectItem value="mantra">Mantra MFS100</SelectItem>
+                <SelectItem value="secugen">SecuGen Pro 20</SelectItem>
+                <SelectItem value="bridge">Hardware Bridge</SelectItem>
+                <SelectItem value="virtual">Virtual Sensor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Refresh / Sync Button */}
           <Button
             variant="outline"
             size="sm"
             onClick={handleRefreshRoster}
             disabled={isRefreshing}
             className="h-7 px-2 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white gap-1"
-            title="Reload enrolled face descriptors from server"
+            title="Reload Face Descriptors, Fingerprint Templates & Hardware"
           >
             <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden lg:inline">Sync</span>
           </Button>
 
           {/* Sound Toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="text-zinc-400 hover:text-zinc-200 transition-colors p-1"
+            title={soundEnabled ? 'Mute Chimes' : 'Enable Chimes'}
           >
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            {soundEnabled ? <Volume2 className="h-4 w-4 text-cyan-400" /> : <VolumeX className="h-4 w-4" />}
           </button>
 
           {/* Today's Tally */}
@@ -661,82 +915,181 @@ export default function FaceKioskPage() {
         </div>
       </div>
 
-      {/* Main Viewport & Overlay */}
-      <div className="flex-1 relative flex flex-col items-center justify-center p-4">
-        <div className="relative w-full max-w-[640px] aspect-video bg-zinc-900 rounded-3xl overflow-hidden border-2 border-zinc-800 shadow-2xl">
-          {/* Live Camera Stream */}
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            className="w-full h-full object-cover scale-x-[-1]"
-          />
+      {/* Main Dual-Biometric Workspace */}
+      <div className="flex-1 min-h-0 flex flex-col justify-between p-3 sm:p-4 overflow-y-auto custom-scrollbar">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-7xl mx-auto w-full my-auto items-stretch">
+          {/* Left: Video Feed with Real-Time Vigilance Face HUD (lg:col-span-8) */}
+          <div className="lg:col-span-8 flex flex-col">
+            <div className="relative w-full aspect-video bg-zinc-900 rounded-3xl overflow-hidden border-2 border-zinc-800 shadow-2xl">
+              {/* Live Camera Stream */}
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
+              />
 
-          {/* Canvas for Face Bounding Boxes & Vigilance HUD */}
-          <canvas
-            ref={canvasRef}
-            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          />
+              {/* Canvas for Face Bounding Boxes & Vigilance HUD */}
+              <canvas
+                ref={canvasRef}
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              />
 
-          {/* Vigilance Surveillance Viewport HUD */}
-          <div className="absolute inset-3 pointer-events-none border border-zinc-800/40 rounded-2xl">
-            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-zinc-500/50 rounded-tl" />
-            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-zinc-500/50 rounded-tr" />
-            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-zinc-500/50 rounded-bl" />
-            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-zinc-500/50 rounded-br" />
-          </div>
+              {/* Vigilance Surveillance Viewport HUD */}
+              <div className="absolute inset-3 pointer-events-none border border-zinc-800/40 rounded-2xl">
+                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-zinc-500/50 rounded-tl" />
+                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-zinc-500/50 rounded-tr" />
+                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-zinc-500/50 rounded-bl" />
+                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-zinc-500/50 rounded-br" />
+              </div>
 
-          <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg">
-            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="font-mono text-[10px] text-zinc-200 tracking-wider font-semibold">LIVE VIGILANCE FEED</span>
-          </div>
+              <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="font-mono text-[10px] text-zinc-200 tracking-wider font-semibold">LIVE VIGILANCE FEED</span>
+              </div>
 
-          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg">
-            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-            <span className="font-mono text-[10px] text-cyan-400 tracking-wider font-semibold">AI BIOMETRIC ENGINE</span>
-          </div>
+              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg">
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                <span className="font-mono text-[10px] text-cyan-400 tracking-wider font-semibold">AI FACE RECOGNITION</span>
+              </div>
 
-          {/* Loading Models State */}
-          {isLoadingModels && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-sm gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm font-medium text-zinc-300">Initializing Neural Engine (WebGL)...</p>
+              {/* Loading Models State */}
+              {isLoadingModels && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-sm gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm font-medium text-zinc-300">Initializing Neural Engine (WebGL)...</p>
+                </div>
+              )}
+
+              {/* Camera Error State */}
+              {cameraError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 p-6 text-center">
+                  <CameraOff className="h-10 w-10 text-red-400 mb-3" />
+                  <p className="text-sm text-zinc-300 mb-4">{cameraError}</p>
+                  <Button onClick={startCamera} className="gap-2">
+                    <RefreshCw className="h-4 w-4" /> Retry Camera
+                  </Button>
+                </div>
+              )}
+
+              {/* Empty Face Roster State */}
+              {!isLoadingModels && roster.length === 0 && (
+                <div className="absolute top-4 left-4 right-4 bg-amber-950/60 border border-amber-800/60 text-amber-300 px-4 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>
+                    No members enrolled with Face ID yet.{' '}
+                    <Link href="/dashboard/attendance" className="underline hover:text-amber-100 font-medium">
+                      Go to Attendance → search a member → click &quot;Enroll Face&quot;
+                    </Link>
+                  </span>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Camera Error State */}
-          {cameraError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 p-6 text-center">
-              <CameraOff className="h-10 w-10 text-red-400 mb-3" />
-              <p className="text-sm text-zinc-300 mb-4">{cameraError}</p>
-              <Button onClick={startCamera} className="gap-2">
-                <RefreshCw className="h-4 w-4" /> Retry Camera
-              </Button>
-            </div>
-          )}
-
-          {/* Empty Roster State */}
-          {!isLoadingModels && roster.length === 0 && (
-            <div className="absolute top-4 left-4 right-4 bg-amber-950/60 border border-amber-800/60 text-amber-300 px-4 py-2.5 rounded-xl text-xs flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>
-                No members enrolled with Face ID yet.{' '}
-                <Link href="/dashboard/attendance" className="underline hover:text-amber-100 font-medium">
-                  Go to Attendance → search a member → click &quot;Enroll Face&quot;
-                </Link>
+          {/* Right: Biometric Fingerprint Sensor Touch Dock (lg:col-span-4) */}
+          <div className="lg:col-span-4 flex flex-col justify-between bg-zinc-900/60 border-2 border-zinc-800/80 rounded-3xl p-5 shadow-2xl backdrop-blur-md relative overflow-hidden min-h-[300px]">
+            {/* Top header of dock */}
+            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg bg-purple-950/80 border border-purple-800/60 flex items-center justify-center">
+                  <Fingerprint className="h-4 w-4 text-purple-400" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200">Optical Sensor</h2>
+                  <p className="text-[10px] text-zinc-500 font-mono">Simultaneous Touch Dock</p>
+                </div>
+              </div>
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-800/40">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {fpDeviceInfo?.connected ? 'Hardware Connected' : 'Sensor Ready'}
               </span>
             </div>
-          )}
+
+            {/* Interactive Circular Scanner Prism */}
+            <div className="my-auto py-3 flex flex-col items-center justify-center">
+              <div
+                onClick={() => handleFingerprintScan('left_thumb')}
+                className={cn(
+                  'relative h-44 w-44 sm:h-48 sm:w-48 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 group select-none shadow-2xl',
+                  isFpScanning
+                    ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_50px_rgba(168,85,247,0.5)] scale-105'
+                    : recognitionBanner.state === 'success' && recognitionBanner.method === 'fingerprint'
+                    ? 'border-green-500 bg-green-950/20 shadow-[0_0_40px_rgba(34,197,94,0.4)]'
+                    : recognitionBanner.state === 'error' && recognitionBanner.method === 'fingerprint'
+                    ? 'border-red-500 bg-red-950/20 shadow-[0_0_40px_rgba(239,68,68,0.3)]'
+                    : 'border-zinc-800 bg-zinc-950/80 hover:border-purple-500/70 hover:shadow-[0_0_35px_rgba(168,85,247,0.25)]'
+                )}
+                title="Place finger on optical scanner or click to trigger scan"
+              >
+                {/* Concentric rotating rings */}
+                <div className="absolute inset-2 rounded-full border border-dashed border-zinc-800 group-hover:border-purple-500/40 animate-[spin_40s_linear_infinite]" />
+                <div className="absolute inset-6 rounded-full border border-zinc-800/70" />
+
+                {/* Glowing biometric fingerprint icon */}
+                <Fingerprint
+                  className={cn(
+                    'h-20 w-20 transition-all duration-300',
+                    isFpScanning
+                      ? 'text-purple-400 scale-110 animate-pulse'
+                      : recognitionBanner.state === 'success' && recognitionBanner.method === 'fingerprint'
+                      ? 'text-green-400'
+                      : recognitionBanner.state === 'error' && recognitionBanner.method === 'fingerprint'
+                      ? 'text-red-400'
+                      : 'text-zinc-500 group-hover:text-purple-400 group-hover:scale-105'
+                  )}
+                />
+
+                {/* Laser scanning beam */}
+                {isFpScanning && (
+                  <div className="absolute inset-x-6 h-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent shadow-[0_0_15px_#c084fc] animate-bounce" />
+                )}
+
+                {/* Interactive hint on prism */}
+                <div className="absolute bottom-4 text-[10px] font-bold tracking-wider uppercase text-zinc-400 group-hover:text-purple-300 transition-colors">
+                  {isFpScanning ? 'Verifying...' : 'Touch Sensor'}
+                </div>
+              </div>
+
+              <p className="text-[11px] text-zinc-400 text-center mt-3 font-medium">
+                Place finger on scanner anytime
+              </p>
+            </div>
+
+            {/* Bottom info of dock */}
+            <div className="border-t border-zinc-800/80 pt-3 flex flex-col gap-1.5 text-xs text-zinc-400">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-zinc-500">Active Driver:</span>
+                <span className="font-mono text-zinc-300 truncate max-w-[170px]">
+                  {fpDeviceInfo?.name || 'Mantra / SecuGen / Virtual'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-zinc-500">Minutiae Templates:</span>
+                <span className="font-mono text-purple-400 font-semibold">
+                  {loadingFpRoster ? 'Loading...' : `${fpRoster.length} Members`}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Recognition Result Banner */}
-        <div className="mt-6 w-full max-w-[500px] min-h-[100px] flex items-center justify-center">
+        {/* Unified Recognition Result Banner */}
+        <div className="mt-3 w-full max-w-2xl mx-auto min-h-[85px] flex items-center justify-center">
           {recognitionBanner.state === 'idle' && (
-            <div className="text-center text-zinc-500">
-              <p className="text-sm font-medium">Walk in front of camera to check in/out</p>
-              <p className="text-xs text-emerald-400/90 flex items-center justify-center gap-1.5 mt-1 font-mono">
+            <div className="text-center text-zinc-500 py-1">
+              <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm font-medium">
+                <span className="flex items-center gap-1.5 text-cyan-400/90">
+                  <ScanFace className="h-4 w-4" /> Look at camera
+                </span>
+                <span className="text-zinc-600 font-bold">OR</span>
+                <span className="flex items-center gap-1.5 text-purple-400/90">
+                  <Fingerprint className="h-4 w-4" /> Touch optical scanner
+                </span>
+              </div>
+              <p className="text-[11px] text-emerald-400/90 flex items-center justify-center gap-1.5 mt-1 font-mono">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Continuous real-time vigilance active
+                Both biometrics running simultaneously • Zero cooldown
               </p>
             </div>
           )}
@@ -744,13 +1097,13 @@ export default function FaceKioskPage() {
           {recognitionBanner.state === 'success' && (
             <div
               className={cn(
-                'flex items-center gap-4 border rounded-2xl p-5 w-full shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300',
+                'flex items-center gap-4 border rounded-2xl p-4 sm:p-5 w-full shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300',
                 recognitionBanner.action === 'check_out'
                   ? 'bg-amber-950/40 border-amber-800/60'
                   : 'bg-green-950/40 border-green-800/60'
               )}
             >
-              <Avatar className="h-14 w-14 border-2 border-primary/50">
+              <Avatar className="h-12 w-12 sm:h-14 sm:w-14 border-2 border-primary/50">
                 <AvatarImage src={recognitionBanner.memberPhoto || ''} />
                 <AvatarFallback className="bg-zinc-800 text-zinc-200 text-lg font-bold">
                   {getInitials(recognitionBanner.memberName || '')}
@@ -759,13 +1112,13 @@ export default function FaceKioskPage() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-lg font-bold text-zinc-100 truncate">{recognitionBanner.memberName}</p>
+                  <p className="text-base sm:text-lg font-bold text-zinc-100 truncate">{recognitionBanner.memberName}</p>
                   <span className="text-xs font-mono text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
                     {recognitionBanner.memberCode}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <Badge
                     className={cn(
                       'text-xs font-bold uppercase tracking-wider',
@@ -776,16 +1129,69 @@ export default function FaceKioskPage() {
                   >
                     {recognitionBanner.action === 'check_out' ? 'Checked Out' : 'Checked In'}
                   </Badge>
+
+                  {/* Modality Badge */}
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'text-[11px] font-semibold gap-1',
+                      recognitionBanner.method === 'fingerprint'
+                        ? 'text-purple-400 border-purple-500/30 bg-purple-500/10'
+                        : 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10'
+                    )}
+                  >
+                    {recognitionBanner.method === 'fingerprint' ? (
+                      <>
+                        <Fingerprint className="h-3 w-3" /> Fingerprint
+                      </>
+                    ) : (
+                      <>
+                        <ScanFace className="h-3 w-3" /> Face ID
+                      </>
+                    )}
+                  </Badge>
+
                   <span className="text-xs text-zinc-400">{recognitionBanner.time}</span>
                 </div>
+                {recognitionBanner.message && (
+                  <p className="text-xs text-zinc-300 mt-1">{recognitionBanner.message}</p>
+                )}
               </div>
 
               <CheckCircle2
                 className={cn(
-                  'h-10 w-10 shrink-0',
+                  'h-8 w-8 sm:h-10 sm:w-10 shrink-0',
                   recognitionBanner.action === 'check_out' ? 'text-amber-400' : 'text-green-400'
                 )}
               />
+            </div>
+          )}
+
+          {recognitionBanner.state === 'already' && (
+            <div className="flex items-center gap-3 border rounded-2xl p-4 w-full shadow-2xl bg-blue-950/40 border-blue-800/60 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <Avatar className="h-11 w-11 border-2 border-blue-500/50">
+                <AvatarImage src={recognitionBanner.memberPhoto || ''} />
+                <AvatarFallback className="bg-zinc-800 text-zinc-200 font-bold">
+                  {getInitials(recognitionBanner.memberName || '')}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-zinc-100">{recognitionBanner.memberName}</p>
+                <p className="text-xs text-blue-300">{recognitionBanner.message || 'Already checked in today'}</p>
+              </div>
+              <Badge variant="outline" className="text-purple-400 border-purple-500/30 bg-purple-500/10 gap-1 text-xs">
+                <Fingerprint className="h-3 w-3" /> Fingerprint
+              </Badge>
+            </div>
+          )}
+
+          {recognitionBanner.state === 'error' && (
+            <div className="flex items-center gap-3 border rounded-2xl p-4 w-full shadow-2xl bg-red-950/40 border-red-800/60 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <AlertCircle className="h-8 w-8 text-red-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-red-200 text-sm">{recognitionBanner.message || 'Verification failed'}</p>
+                <p className="text-xs text-zinc-400">Please try scanning again or register fingerprint template.</p>
+              </div>
             </div>
           )}
         </div>
@@ -793,17 +1199,17 @@ export default function FaceKioskPage() {
 
       {/* Bottom Strip: Recent Check-ins */}
       {recentEvents.length > 0 && (
-        <div className="px-6 py-3 bg-zinc-900/60 border-t border-zinc-800/80">
-          <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-2">Recent Scans</p>
+        <div className="px-6 py-2.5 bg-zinc-900/70 border-t border-zinc-800 backdrop-blur-sm">
+          <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1.5">Recent Scans</p>
           <div className="flex gap-3 overflow-x-auto pb-1 custom-scrollbar">
             {recentEvents.map((evt, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2.5 bg-zinc-950 border border-zinc-800/80 rounded-xl px-3.5 py-2 shrink-0"
+                className="flex items-center gap-2.5 bg-zinc-950 border border-zinc-800/80 rounded-xl px-3 py-1.5 shrink-0"
               >
-                <Avatar className="h-7 w-7 border border-zinc-800">
+                <Avatar className="h-6 w-6 border border-zinc-800">
                   <AvatarImage src={evt.photo || ''} />
-                  <AvatarFallback className="text-[10px] bg-zinc-800 text-zinc-300">
+                  <AvatarFallback className="text-[9px] bg-zinc-800 text-zinc-300">
                     {getInitials(evt.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -813,6 +1219,16 @@ export default function FaceKioskPage() {
                     <span className={evt.action === 'check_out' ? 'text-amber-400' : 'text-green-400'}>
                       {evt.action === 'check_out' ? 'Out' : 'In'}
                     </span>
+                    <span className="text-zinc-600">•</span>
+                    {evt.method === 'fingerprint' ? (
+                      <span className="text-purple-400 flex items-center gap-0.5">
+                        <Fingerprint className="h-2.5 w-2.5" /> Finger
+                      </span>
+                    ) : (
+                      <span className="text-cyan-400 flex items-center gap-0.5">
+                        <ScanFace className="h-2.5 w-2.5" /> Face
+                      </span>
+                    )}
                     <span className="text-zinc-600">•</span>
                     <span className="text-zinc-400">{evt.time}</span>
                   </div>
