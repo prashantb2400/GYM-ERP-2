@@ -7,9 +7,11 @@ export interface FaceDescriptorRecord {
   name: string;
   memberCode: string;
   photoUrl?: string | null;
-  descriptor: number[]; // 128-float array (primary / centroid)
+  descriptor: number[]; // float array (1024-d, 512-d, or legacy 128-d primary)
   descriptors?: number[][]; // multi-template gallery of distinct pose vectors
   branchId?: string | null;
+  dimension?: number; // 1024 | 512 | 128
+  model?: string; // 'human-1024' | 'insightface-512' | 'face-api-128'
 }
 
 export interface MatchResult {
@@ -19,6 +21,8 @@ export interface MatchResult {
   photoUrl?: string | null;
   distance: number;
   confidence: number;
+  similarity?: number;
+  dimension?: number;
   tier?: 'high' | 'medium';
 }
 

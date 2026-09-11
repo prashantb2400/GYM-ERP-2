@@ -58,21 +58,24 @@ export async function POST(
       return NextResponse.json({ error: 'Explicit DPDP consent is mandatory before enrolling face descriptor' }, { status: 400 });
     }
 
-    if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
-      return NextResponse.json({ error: 'Invalid face descriptor: must be a 128-element float array' }, { status: 400 });
+    const validDimensions = [1024, 512, 128];
+    if (!descriptor || !Array.isArray(descriptor) || !validDimensions.includes(descriptor.length)) {
+      return NextResponse.json({ error: 'Invalid face descriptor: must be a 1024, 512, or 128-element float array' }, { status: 400 });
     }
 
+    const expectedDim = descriptor.length;
     let gallery: number[][] = [descriptor];
     if (descriptors && Array.isArray(descriptors) && descriptors.length > 0) {
       for (const d of descriptors) {
-        if (!Array.isArray(d) || d.length !== 128) {
-          return NextResponse.json({ error: 'Invalid gallery descriptor: each pose must be a 128-element float array' }, { status: 400 });
+        if (!Array.isArray(d) || d.length !== expectedDim) {
+          return NextResponse.json({ error: `Invalid gallery descriptor: each pose must be a ${expectedDim}-element float array` }, { status: 400 });
         }
       }
       gallery = descriptors;
     }
 
     const nowIso = new Date().toISOString();
+    const modelTag = expectedDim === 1024 ? 'human-1024' : expectedDim === 512 ? 'insightface-512' : 'face-api-128';
 
     const { error: updateErr } = await supabaseAdmin
       .from('members')
@@ -81,6 +84,8 @@ export async function POST(
         face_descriptor: {
           primary: descriptor,
           gallery,
+          dimension: expectedDim,
+          model: modelTag,
           enrolled_at: nowIso,
         },
         consent_given_at: nowIso,

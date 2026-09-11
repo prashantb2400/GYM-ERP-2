@@ -38,6 +38,7 @@ import type { RosterMemberFingerprint, ScannerDeviceInfo, ScannerDriverId, Finge
 
 import {
   loadFaceApiModels,
+  getHumanInstance,
   findBestMatch,
   syncRoster,
   recordAttendanceEvent,
@@ -108,6 +109,7 @@ export default function FaceKioskPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const faceApiRef = useRef<any>(null);
+  const humanRef = useRef<any>(null);
 
   const isDetectingRef = useRef(false);
   const cooldownMapRef = useRef<Map<string, number>>(new Map());
@@ -266,8 +268,12 @@ export default function FaceKioskPage() {
     (async () => {
       try {
         setIsLoadingModels(true);
-        const api = await loadFaceApiModels();
+        const [human, api] = await Promise.all([
+          getHumanInstance(),
+          loadFaceApiModels().catch(() => null),
+        ]);
         if (mounted) {
+          humanRef.current = human;
           faceApiRef.current = api;
           setIsLoadingModels(false);
           await startCamera();
@@ -333,28 +339,27 @@ export default function FaceKioskPage() {
         !isDetectingRef.current &&
         videoRef.current &&
         videoRef.current.readyState >= 2 &&
-        faceApiRef.current &&
+        (humanRef.current || faceApiRef.current) &&
         roster.length > 0 &&
         now - lastDetectionTime >= THROTTLE_MS
       ) {
         isDetectingRef.current = true;
         lastDetectionTime = now;
 
-        const faceapi = faceApiRef.current;
+        const human = humanRef.current;
         const video = videoRef.current;
 
         try {
-          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.50 });
-          const allDetections = await faceapi
-            .detectAllFaces(video, options)
-            .withFaceLandmarks()
-            .withFaceDescriptors();
-
-          // Pre-descriptor Quality Gate: Filter out tiny distant background faces
-          const detections = allDetections.filter(d => {
-            const box = d.detection.box;
-            return box.width >= 75 && box.height >= 75 && d.detection.score >= 0.50;
-          });
+          // 1. Primary Deep Detection with @vladmandic/human (WebGL / 1024-D)
+          let faces: any[] = [];
+          if (human) {
+            const result = await human.detect(video);
+            const rawFaces = result?.face || [];
+            faces = rawFaces.filter((f: any) => {
+              const [x, y, w, h] = f.box;
+              return w >= 75 && h >= 75 && ((f.score ?? 0) >= 0.45 || (f.boxScore ?? 0) >= 0.45);
+            });
+          }
 
           // Draw visual biometric bounding HUD on overlay canvas
           let canvasCtx: CanvasRenderingContext2D | null = null;
@@ -374,15 +379,32 @@ export default function FaceKioskPage() {
 
           // Process each detected face against the roster
           const currentTime = Date.now();
-          for (const det of detections) {
-            const box = det.detection.box;
-            // Calibrated thresholds: Standard match 0.54, Instant Tier 1: 0.42
-            const match = findBestMatch(det.descriptor, roster, 0.54, 0.42);
+          for (const face of faces) {
+            const [fx, fy, fw, fh] = face.box;
+
+            // 1. High-Precision 1024-D / 512-D Cosine Match
+            let match = face.embedding && face.embedding.length >= 512
+              ? findBestMatch(face.embedding, roster)
+              : null;
+
+            // 2. Backward compatibility fallback for legacy 128-D enrolled members
+            if (!match && faceApiRef.current && roster.some(r => r.dimension === 128 || r.descriptor?.length === 128)) {
+              try {
+                const faceapi = faceApiRef.current;
+                const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
+                const legacyDet = await faceapi.detectSingleFace(video, options).withFaceDescriptor();
+                if (legacyDet?.descriptor) {
+                  match = findBestMatch(legacyDet.descriptor, roster, 0.54, 0.42);
+                }
+              } catch {
+                // Ignore legacy detection fallback error
+              }
+            }
 
             if (match) {
-              const leftEye = det.landmarks ? det.landmarks.getLeftEye() : undefined;
-              const rightEye = det.landmarks ? det.landmarks.getRightEye() : undefined;
-              const centroid = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+              const leftEye = face.annotations?.leftEye?.map((pt: number[]) => ({ x: pt[0], y: pt[1] }));
+              const rightEye = face.annotations?.rightEye?.map((pt: number[]) => ({ x: pt[0], y: pt[1] }));
+              const centroid = { x: fx + fw / 2, y: fy + fh / 2 };
 
               const consensus = consensusTrackerRef.current.evaluate(match, currentTime, {
                 leftEye,
@@ -393,14 +415,16 @@ export default function FaceKioskPage() {
 
               // Draw vigilance biometric square & identity plates on canvas
               if (canvasCtx) {
-                const x = canvasWidth - (box.x + box.width);
-                const y = box.y;
-                const w = box.width;
-                const h = box.height;
+                const x = canvasWidth - (fx + fw);
+                const y = fy;
+                const w = fw;
+                const h = fh;
                 const cx = x + w / 2;
                 const cy = y + h / 2;
 
-                const isSpoofSuspect = consensus.liveness?.flags.includes('zero_motion_spoof_suspect');
+                const isSpoofSuspect = (face.real !== undefined && face.real < 0.35) ||
+                  consensus.liveness?.flags.includes('zero_motion_spoof_suspect');
+
                 const hudColor = isReadyToLog
                   ? '#10b981' // Verified: Electric Emerald
                   : isSpoofSuspect
@@ -593,10 +617,10 @@ export default function FaceKioskPage() {
               }
             } else if (canvasCtx) {
               // Unrecognized face candidate
-              const x = canvasWidth - (box.x + box.width);
-              const y = box.y;
-              const w = box.width;
-              const h = box.height;
+              const x = canvasWidth - (fx + fw);
+              const y = fy;
+              const w = fw;
+              const h = fh;
               const len = Math.min(18, w * 0.22);
 
               canvasCtx.save();

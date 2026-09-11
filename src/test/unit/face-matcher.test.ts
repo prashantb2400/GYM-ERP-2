@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   euclideanDistance,
   squaredEuclideanDistance,
+  cosineSimilarity,
   distanceToConfidence,
+  similarityToConfidence,
   averageDescriptors,
   findBestMatch,
   normalizeDescriptor,
@@ -163,6 +165,109 @@ describe('Face Descriptor Vector Matcher', () => {
     ];
 
     const match = findBestMatch(targetDescriptor, roster);
+    expect(match).toBeNull();
+  });
+});
+
+describe('Deep Biometric Cosine Matcher (512-D / 1024-D Human AI)', () => {
+  it('calculates exact 1.0 Cosine similarity for identical vectors', () => {
+    const v1 = new Float32Array(1024).fill(0.03);
+    const v2 = new Float32Array(1024).fill(0.03);
+    expect(cosineSimilarity(v1, v2)).toBeCloseTo(1.0, 4);
+  });
+
+  it('calculates 0.0 Cosine similarity for orthogonal vectors', () => {
+    const v1 = [1, 0, 0, 0];
+    const v2 = [0, 1, 0, 0];
+    expect(cosineSimilarity(v1, v2)).toBe(0);
+  });
+
+  it('calculates -1.0 Cosine similarity for opposite vectors', () => {
+    const v1 = [1, 2, 3];
+    const v2 = [-1, -2, -3];
+    expect(cosineSimilarity(v1, v2)).toBeCloseTo(-1.0, 4);
+  });
+
+  it('converts similarity to normalized confidence correctly', () => {
+    expect(similarityToConfidence(1.0)).toBe(1.0);
+    expect(similarityToConfidence(0.62)).toBe(0.5);
+    expect(similarityToConfidence(0.81)).toBeGreaterThan(0.7);
+    expect(similarityToConfidence(0.40)).toBeLessThan(0.45);
+    expect(similarityToConfidence(0)).toBe(0);
+  });
+
+  it('finds best matching member in 1024-D vector space with Cosine Similarity', () => {
+    // Generate normalized 1024-D base vector
+    const baseVec = normalizeDescriptor(new Array(1024).fill(0.05));
+    // Close vector (high similarity)
+    const closeVec = normalizeDescriptor(baseVec.map((v, i) => i % 10 === 0 ? v + 0.005 : v));
+    // Far orthogonal vector
+    const farVec = normalizeDescriptor(new Array(1024).fill(0).map((_, i) => i % 2 === 0 ? 1 : -1));
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_deep_1',
+        name: 'David Banner',
+        memberCode: 'MEM-801',
+        descriptor: farVec,
+        dimension: 1024,
+      },
+      {
+        memberId: 'mem_deep_2',
+        name: 'Natasha Romanoff',
+        memberCode: 'MEM-802',
+        descriptor: closeVec,
+        dimension: 1024,
+      },
+    ];
+
+    const match = findBestMatch(baseVec, roster);
+    expect(match).not.toBeNull();
+    expect(match!.memberId).toBe('mem_deep_2');
+    expect(match!.name).toBe('Natasha Romanoff');
+    expect(match!.similarity).toBeGreaterThan(0.74);
+    expect(match!.tier).toBe('high');
+    expect(match!.dimension).toBe(1024);
+  });
+
+  it('matches member via 1024-D multi-template gallery poses', () => {
+    const frontal = normalizeDescriptor(new Array(1024).fill(0.02));
+    const yawLeft = normalizeDescriptor(new Array(1024).fill(0.02).map((v, i) => (i < 512 ? v + 0.02 : v - 0.01)));
+    const yawRight = normalizeDescriptor(new Array(1024).fill(0.02).map((v, i) => (i >= 512 ? v + 0.02 : v - 0.01)));
+
+    const queryAngle = normalizeDescriptor(yawLeft.map(v => v + 0.001));
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_gallery_1',
+        name: 'Steve Rogers',
+        memberCode: 'MEM-803',
+        descriptor: frontal,
+        descriptors: [frontal, yawLeft, yawRight],
+        dimension: 1024,
+      },
+    ];
+
+    const match = findBestMatch(queryAngle, roster);
+    expect(match).not.toBeNull();
+    expect(match!.memberId).toBe('mem_gallery_1');
+    expect(match!.similarity).toBeGreaterThan(0.9);
+    expect(match!.tier).toBe('high');
+  });
+
+  it('safely isolates dimension differences (1024-D query vs 128-D record returns null)', () => {
+    const query1024 = new Array(1024).fill(0.05);
+    const legacy128Roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'legacy_1',
+        name: 'Tony Stark',
+        memberCode: 'MEM-128',
+        descriptor: new Array(128).fill(0.05),
+        dimension: 128,
+      },
+    ];
+
+    const match = findBestMatch(query1024, legacy128Roster);
     expect(match).toBeNull();
   });
 });

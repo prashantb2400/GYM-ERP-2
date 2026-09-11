@@ -32,6 +32,21 @@ const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["@node-rs/bcrypt", "puppeteer"],
 
+  turbopack: {
+    resolveAlias: {
+      '@vladmandic/human': './node_modules/@vladmandic/human/dist/human.esm.js',
+      '@tensorflow/tfjs-node': './src/lib/face-attendance/empty-stub.js',
+    },
+  },
+
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+    config.resolve.alias['@vladmandic/human'] = require('path').resolve(__dirname, 'node_modules/@vladmandic/human/dist/human.esm.js');
+    config.resolve.alias['@tensorflow/tfjs-node'] = require('path').resolve(__dirname, 'src/lib/face-attendance/empty-stub.js');
+    return config;
+  },
+
   async headers() {
     return [
       {

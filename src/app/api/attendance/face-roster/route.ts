@@ -95,6 +95,8 @@ export async function GET(request: Request) {
         photoUrl: m.photo_url,
         descriptor: primaryDesc,
         descriptors: gallery,
+        dimension: (raw && typeof raw === 'object' && raw.dimension) || primaryDesc.length,
+        model: (raw && typeof raw === 'object' && raw.model) || (primaryDesc.length === 128 ? 'face-api-128' : 'human-1024'),
         branchId: m.branch_id,
       };
     });
