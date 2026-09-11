@@ -49,6 +49,14 @@ interface RecognitionBanner {
   message?: string;
 }
 
+function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+  } else {
+    ctx.rect(x, y, w, h);
+  }
+}
+
 export default function FaceKioskPage() {
   const { user } = useAuth();
   const gymId = user?.gymId;
@@ -257,10 +265,14 @@ export default function FaceKioskPage() {
 
           // Draw visual biometric bounding HUD on overlay canvas
           let canvasCtx: CanvasRenderingContext2D | null = null;
+          let canvasWidth = 0;
+          let canvasHeight = 0;
           if (canvasRef.current) {
             const canvas = canvasRef.current;
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+            canvasWidth = canvas.width;
+            canvasHeight = canvas.height;
             canvasCtx = canvas.getContext('2d');
             if (canvasCtx) {
               canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
@@ -286,62 +298,144 @@ export default function FaceKioskPage() {
               });
               const isReadyToLog = consensus.isConfirmed;
 
-              // Draw interactive biometric lock reticle on canvas
+              // Draw vigilance biometric square & identity plates on canvas
               if (canvasCtx) {
-                const isSpoofSuspect = consensus.liveness?.flags.includes('zero_motion_spoof_suspect');
-                const hudColor = isReadyToLog
-                  ? '#10b981'
-                  : isSpoofSuspect
-                  ? '#f59e0b'
-                  : consensus.progress >= 0.5
-                  ? '#06b6d4'
-                  : '#8b5cf6';
-
-                const label = isReadyToLog
-                  ? `${match.name} · Verified ✓`
-                  : isSpoofSuspect
-                  ? `${match.name} (Checking Liveness...)`
-                  : `${match.name} (${Math.round(consensus.progress * 100)}%)`;
-
-                const x = box.x;
+                // Video is mirrored horizontally with CSS scale-x-[-1] for a natural selfie/kiosk view.
+                // Since canvas overlay is unmirrored, we compute mirrored X coordinate:
+                const x = canvasWidth - (box.x + box.width);
                 const y = box.y;
                 const w = box.width;
                 const h = box.height;
-                const len = Math.min(22, w * 0.25);
+                const cx = x + w / 2;
+                const cy = y + h / 2;
 
+                const isSpoofSuspect = consensus.liveness?.flags.includes('zero_motion_spoof_suspect');
+                const hudColor = isReadyToLog
+                  ? '#10b981' // Verified: Electric Emerald
+                  : isSpoofSuspect
+                  ? '#f59e0b' // Warning: Amber
+                  : consensus.progress >= 0.5
+                  ? '#06b6d4' // Candidate Locked: Cyber Cyan
+                  : '#8b5cf6'; // Initial recognition: Violet
+
+                // 1. Sleek Vigilance Corner Brackets (The Live Square)
+                const len = Math.max(18, Math.min(32, w * 0.25));
+                canvasCtx.save();
                 canvasCtx.strokeStyle = hudColor;
                 canvasCtx.lineWidth = 2.5;
                 canvasCtx.lineCap = 'round';
+                canvasCtx.shadowColor = hudColor;
+                canvasCtx.shadowBlur = isReadyToLog ? 14 : 6;
 
-                // Corner brackets
                 canvasCtx.beginPath();
+                // Top-Left Corner
                 canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
+                // Top-Right Corner
                 canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
+                // Bottom-Right Corner
                 canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
+                // Bottom-Left Corner
                 canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
                 canvasCtx.stroke();
 
-                // Name Pill
-                canvasCtx.fillStyle = 'rgba(9, 9, 11, 0.85)';
+                // Subtle Center Crosshair Tick
                 canvasCtx.beginPath();
-                const textWidth = Math.max(120, canvasCtx.measureText(label).width + 24);
-                canvasCtx.roundRect(x, Math.max(8, y - 26), textWidth, 20, 5);
-                canvasCtx.fill();
-                canvasCtx.strokeStyle = hudColor;
+                canvasCtx.strokeStyle = `${hudColor}60`;
                 canvasCtx.lineWidth = 1;
+                canvasCtx.moveTo(cx - 6, cy); canvasCtx.lineTo(cx + 6, cy);
+                canvasCtx.moveTo(cx, cy - 6); canvasCtx.lineTo(cx, cy + 6);
+                canvasCtx.stroke();
+                canvasCtx.restore();
+
+                // 2. Identity Header Plate (JUST ABOVE the live square)
+                const nameLabel = match.name.toUpperCase();
+                const codeLabel = match.memberCode ? `#${match.memberCode}` : (isReadyToLog ? 'VERIFIED' : 'ACTIVE');
+
+                canvasCtx.font = 'bold 12px system-ui, -apple-system, sans-serif';
+                const nameWidth = canvasCtx.measureText(nameLabel).width;
+                canvasCtx.font = 'bold 9px monospace';
+                const codeWidth = canvasCtx.measureText(codeLabel).width;
+
+                const plateHeight = 26;
+                const plateWidth = Math.max(130, nameWidth + codeWidth + 36);
+                const plateX = Math.max(4, Math.min(canvasWidth - plateWidth - 4, x + (w - plateWidth) / 2));
+                const plateY = Math.max(6, y - plateHeight - 8);
+
+                canvasCtx.save();
+                // Plate Background & Glowing Cyber Border
+                canvasCtx.fillStyle = 'rgba(9, 9, 13, 0.92)';
+                canvasCtx.strokeStyle = hudColor;
+                canvasCtx.lineWidth = 1.5;
+                canvasCtx.shadowColor = hudColor;
+                canvasCtx.shadowBlur = 4;
+                canvasCtx.beginPath();
+                drawRoundRect(canvasCtx, plateX, plateY, plateWidth, plateHeight, 6);
+                canvasCtx.fill();
                 canvasCtx.stroke();
 
+                // Left Status Indicator Dot (Solid green if verified, pulsing cyan if matching)
+                canvasCtx.beginPath();
+                canvasCtx.arc(plateX + 12, plateY + plateHeight / 2, 4, 0, Math.PI * 2);
                 canvasCtx.fillStyle = hudColor;
-                canvasCtx.font = 'bold 11px system-ui, sans-serif';
-                canvasCtx.fillText(label, x + 8, Math.max(22, y - 12));
+                canvasCtx.fill();
 
-                // Temporal lock progress bar
-                if (consensus.progress > 0 && !isReadyToLog) {
-                  const barY = y + h + 6;
-                  canvasCtx.fillStyle = 'rgba(24, 24, 27, 0.8)';
-                  canvasCtx.fillRect(x, barY, w, 4);
-                  canvasCtx.fillStyle = hudColor;
-                  canvasCtx.fillRect(x, barY, w * consensus.progress, 4);
+                // Member Name
+                canvasCtx.fillStyle = '#ffffff';
+                canvasCtx.font = 'bold 12px system-ui, -apple-system, sans-serif';
+                canvasCtx.fillText(nameLabel, plateX + 22, plateY + 17);
+
+                // Member Code / Status Badge on Right
+                const badgeX = plateX + plateWidth - codeWidth - 14;
+                const badgeY = plateY + 4;
+                canvasCtx.fillStyle = `${hudColor}26`;
+                canvasCtx.beginPath();
+                drawRoundRect(canvasCtx, badgeX, badgeY, codeWidth + 8, 18, 4);
+                canvasCtx.fill();
+                canvasCtx.fillStyle = hudColor;
+                canvasCtx.font = 'bold 9px monospace';
+                canvasCtx.fillText(codeLabel, badgeX + 4, badgeY + 12);
+                canvasCtx.restore();
+
+                // 3. Status Footer Banner (JUST BELOW the live square)
+                const bannerHeight = 22;
+                const bannerY = y + h + 8;
+                if (bannerY + bannerHeight < canvasHeight) {
+                  canvasCtx.save();
+                  const bannerWidth = Math.max(120, Math.min(plateWidth, w + 20));
+                  const bannerX = Math.max(4, Math.min(canvasWidth - bannerWidth - 4, x + (w - bannerWidth) / 2));
+
+                  canvasCtx.fillStyle = 'rgba(9, 9, 13, 0.90)';
+                  canvasCtx.strokeStyle = `${hudColor}bb`;
+                  canvasCtx.lineWidth = 1;
+                  canvasCtx.beginPath();
+                  drawRoundRect(canvasCtx, bannerX, bannerY, bannerWidth, bannerHeight, 5);
+                  canvasCtx.fill();
+                  canvasCtx.stroke();
+
+                  if (isReadyToLog) {
+                    canvasCtx.fillStyle = '#10b981';
+                    canvasCtx.font = 'bold 10px system-ui, sans-serif';
+                    canvasCtx.fillText('✓ ATTENDANCE LOGGED', bannerX + 8, bannerY + 15);
+                  } else if (isSpoofSuspect) {
+                    canvasCtx.fillStyle = '#f59e0b';
+                    canvasCtx.font = 'bold 10px system-ui, sans-serif';
+                    canvasCtx.fillText('⚡ BLINK FOR LIVENESS', bannerX + 8, bannerY + 15);
+                  } else {
+                    const pct = Math.round(consensus.progress * 100);
+                    canvasCtx.fillStyle = hudColor;
+                    canvasCtx.font = 'bold 9px system-ui, sans-serif';
+                    canvasCtx.fillText(`IDENTIFYING · ${pct}%`, bannerX + 8, bannerY + 11);
+
+                    // Mini Progress Track & Bar
+                    const trackX = bannerX + 8;
+                    const trackY = bannerY + 14;
+                    const trackWidth = bannerWidth - 16;
+                    canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                    canvasCtx.fillRect(trackX, trackY, trackWidth, 3);
+                    canvasCtx.fillStyle = hudColor;
+                    canvasCtx.fillRect(trackX, trackY, trackWidth * consensus.progress, 3);
+                  }
+                  canvasCtx.restore();
                 }
               }
 
@@ -413,30 +507,48 @@ export default function FaceKioskPage() {
                 }
               }
             } else if (canvasCtx) {
-              // Unrecognized face candidate (distant stranger or non-member)
-              const x = box.x;
+              // Unrecognized face candidate (Visitor or non-enrolled person)
+              const x = canvasWidth - (box.x + box.width);
               const y = box.y;
               const w = box.width;
               const h = box.height;
-              const len = Math.min(16, w * 0.2);
+              const len = Math.min(18, w * 0.22);
 
-              canvasCtx.strokeStyle = 'rgba(161, 161, 170, 0.4)';
-              canvasCtx.lineWidth = 1.5;
+              canvasCtx.save();
+              canvasCtx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+              canvasCtx.lineWidth = 1.8;
+              canvasCtx.lineCap = 'round';
+              canvasCtx.setLineDash([4, 4]); // Dashed reticle for unverified faces
+
               canvasCtx.beginPath();
+              // 4 Corner Brackets
               canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
               canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
               canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
               canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
               canvasCtx.stroke();
+              canvasCtx.restore();
 
-              if (w >= 90) {
-                canvasCtx.fillStyle = 'rgba(24, 24, 27, 0.75)';
+              if (w >= 75) {
+                // Header Banner Above Face
+                canvasCtx.save();
+                const plateWidth = 145;
+                const plateHeight = 22;
+                const plateX = Math.max(4, Math.min(canvasWidth - plateWidth - 4, x + (w - plateWidth) / 2));
+                const plateY = Math.max(6, y - plateHeight - 6);
+
+                canvasCtx.fillStyle = 'rgba(15, 15, 20, 0.88)';
+                canvasCtx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+                canvasCtx.lineWidth = 1;
                 canvasCtx.beginPath();
-                canvasCtx.roundRect(x, Math.max(8, y - 22), 110, 18, 4);
+                drawRoundRect(canvasCtx, plateX, plateY, plateWidth, plateHeight, 5);
                 canvasCtx.fill();
-                canvasCtx.fillStyle = 'rgba(212, 212, 216, 0.75)';
-                canvasCtx.font = '10px system-ui, sans-serif';
-                canvasCtx.fillText('Aligning face...', x + 6, Math.max(20, y - 9));
+                canvasCtx.stroke();
+
+                canvasCtx.fillStyle = '#f59e0b';
+                canvasCtx.font = 'bold 10px system-ui, sans-serif';
+                canvasCtx.fillText('⚠ VISITOR · SCANNING...', plateX + 8, plateY + 15);
+                canvasCtx.restore();
               }
             }
           }
@@ -560,22 +672,28 @@ export default function FaceKioskPage() {
             className="w-full h-full object-cover scale-x-[-1]"
           />
 
-          {/* Canvas for Face Bounding Boxes */}
+          {/* Canvas for Face Bounding Boxes & Vigilance HUD */}
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 w-full h-full object-cover scale-x-[-1] pointer-events-none"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           />
 
-          {/* Oval Target Framing Guide */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div
-              className={cn(
-                'w-48 h-64 rounded-[50%] border-2 border-dashed transition-all duration-300',
-                recognitionBanner.state === 'success'
-                  ? 'border-green-400 bg-green-500/10 scale-105'
-                  : 'border-zinc-500/40'
-              )}
-            />
+          {/* Vigilance Surveillance Viewport HUD */}
+          <div className="absolute inset-3 pointer-events-none border border-zinc-800/40 rounded-2xl">
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-zinc-500/50 rounded-tl" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-zinc-500/50 rounded-tr" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-zinc-500/50 rounded-bl" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-zinc-500/50 rounded-br" />
+          </div>
+
+          <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg">
+            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="font-mono text-[10px] text-zinc-200 tracking-wider font-semibold">LIVE VIGILANCE FEED</span>
+          </div>
+
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+            <span className="font-mono text-[10px] text-cyan-400 tracking-wider font-semibold">AI BIOMETRIC ENGINE</span>
           </div>
 
           {/* Loading Models State */}
