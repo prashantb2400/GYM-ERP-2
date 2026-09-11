@@ -5,6 +5,7 @@ import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { AdminTopbar } from '@/components/layout/AdminTopbar';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/authStore';
 import { BranchProvider } from '@/hooks/useBranch';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -24,6 +25,14 @@ export default function AdminDashboardLayout({
 
   React.useEffect(() => {
     if (!loading && isAuthenticated && user && user.role === 'owner' && !user.gymId && !isOnboarding) {
+      const cached = typeof window !== 'undefined' ? localStorage.getItem('gymerp_cached_gym_id') : null;
+      if (cached && cached !== 'null' && cached !== 'undefined') {
+        useAuthStore.getState().setSession({
+          user: { ...user, gymId: cached },
+          member: null,
+        });
+        return;
+      }
       router.replace('/dashboard/onboarding');
     }
   }, [loading, isAuthenticated, user, router, isOnboarding]);
@@ -64,6 +73,17 @@ export default function AdminDashboardLayout({
 
   // Owner without gym workspace: cleanly redirect to onboarding instead of rendering blank dashboard
   if (user && user.role === 'owner' && !user.gymId && !isOnboarding) {
+    const cached = typeof window !== 'undefined' ? localStorage.getItem('gymerp_cached_gym_id') : null;
+    if (cached && cached !== 'null' && cached !== 'undefined') {
+      return (
+        <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
+            <p className="text-sm text-zinc-400">Loading gym workspace...</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
         <div className="text-center">

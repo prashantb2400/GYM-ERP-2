@@ -53,7 +53,7 @@ export function useAuth() {
                 }
               } else if (typeof window !== 'undefined') {
                 const cachedGymId = localStorage.getItem('gymerp_cached_gym_id');
-                if (cachedGymId) {
+                if (cachedGymId && cachedGymId !== 'null' && cachedGymId !== 'undefined') {
                   resolvedUser = { ...resolvedUser, gymId: cachedGymId };
                 }
               }
@@ -65,12 +65,13 @@ export function useAuth() {
 
         // Fallback: If not found in either, check cached gymId before defaulting to blank
         const cachedGymId = typeof window !== 'undefined' ? localStorage.getItem('gymerp_cached_gym_id') : null;
+        const validCachedGymId = cachedGymId && cachedGymId !== 'null' && cachedGymId !== 'undefined' ? cachedGymId : '';
         const isNewOwner = supabaseUser.app_metadata?.provider === 'google' || supabaseUser.user_metadata?.iss || !!supabaseUser.email;
         if (isNewOwner) {
           const authUser: AuthUser = {
             id: supabaseUser.id,
             authId: supabaseUser.id,
-            gymId: cachedGymId || '',
+            gymId: validCachedGymId,
             branchId: null,
             name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Gym Owner',
             email: supabaseUser.email || null,

@@ -86,7 +86,9 @@ export async function POST(request: Request) {
 
     // 1. Resolve or Create Gym workspace
     let gymId: string;
-    const { data: existingGym } = await supabaseAdmin
+    let existingGym: any = null;
+
+    const { data: gymByOwner } = await supabaseAdmin
       .from('gyms')
       .select('id, name')
       .eq('owner_id', user.id)
@@ -94,8 +96,49 @@ export async function POST(request: Request) {
       .limit(1)
       .maybeSingle();
 
+    if (gymByOwner) {
+      existingGym = gymByOwner;
+    } else if (contactEmail) {
+      const { data: gymByEmail } = await supabaseAdmin
+        .from('gyms')
+        .select('id, name')
+        .ilike('email', contactEmail)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (gymByEmail) {
+        existingGym = gymByEmail;
+      }
+    }
+
+    if (!existingGym) {
+      // Check for unowned gym (e.g. demo gym)
+      const { data: unownedGym } = await supabaseAdmin
+        .from('gyms')
+        .select('id, name')
+        .is('owner_id', null)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (unownedGym) {
+        existingGym = unownedGym;
+      }
+    }
+
     if (existingGym) {
       gymId = existingGym.id;
+      await supabaseAdmin
+        .from('gyms')
+        .update({
+          name: gymName.trim(),
+          phone: contactPhone,
+          email: contactEmail,
+          tagline: tagline?.trim() || null,
+          address: addressObj,
+          owner_id: user.id,
+          is_setup_complete: true,
+        })
+        .eq('id', gymId);
     } else {
       const { data: gymData, error: gymError } = await supabaseAdmin
         .from('gyms')
@@ -228,22 +271,26 @@ export async function POST(request: Request) {
     // 6. Create or Update Owner User Profile in public.users
     const ownerName = user.user_metadata?.full_name || contactEmail?.split('@')[0] || 'Gym Owner';
 
-    const { error: userUpsertErr } = await supabaseAdmin
-      .from('users')
-      .upsert({
-        auth_id: user.id,
-        gym_id: gymId,
-        branch_id: branchId,
-        name: ownerName,
-        email: contactEmail,
-        role: 'owner',
-        permissions: ['*'],
-        is_active: true,
-      }, { onConflict: 'auth_id' });
+    if (existingUser?.id) {
+      await supabaseAdmin
+        .from('users')
+        .update({
+          auth_id: user.id,
+          gym_id: gymId,
+          branch_id: branchId,
+          role: 'owner',
+          permissions: ['*'],
+          is_active: true,
+        })
+        .eq('id', existingUser.id);
+    } else {
+      const { data: byEmail } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .ilike('email', contactEmail || '')
+        .maybeSingle();
 
-    if (userUpsertErr) {
-      console.warn('Upsert by auth_id failed, attempting fallback update:', userUpsertErr);
-      if (contactEmail) {
+      if (byEmail?.id) {
         await supabaseAdmin
           .from('users')
           .update({
@@ -251,9 +298,23 @@ export async function POST(request: Request) {
             gym_id: gymId,
             branch_id: branchId,
             role: 'owner',
+            permissions: ['*'],
             is_active: true,
           })
-          .eq('email', contactEmail);
+          .eq('id', byEmail.id);
+      } else {
+        await supabaseAdmin
+          .from('users')
+          .upsert({
+            auth_id: user.id,
+            gym_id: gymId,
+            branch_id: branchId,
+            name: ownerName,
+            email: contactEmail,
+            role: 'owner',
+            permissions: ['*'],
+            is_active: true,
+          }, { onConflict: 'auth_id' });
       }
     }
 
