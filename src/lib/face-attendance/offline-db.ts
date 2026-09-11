@@ -76,6 +76,8 @@ export async function getRosterFromOfflineDB(gymId: string): Promise<FaceDescrip
     memberCode: r.memberCode,
     photoUrl: r.photoUrl,
     descriptor: r.descriptor,
+    descriptors: r.descriptors || (r.descriptor ? [r.descriptor] : []),
+    branchId: r.branchId,
   }));
 }
 

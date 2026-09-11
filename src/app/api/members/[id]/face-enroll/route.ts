@@ -52,7 +52,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { descriptor, consentGiven } = body;
+    const { descriptor, descriptors, consentGiven } = body;
 
     if (!consentGiven) {
       return NextResponse.json({ error: 'Explicit DPDP consent is mandatory before enrolling face descriptor' }, { status: 400 });
@@ -62,13 +62,27 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid face descriptor: must be a 128-element float array' }, { status: 400 });
     }
 
+    let gallery: number[][] = [descriptor];
+    if (descriptors && Array.isArray(descriptors) && descriptors.length > 0) {
+      for (const d of descriptors) {
+        if (!Array.isArray(d) || d.length !== 128) {
+          return NextResponse.json({ error: 'Invalid gallery descriptor: each pose must be a 128-element float array' }, { status: 400 });
+        }
+      }
+      gallery = descriptors;
+    }
+
     const nowIso = new Date().toISOString();
 
     const { error: updateErr } = await supabaseAdmin
       .from('members')
       .update({
         face_enrolled: true,
-        face_descriptor: descriptor,
+        face_descriptor: {
+          primary: descriptor,
+          gallery,
+          enrolled_at: nowIso,
+        },
         consent_given_at: nowIso,
         updated_at: nowIso,
       })
@@ -81,6 +95,7 @@ export async function POST(
       success: true,
       message: 'Face descriptor enrolled successfully with verified consent',
       enrolled_at: nowIso,
+      poses_count: gallery.length,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'An unknown error occurred';

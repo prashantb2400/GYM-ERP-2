@@ -7,7 +7,9 @@ export interface FaceDescriptorRecord {
   name: string;
   memberCode: string;
   photoUrl?: string | null;
-  descriptor: number[]; // 128-float array
+  descriptor: number[]; // 128-float array (primary / centroid)
+  descriptors?: number[][]; // multi-template gallery of distinct pose vectors
+  branchId?: string | null;
 }
 
 export interface MatchResult {
@@ -57,5 +59,6 @@ export interface EnrollmentFrame {
 export interface EnrollmentResult {
   success: boolean;
   averagedDescriptor?: number[];
+  descriptors?: number[][];
   error?: string;
 }

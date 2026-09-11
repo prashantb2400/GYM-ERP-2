@@ -44,7 +44,7 @@ export class ConsensusTracker {
     mediumConfidenceRequiredFrames?: number;
     requireLiveness?: boolean;
   }) {
-    this.windowMs = options?.windowMs ?? 650; // 650ms temporal window
+    this.windowMs = options?.windowMs ?? 1200; // 1200ms temporal window for camera frame rate resilience
     this.highConfidenceRequiredFrames = options?.highConfidenceRequiredFrames ?? 2;
     this.mediumConfidenceRequiredFrames = options?.mediumConfidenceRequiredFrames ?? 3;
     this.requireLiveness = options?.requireLiveness ?? false;

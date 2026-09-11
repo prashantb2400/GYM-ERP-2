@@ -39,14 +39,31 @@ export function squaredEuclideanDistance(a: ArrayLike<number>, b: ArrayLike<numb
 }
 
 /**
+ * Normalizes a 128-d descriptor to unit length (L2 norm = 1).
+ */
+export function normalizeDescriptor(descriptor: ArrayLike<number>): number[] {
+  let norm = 0;
+  for (let i = 0; i < descriptor.length; i++) {
+    norm += descriptor[i] * descriptor[i];
+  }
+  norm = Math.sqrt(norm);
+  if (norm <= 0) return Array.from(descriptor);
+  const normalized = new Float32Array(descriptor.length);
+  for (let i = 0; i < descriptor.length; i++) {
+    normalized[i] = descriptor[i] / norm;
+  }
+  return Array.from(normalized);
+}
+
+/**
  * Converts a Euclidean distance into a normalized confidence percentage [0.0 - 1.0].
  * Threshold is treated as 50% confidence.
  */
-export function distanceToConfidence(distance: number, threshold = 0.48): number {
+export function distanceToConfidence(distance: number, threshold = 0.54): number {
   if (distance <= 0) return 1.0;
   if (distance >= 1.0) return 0.0;
-  // Non-linear scaling prioritizing high-confidence matches (<0.38)
-  const confidence = Math.max(0, 1 - (distance / (threshold * 1.5)));
+  // Non-linear scaling prioritizing high-confidence matches (<0.42)
+  const confidence = Math.max(0, 1 - (distance / (threshold * 1.4)));
   return Math.round(confidence * 1000) / 1000;
 }
 
@@ -105,35 +122,27 @@ export function averageDescriptors(
     avg[i] /= count;
   }
 
-  // Normalize vector to unit length
-  let norm = 0;
-  for (let i = 0; i < length; i++) {
-    norm += avg[i] * avg[i];
-  }
-  norm = Math.sqrt(norm);
-
-  if (norm > 0) {
-    for (let i = 0; i < length; i++) {
-      avg[i] /= norm;
-    }
-  }
-
-  return Array.from(avg);
+  return normalizeDescriptor(avg);
 }
 
 /**
  * Scans an in-memory roster of enrolled members and finds the best match
  * using squared Euclidean distance for high performance.
  *
- * Threshold:
- * - default 0.48: standard strict threshold
- * - highConfidence 0.38: instant match threshold
+ * Supports Multi-Template Gallery:
+ * If a candidate record has multiple descriptors (e.g. [front, left, right]),
+ * calculates the distance against each stored pose and takes the minimum distance.
+ * Falls back to candidate.descriptor if gallery is not present.
+ *
+ * Calibrated Thresholds:
+ * - standard match threshold: 0.54 (calibrated for varying gym lighting)
+ * - highConfidence match threshold: 0.42 (instant Tier 1 match)
  */
 export function findBestMatch(
   queryDescriptor: ArrayLike<number>,
   roster: FaceDescriptorRecord[],
-  threshold = 0.48,
-  highConfidenceThreshold = 0.38
+  threshold = 0.54,
+  highConfidenceThreshold = 0.42
 ): MatchResult | null {
   if (!roster || roster.length === 0) return null;
 
@@ -143,13 +152,31 @@ export function findBestMatch(
 
   for (let i = 0; i < roster.length; i++) {
     const candidate = roster[i];
-    if (!candidate.descriptor || candidate.descriptor.length !== queryDescriptor.length) {
-      continue;
+    let candidateMinSqDist = Infinity;
+
+    // Check multi-template gallery if present
+    if (candidate.descriptors && Array.isArray(candidate.descriptors) && candidate.descriptors.length > 0) {
+      for (let d = 0; d < candidate.descriptors.length; d++) {
+        const desc = candidate.descriptors[d];
+        if (desc && desc.length === queryDescriptor.length) {
+          const sqDist = squaredEuclideanDistance(queryDescriptor, desc);
+          if (sqDist < candidateMinSqDist) {
+            candidateMinSqDist = sqDist;
+          }
+        }
+      }
     }
 
-    const sqDist = squaredEuclideanDistance(queryDescriptor, candidate.descriptor);
-    if (sqDist < bestSqDistance) {
-      bestSqDistance = sqDist;
+    // Check single/primary descriptor
+    if (candidate.descriptor && candidate.descriptor.length === queryDescriptor.length) {
+      const sqDist = squaredEuclideanDistance(queryDescriptor, candidate.descriptor);
+      if (sqDist < candidateMinSqDist) {
+        candidateMinSqDist = sqDist;
+      }
+    }
+
+    if (candidateMinSqDist < bestSqDistance) {
+      bestSqDistance = candidateMinSqDist;
       bestMatch = candidate;
     }
   }

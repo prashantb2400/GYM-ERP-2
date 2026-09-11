@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Camera, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { loadFaceApiModels } from '@/lib/face-attendance/models';
-import { averageDescriptors } from '@/lib/face-attendance/matcher';
+import { averageDescriptors, normalizeDescriptor } from '@/lib/face-attendance/matcher';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 
 interface FaceEnrollmentModalProps {
@@ -118,8 +118,8 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
     setProgress(0);
 
     const faceapi = faceApiRef.current;
-    // Upgrade to inputSize 416 for crisp landmark positioning
-    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.68 });
+    // Upgrade to inputSize 416 with scoreThreshold 0.55 for reliable detection in standard indoor lighting
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.55 });
     const descriptors: number[][] = [];
     const TOTAL_FRAMES = 5;
 
@@ -151,21 +151,21 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
 
       const box = detection.detection.box;
       // Quality Gate: Ensure face is close enough and sharp
-      if (box.width < 95 || box.height < 95) {
+      if (box.width < 75 || box.height < 75) {
         setStatusMessage('Move a bit closer to the camera...');
         i--;
         await new Promise(r => setTimeout(r, 400));
         continue;
       }
 
-      if (detection.detection.score < 0.70) {
+      if (detection.detection.score < 0.55) {
         setStatusMessage('Adjust lighting and hold steady...');
         i--;
         await new Promise(r => setTimeout(r, 400));
         continue;
       }
 
-      descriptors.push(Array.from(detection.descriptor));
+      descriptors.push(normalizeDescriptor(Array.from(detection.descriptor)));
       setProgress(Math.round(((i + 1) / TOTAL_FRAMES) * 100));
     }
 
@@ -174,8 +174,8 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
     if (descriptors.length === TOTAL_FRAMES) {
       try {
         setIsSaving(true);
-        setStatusMessage('Computing stable 128-d vector (filtering outliers)...');
-        // Average with outlier rejection
+        setStatusMessage('Computing multi-pose biometric template...');
+        // Average with outlier rejection for primary centroid
         const averagedVector = averageDescriptors(descriptors, true);
 
         const res = await fetchWithAuth(`/api/members/${member.id}/face-enroll`, {
@@ -183,6 +183,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             descriptor: averagedVector,
+            descriptors: descriptors, // 5-pose gallery
             consentGiven: true,
           }),
         });

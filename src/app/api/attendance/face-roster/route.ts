@@ -57,14 +57,47 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    const roster = (members || []).map(m => ({
-      memberId: m.id,
-      name: m.name,
-      memberCode: m.member_code,
-      photoUrl: m.photo_url,
-      descriptor: m.face_descriptor,
-      branchId: m.branch_id,
-    }));
+    const roster = (members || []).map(m => {
+      let primaryDesc: number[] = [];
+      let gallery: number[][] = [];
+
+      const raw = m.face_descriptor;
+      if (Array.isArray(raw)) {
+        if (typeof raw[0] === 'number') {
+          // Legacy single 128-d vector
+          primaryDesc = raw;
+          gallery = [raw];
+        } else if (Array.isArray(raw[0])) {
+          // Array of 128-d vectors
+          gallery = raw;
+          primaryDesc = raw[0];
+        }
+      } else if (raw && typeof raw === 'object') {
+        // Structured object { primary, gallery }
+        if (Array.isArray(raw.primary)) {
+          primaryDesc = raw.primary;
+        }
+        if (Array.isArray(raw.gallery)) {
+          gallery = raw.gallery;
+        }
+        if (gallery.length === 0 && primaryDesc.length > 0) {
+          gallery = [primaryDesc];
+        }
+        if (primaryDesc.length === 0 && gallery.length > 0) {
+          primaryDesc = gallery[0];
+        }
+      }
+
+      return {
+        memberId: m.id,
+        name: m.name,
+        memberCode: m.member_code,
+        photoUrl: m.photo_url,
+        descriptor: primaryDesc,
+        descriptors: gallery,
+        branchId: m.branch_id,
+      };
+    });
 
     return NextResponse.json(roster);
   } catch (err: unknown) {

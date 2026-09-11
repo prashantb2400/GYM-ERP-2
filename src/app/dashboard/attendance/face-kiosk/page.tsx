@@ -90,7 +90,7 @@ export default function FaceKioskPage() {
   const isDetectingRef = useRef(false);
   const cooldownMapRef = useRef<Map<string, number>>(new Map());
   const consensusTrackerRef = useRef<ConsensusTracker>(
-    new ConsensusTracker({ windowMs: 650, highConfidenceRequiredFrames: 2, mediumConfidenceRequiredFrames: 3 })
+    new ConsensusTracker({ windowMs: 1200, highConfidenceRequiredFrames: 2, mediumConfidenceRequiredFrames: 3 })
   );
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -243,7 +243,7 @@ export default function FaceKioskPage() {
         const video = videoRef.current;
 
         try {
-          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.65 });
+          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.50 });
           const allDetections = await faceapi
             .detectAllFaces(video, options)
             .withFaceLandmarks()
@@ -252,7 +252,7 @@ export default function FaceKioskPage() {
           // Pre-descriptor Quality Gate: Filter out tiny distant background faces
           const detections = allDetections.filter(d => {
             const box = d.detection.box;
-            return box.width >= 85 && box.height >= 85 && d.detection.score >= 0.65;
+            return box.width >= 75 && box.height >= 75 && d.detection.score >= 0.50;
           });
 
           // Draw visual biometric bounding HUD on overlay canvas
@@ -271,8 +271,8 @@ export default function FaceKioskPage() {
           const currentTime = Date.now();
           for (const det of detections) {
             const box = det.detection.box;
-            // Strict accuracy threshold: 0.48, Instant Tier 1: 0.38
-            const match = findBestMatch(det.descriptor, roster, 0.48, 0.38);
+            // Calibrated thresholds: Standard match 0.54, Instant Tier 1: 0.42
+            const match = findBestMatch(det.descriptor, roster, 0.54, 0.42);
 
             if (match) {
               const leftEye = det.landmarks ? det.landmarks.getLeftEye() : undefined;
@@ -428,6 +428,16 @@ export default function FaceKioskPage() {
               canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
               canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
               canvasCtx.stroke();
+
+              if (w >= 90) {
+                canvasCtx.fillStyle = 'rgba(24, 24, 27, 0.75)';
+                canvasCtx.beginPath();
+                canvasCtx.roundRect(x, Math.max(8, y - 22), 110, 18, 4);
+                canvasCtx.fill();
+                canvasCtx.fillStyle = 'rgba(212, 212, 216, 0.75)';
+                canvasCtx.font = '10px system-ui, sans-serif';
+                canvasCtx.fillText('Aligning face...', x + 6, Math.max(20, y - 9));
+              }
             }
           }
         } catch {
