@@ -103,7 +103,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
     };
   }, [isOpen, startCamera, stopCamera]);
 
-  // Capture face descriptors across 5 frames
+  // Capture face descriptors across 5 guided poses
   const handleStartCapture = async () => {
     if (!consentGiven) {
       toast.error('Please accept the biometric data consent before continuing.');
@@ -118,13 +118,22 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
     setProgress(0);
 
     const faceapi = faceApiRef.current;
-    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+    // Upgrade to inputSize 416 for crisp landmark positioning
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.68 });
     const descriptors: number[][] = [];
     const TOTAL_FRAMES = 5;
 
+    const POSE_INSTRUCTIONS = [
+      'Pose 1/5: Look straight into the camera',
+      'Pose 2/5: Hold steady, neutral expression',
+      'Pose 3/5: Turn face slightly left (~10°)',
+      'Pose 4/5: Turn face slightly right (~10°)',
+      'Pose 5/5: Look straight again (natural expression)',
+    ];
+
     for (let i = 0; i < TOTAL_FRAMES; i++) {
-      setStatusMessage(`Capturing sample ${i + 1} of ${TOTAL_FRAMES}... Hold steady`);
-      await new Promise(r => setTimeout(r, 400));
+      setStatusMessage(POSE_INSTRUCTIONS[i]);
+      await new Promise(r => setTimeout(r, 600));
 
       if (!videoRef.current) break;
 
@@ -134,9 +143,25 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
         .withFaceDescriptor();
 
       if (!detection) {
-        setStatusMessage('No face detected. Please center your face.');
-        i--; // Retry this frame
-        await new Promise(r => setTimeout(r, 300));
+        setStatusMessage('No face detected. Please position within the oval.');
+        i--; // Retry this pose
+        await new Promise(r => setTimeout(r, 400));
+        continue;
+      }
+
+      const box = detection.detection.box;
+      // Quality Gate: Ensure face is close enough and sharp
+      if (box.width < 95 || box.height < 95) {
+        setStatusMessage('Move a bit closer to the camera...');
+        i--;
+        await new Promise(r => setTimeout(r, 400));
+        continue;
+      }
+
+      if (detection.detection.score < 0.70) {
+        setStatusMessage('Adjust lighting and hold steady...');
+        i--;
+        await new Promise(r => setTimeout(r, 400));
         continue;
       }
 
@@ -149,8 +174,9 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
     if (descriptors.length === TOTAL_FRAMES) {
       try {
         setIsSaving(true);
-        setStatusMessage('Computing stable 128-d vector average...');
-        const averagedVector = averageDescriptors(descriptors);
+        setStatusMessage('Computing stable 128-d vector (filtering outliers)...');
+        // Average with outlier rejection
+        const averagedVector = averageDescriptors(descriptors, true);
 
         const res = await fetchWithAuth(`/api/members/${member.id}/face-enroll`, {
           method: 'POST',

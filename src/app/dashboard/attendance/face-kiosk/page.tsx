@@ -32,6 +32,7 @@ import {
   syncRoster,
   recordAttendanceEvent,
   flushAttendanceQueue,
+  ConsensusTracker,
   type FaceDescriptorRecord,
   type AttendanceEvent,
 } from '@/lib/face-attendance';
@@ -88,6 +89,9 @@ export default function FaceKioskPage() {
 
   const isDetectingRef = useRef(false);
   const cooldownMapRef = useRef<Map<string, number>>(new Map());
+  const consensusTrackerRef = useRef<ConsensusTracker>(
+    new ConsensusTracker({ windowMs: 650, highConfidenceRequiredFrames: 2, mediumConfidenceRequiredFrames: 3 })
+  );
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const supabase = createClient();
@@ -239,101 +243,173 @@ export default function FaceKioskPage() {
         const video = videoRef.current;
 
         try {
-          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
-          const detections = await faceapi
+          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.65 });
+          const allDetections = await faceapi
             .detectAllFaces(video, options)
             .withFaceLandmarks()
             .withFaceDescriptors();
 
-          // Draw visual bounding boxes on overlay canvas
+          // Pre-descriptor Quality Gate: Filter out tiny distant background faces
+          const detections = allDetections.filter(d => {
+            const box = d.detection.box;
+            return box.width >= 85 && box.height >= 85 && d.detection.score >= 0.65;
+          });
+
+          // Draw visual biometric bounding HUD on overlay canvas
+          let canvasCtx: CanvasRenderingContext2D | null = null;
           if (canvasRef.current) {
             const canvas = canvasRef.current;
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-              for (const det of detections) {
-                const box = det.detection.box;
-                ctx.strokeStyle = '#3b82f6';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(box.x, box.y, box.width, box.height);
-              }
+            canvasCtx = canvas.getContext('2d');
+            if (canvasCtx) {
+              canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
             }
           }
 
           // Process each detected face against the roster
           const currentTime = Date.now();
           for (const det of detections) {
-            const match = findBestMatch(det.descriptor, roster, 0.55);
+            const box = det.detection.box;
+            // Strict accuracy threshold: 0.48, Instant Tier 1: 0.38
+            const match = findBestMatch(det.descriptor, roster, 0.48, 0.38);
 
             if (match) {
-              const lastScanned = cooldownMapRef.current.get(match.memberId) || 0;
-              const elapsedMs = currentTime - lastScanned;
-              const COOLDOWN_MS = 30000; // 30 seconds
+              const consensus = consensusTrackerRef.current.evaluate(match, currentTime);
+              const isReadyToLog = consensus.isConfirmed;
 
-              if (elapsedMs > COOLDOWN_MS) {
-                // Member recognized and ready to log!
-                cooldownMapRef.current.set(match.memberId, currentTime);
+              // Draw interactive biometric lock reticle on canvas
+              if (canvasCtx) {
+                const hudColor = isReadyToLog ? '#10b981' : consensus.progress >= 0.5 ? '#06b6d4' : '#8b5cf6';
+                const label = isReadyToLog
+                  ? `${match.name} · Verified ✓`
+                  : `${match.name} (${Math.round(consensus.progress * 100)}%)`;
 
-                // Determine attendance event payload
-                const eventPayload: AttendanceEvent = {
-                  gymId: gymId || '',
-                  branchId: user?.branchId || undefined,
-                  memberId: match.memberId,
-                  memberName: match.name,
-                  type: mode === 'out' ? 'out' : mode === 'in' ? 'in' : 'in',
-                  timestamp: new Date().toISOString(),
-                  confidence: match.confidence,
-                  method: 'face_recognition',
-                };
+                const x = box.x;
+                const y = box.y;
+                const w = box.width;
+                const h = box.height;
+                const len = Math.min(22, w * 0.25);
 
-                // Clear previous banner timeout
-                if (bannerTimeoutRef.current) {
-                  clearTimeout(bannerTimeoutRef.current);
+                canvasCtx.strokeStyle = hudColor;
+                canvasCtx.lineWidth = 2.5;
+                canvasCtx.lineCap = 'round';
+
+                // Corner brackets
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
+                canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
+                canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
+                canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
+                canvasCtx.stroke();
+
+                // Name Pill
+                canvasCtx.fillStyle = 'rgba(9, 9, 11, 0.85)';
+                canvasCtx.beginPath();
+                const textWidth = Math.max(120, canvasCtx.measureText(label).width + 24);
+                canvasCtx.roundRect(x, Math.max(8, y - 26), textWidth, 20, 5);
+                canvasCtx.fill();
+                canvasCtx.strokeStyle = hudColor;
+                canvasCtx.lineWidth = 1;
+                canvasCtx.stroke();
+
+                canvasCtx.fillStyle = hudColor;
+                canvasCtx.font = 'bold 11px system-ui, sans-serif';
+                canvasCtx.fillText(label, x + 8, Math.max(22, y - 12));
+
+                // Temporal lock progress bar
+                if (consensus.progress > 0 && !isReadyToLog) {
+                  const barY = y + h + 6;
+                  canvasCtx.fillStyle = 'rgba(24, 24, 27, 0.8)';
+                  canvasCtx.fillRect(x, barY, w, 4);
+                  canvasCtx.fillStyle = hudColor;
+                  canvasCtx.fillRect(x, barY, w * consensus.progress, 4);
                 }
-
-                // Record event
-                recordAttendanceEvent(eventPayload).then(({ success, isOffline, event: resEvent }) => {
-                  if (success) {
-                    playChime(true);
-
-                    const anyRes = resEvent as any;
-                    const action = anyRes.action || 'check_in';
-                    const timeStr = anyRes.time || new Date().toLocaleTimeString('en-IN');
-
-                    setRecognitionBanner({
-                      state: 'success',
-                      memberName: match.name,
-                      memberCode: match.memberCode,
-                      memberPhoto: match.photoUrl,
-                      action,
-                      time: timeStr,
-                    });
-
-                    if (action === 'check_in') {
-                      setTodayCount(c => c + 1);
-                    }
-
-                    setRecentEvents(prev => [
-                      { name: match.name, time: timeStr, action, photo: match.photoUrl },
-                      ...prev.slice(0, 4),
-                    ]);
-
-                    if (isOffline) {
-                      setPendingQueueCount(q => q + 1);
-                    }
-                  }
-                });
-
-                // Auto-clear banner after 3 seconds
-                bannerTimeoutRef.current = setTimeout(() => {
-                  setRecognitionBanner({ state: 'idle' });
-                }, 3500);
-
-                break; // Process one member per loop cycle to maintain clean UI
               }
+
+              if (isReadyToLog) {
+                const lastScanned = cooldownMapRef.current.get(match.memberId) || 0;
+                const elapsedMs = currentTime - lastScanned;
+                const COOLDOWN_MS = 30000; // 30 seconds
+
+                if (elapsedMs > COOLDOWN_MS) {
+                  // Member recognized through multi-frame consensus and ready to log!
+                  cooldownMapRef.current.set(match.memberId, currentTime);
+
+                  // Determine attendance event payload
+                  const eventPayload: AttendanceEvent = {
+                    gymId: gymId || '',
+                    branchId: user?.branchId || undefined,
+                    memberId: match.memberId,
+                    memberName: match.name,
+                    type: mode === 'out' ? 'out' : mode === 'in' ? 'in' : 'in',
+                    timestamp: new Date().toISOString(),
+                    confidence: match.confidence,
+                    method: 'face_recognition',
+                  };
+
+                  // Clear previous banner timeout
+                  if (bannerTimeoutRef.current) {
+                    clearTimeout(bannerTimeoutRef.current);
+                  }
+
+                  // Record event
+                  recordAttendanceEvent(eventPayload).then(({ success, isOffline, event: resEvent }) => {
+                    if (success) {
+                      playChime(true);
+
+                      const anyRes = resEvent as any;
+                      const action = anyRes.action || 'check_in';
+                      const timeStr = anyRes.time || new Date().toLocaleTimeString('en-IN');
+
+                      setRecognitionBanner({
+                        state: 'success',
+                        memberName: match.name,
+                        memberCode: match.memberCode,
+                        memberPhoto: match.photoUrl,
+                        action,
+                        time: timeStr,
+                      });
+
+                      if (action === 'check_in') {
+                        setTodayCount(c => c + 1);
+                      }
+
+                      setRecentEvents(prev => [
+                        { name: match.name, time: timeStr, action, photo: match.photoUrl },
+                        ...prev.slice(0, 4),
+                      ]);
+
+                      if (isOffline) {
+                        setPendingQueueCount(q => q + 1);
+                      }
+                    }
+                  });
+
+                  // Auto-clear banner after 3.5 seconds
+                  bannerTimeoutRef.current = setTimeout(() => {
+                    setRecognitionBanner({ state: 'idle' });
+                  }, 3500);
+
+                  break; // Process one member per loop cycle to maintain clean UI
+                }
+              }
+            } else if (canvasCtx) {
+              // Unrecognized face candidate (distant stranger or non-member)
+              const x = box.x;
+              const y = box.y;
+              const w = box.width;
+              const h = box.height;
+              const len = Math.min(16, w * 0.2);
+
+              canvasCtx.strokeStyle = 'rgba(161, 161, 170, 0.4)';
+              canvasCtx.lineWidth = 1.5;
+              canvasCtx.beginPath();
+              canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
+              canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
+              canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
+              canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
+              canvasCtx.stroke();
             }
           }
         } catch {

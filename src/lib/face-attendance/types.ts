@@ -17,6 +17,12 @@ export interface MatchResult {
   photoUrl?: string | null;
   distance: number;
   confidence: number;
+  tier?: 'high' | 'medium';
+}
+
+export interface QualityMetrics {
+  minFaceWidthPx: number;
+  minDetectionScore: number;
 }
 
 export interface AttendanceEvent {
