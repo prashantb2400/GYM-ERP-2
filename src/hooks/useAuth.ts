@@ -89,15 +89,32 @@ export function useAuth() {
       }
     };
 
-    // Get initial user session
-    supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
-      fetchSessionDetails(supabaseUser);
+    // Get initial user session (check local session cache first for instant response)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchSessionDetails(session.user);
+      } else {
+        supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
+          fetchSessionDetails(supabaseUser);
+        }).catch(() => {
+          setSession({ user: null, member: null });
+        });
+      }
+    }).catch(() => {
+      supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
+        fetchSessionDetails(supabaseUser);
+      }).catch(() => {
+        setSession({ user: null, member: null });
+      });
     });
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
+        if (
+          (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') &&
+          session?.user
+        ) {
           fetchSessionDetails(session.user);
         } else if (event === 'SIGNED_OUT') {
           logout();

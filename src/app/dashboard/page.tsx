@@ -54,7 +54,12 @@ export default function DashboardHome() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [demoSeeded, setDemoSeeded] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const hasLoadedRef = React.useRef(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (gym?.settings?.demo_seeded) {
@@ -80,6 +85,15 @@ export default function DashboardHome() {
       setSeeding(false);
     }
   };
+
+  useEffect(() => {
+    if (!user?.gymId) {
+      const timer = setTimeout(() => {
+        if (!user?.gymId) setLoading(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user?.gymId]);
 
   useEffect(() => {
     if (!user?.gymId) return;
@@ -289,7 +303,7 @@ export default function DashboardHome() {
           >
             ⚡ Quick Add
           </Button>
-          <Link href="/dashboard/invoices" passHref legacyBehavior>
+          <Link href="/dashboard/invoices">
             <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 gap-2">
               <PlusCircle className="h-4 w-4" /> New Invoice
             </Button>
@@ -413,17 +427,19 @@ export default function DashboardHome() {
                 <div key={entry.id} className="flex items-center justify-between border-b border-zinc-800/40 pb-3 last:border-0 last:pb-0">
                   <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-300 font-bold border border-purple-800/40">
-                      {entry.member_name.slice(0,2).toUpperCase()}
+                      {(entry.member_name || 'Member').slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-zinc-200">{entry.member_name}</div>
+                      <div className="text-sm font-semibold text-zinc-200">{entry.member_name || 'Member'}</div>
                       <div className="text-[10px] text-zinc-500 mt-0.5 uppercase flex items-center gap-1.5">
-                        <GlowingBadge variant="active" pulse={false}>{entry.method}</GlowingBadge>
+                        <GlowingBadge variant="active" pulse={false}>{entry.method || 'check-in'}</GlowingBadge>
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-semibold text-zinc-400">{formatDateTime(entry.check_in_time).split(',')[1]}</span>
+                    <span className="text-xs font-semibold text-zinc-400">
+                      {entry.check_in_time ? (formatDateTime(entry.check_in_time).split(',')[1] || formatDateTime(entry.check_in_time)) : ''}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -445,7 +461,7 @@ export default function DashboardHome() {
           </CardHeader>
           <CardContent className="h-[280px] relative">
             <BorderBeam />
-            {chartData.length === 0 ? (
+            {!mounted || chartData.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-zinc-500 pb-8">
                 <CalendarDays className="h-10 w-10 mb-3 opacity-30" />
                 <p className="text-sm font-medium">No check-ins yet this week</p>
@@ -473,7 +489,7 @@ export default function DashboardHome() {
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-zinc-200">Management Shortcuts</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-stagger">
-          <Link href="/dashboard/members" passHref legacyBehavior>
+          <Link href="/dashboard/members" className="block">
             <GlowCard className="group flex items-start gap-4" glowColor="purple">
               <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
                 <Users className="h-5 w-5" />
@@ -485,7 +501,7 @@ export default function DashboardHome() {
             </GlowCard>
           </Link>
 
-          <Link href="/dashboard/whatsapp" passHref legacyBehavior>
+          <Link href="/dashboard/whatsapp" className="block">
             <GlowCard className="group flex items-start gap-4" glowColor="purple">
               <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
                 <MessageCircle className="h-5 w-5" />
@@ -497,7 +513,7 @@ export default function DashboardHome() {
             </GlowCard>
           </Link>
 
-          <Link href="/dashboard/followups" passHref legacyBehavior>
+          <Link href="/dashboard/followups" className="block">
             <GlowCard className="group flex items-start gap-4" glowColor="purple">
               <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
                 <Clock className="h-5 w-5" />
@@ -509,7 +525,7 @@ export default function DashboardHome() {
             </GlowCard>
           </Link>
 
-          <Link href="/dashboard/settings" passHref legacyBehavior>
+          <Link href="/dashboard/settings" className="block">
             <GlowCard className="group flex items-start gap-4" glowColor="purple">
               <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
                 <FileText className="h-5 w-5" />

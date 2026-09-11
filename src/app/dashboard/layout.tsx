@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { BranchProvider } from '@/hooks/useBranch';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 
 export default function AdminDashboardLayout({
   children,
@@ -27,6 +28,12 @@ export default function AdminDashboardLayout({
     }
   }, [loading, isAuthenticated, user, router, isOnboarding]);
 
+  React.useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [loading, isAuthenticated, router]);
+
   if (isOnboarding) {
     return <>{children}</>;
   }
@@ -42,9 +49,16 @@ export default function AdminDashboardLayout({
     );
   }
 
-  // Fallback protection (in case middleware takes a second to redirect)
+  // Fallback protection: show clean redirect screen instead of returning blank null
   if (!isAuthenticated && !loading) {
-    return null;
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
+          <p className="text-sm text-zinc-400">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -66,7 +80,9 @@ export default function AdminDashboardLayout({
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
           <AdminTopbar onMenuClick={() => setMobileOpen(true)} />
           <main className="flex-1 overflow-y-auto bg-zinc-950 p-6 lg:p-8 pb-12">
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </main>
         </div>
       </div>
