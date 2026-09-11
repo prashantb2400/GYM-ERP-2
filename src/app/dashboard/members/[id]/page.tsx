@@ -27,7 +27,9 @@ import {
   Printer,
   Plus,
   PauseCircle,
+  ScanFace,
 } from 'lucide-react';
+import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -57,6 +59,7 @@ export default function MemberDetailPage() {
   const [freezeOpen, setFreezeOpen] = useState(false);
   const [freezeDays, setFreezeDays] = useState('7');
   const [freezing, setFreezing] = useState(false);
+  const [faceEnrollOpen, setFaceEnrollOpen] = useState(false);
 
   const loadMemberDetails = async () => {
     if (!user?.gymId || !memberId) return;
@@ -243,6 +246,18 @@ export default function MemberDetailPage() {
               Mark Present
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFaceEnrollOpen(true)}
+            className={member.face_enrolled 
+              ? "border-green-700/50 text-green-400 hover:bg-green-950/30 text-xs gap-1.5" 
+              : "border-purple-700/50 text-purple-400 hover:bg-purple-950/30 text-xs gap-1.5"
+            }
+          >
+            <ScanFace className="h-4 w-4" />
+            {member.face_enrolled ? 'Face ID Enrolled ✓' : 'Enroll Face ID'}
+          </Button>
           <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-xs gap-2">
             <Printer className="h-4 w-4" /> Print ID Card
           </Button>
@@ -351,6 +366,38 @@ export default function MemberDetailPage() {
                   </p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Biometric Face ID Card */}
+          <Card className="border-zinc-800 bg-zinc-900/40">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold text-zinc-200 flex items-center gap-2">
+                  <ScanFace className="h-4 w-4 text-purple-400" />
+                  Biometric Face ID
+                </CardTitle>
+                <Badge className={member.face_enrolled 
+                  ? "bg-green-500/10 text-green-400 border-green-500/20 text-[10px]" 
+                  : "bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px]"
+                }>
+                  {member.face_enrolled ? 'Enrolled ✓' : 'Not Enrolled'}
+                </Badge>
+              </div>
+              <CardDescription className="text-xs text-zinc-400 mt-1">
+                Biometric vector for walk-through contactless attendance kiosks.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFaceEnrollOpen(true)}
+                className="w-full gap-2 border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs"
+              >
+                <ScanFace className="h-4 w-4 text-purple-400" />
+                {member.face_enrolled ? 'Update / Re-enroll Face' : 'Enroll Face ID'}
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -552,6 +599,24 @@ export default function MemberDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {member && (
+        <FaceEnrollmentModal
+          isOpen={faceEnrollOpen}
+          onClose={() => setFaceEnrollOpen(false)}
+          member={{
+            id: member.id,
+            name: member.name,
+            member_code: member.member_code,
+            face_enrolled: member.face_enrolled,
+            photo_url: member.photo_url,
+          }}
+          onSuccess={() => {
+            setMember((prev: any) => ({ ...prev, face_enrolled: true }));
+            loadMemberDetails();
+          }}
+        />
+      )}
     </div>
   );
 }

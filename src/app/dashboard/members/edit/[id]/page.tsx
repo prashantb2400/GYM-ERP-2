@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, ArrowLeft, Save, Camera, Upload, User } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, Camera, Upload, User, ScanFace } from 'lucide-react';
 import { toast } from 'sonner';
 import { INDIAN_STATES, BLOOD_GROUPS, GENDER_OPTIONS, FITNESS_LEVELS, MEMBER_STATUSES } from '@/lib/utils/constants';
 import { CameraCaptureModal } from '@/components/shared/CameraCaptureModal';
+import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 
 export default function EditMemberPage() {
   const supabase = createClient();
@@ -33,6 +34,9 @@ export default function EditMemberPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [faceEnrollOpen, setFaceEnrollOpen] = useState(false);
+  const [faceEnrolled, setFaceEnrolled] = useState(false);
+  const [memberCode, setMemberCode] = useState('');
 
   // Form states
   const [name, setName] = useState('');
@@ -127,6 +131,8 @@ export default function EditMemberPage() {
         setLockerNumber(memberData.locker_number || '');
         setPhotoUrl(memberData.photo_url || null);
         setPhotoPreview(memberData.photo_url || null);
+        setFaceEnrolled(memberData.face_enrolled || false);
+        setMemberCode(memberData.member_code || '');
 
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -536,6 +542,40 @@ export default function EditMemberPage() {
               </CardContent>
             </Card>
 
+            {/* Biometric Face ID Card */}
+            <Card className="border-zinc-800 bg-zinc-900/40">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold text-zinc-200 flex items-center gap-2">
+                    <ScanFace className="h-4 w-4 text-purple-400" />
+                    Biometric Face ID
+                  </CardTitle>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    faceEnrolled
+                      ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                  }`}>
+                    {faceEnrolled ? 'Enrolled ✓' : 'Not Enrolled'}
+                  </span>
+                </div>
+                <CardDescription className="text-xs text-zinc-400 mt-1">
+                  Biometric descriptor used for walk-through contactless attendance kiosks.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFaceEnrollOpen(true)}
+                  className="w-full gap-2 border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs"
+                >
+                  <ScanFace className="h-4 w-4 text-purple-400" />
+                  {faceEnrolled ? 'Re-enroll / Update Face' : 'Enroll Face ID'}
+                </Button>
+              </CardContent>
+            </Card>
+
             <Card className="border-zinc-800 bg-zinc-900/40">
               <CardHeader>
                 <CardTitle className="text-sm font-bold text-zinc-200">Fitness & Timing</CardTitle>
@@ -653,6 +693,21 @@ export default function EditMemberPage() {
           setPhotoPreview(previewUrl);
         }}
         title="Update Member Profile Snapshot"
+      />
+
+      <FaceEnrollmentModal
+        isOpen={faceEnrollOpen}
+        onClose={() => setFaceEnrollOpen(false)}
+        member={{
+          id: memberId,
+          name,
+          member_code: memberCode,
+          face_enrolled: faceEnrolled,
+          photo_url: photoPreview || photoUrl,
+        }}
+        onSuccess={() => {
+          setFaceEnrolled(true);
+        }}
       />
     </div>
   );

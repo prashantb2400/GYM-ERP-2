@@ -468,7 +468,12 @@ export default function FaceKioskPage() {
           {!isLoadingModels && roster.length === 0 && (
             <div className="absolute top-4 left-4 right-4 bg-amber-950/60 border border-amber-800/60 text-amber-300 px-4 py-2.5 rounded-xl text-xs flex items-center gap-2">
               <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>No members enrolled with Face ID yet. Use the member profile to enroll faces.</span>
+              <span>
+                No members enrolled with Face ID yet.{' '}
+                <Link href="/dashboard/attendance" className="underline hover:text-amber-100 font-medium">
+                  Go to Attendance → search a member → click &quot;Enroll Face&quot;
+                </Link>
+              </span>
             </div>
           )}
         </div>
