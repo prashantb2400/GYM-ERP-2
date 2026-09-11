@@ -95,16 +95,32 @@ export default function MemberDetailPage() {
 
     try {
       setLoading(true);
-      // 1. Fetch member data with joins
+      // 1. Fetch member data with joins (decoupled from users table to prevent RLS recursion)
       const { data: memberData, error: memberError } = await supabase
         .from('members')
-        .select('*, plans(*), branches(name), users!members_trainer_id_fkey(name), diet_charts(id, name), exercise_charts(id, name)')
+        .select('*, plans(*), branches(name), diet_charts(id, name), exercise_charts(id, name)')
         .eq('id', memberId)
         .eq('gym_id', user.gymId)
         .single();
 
       if (memberError || !memberData) {
         throw new Error(memberError?.message || 'Member not found');
+      }
+
+      // Fetch trainer name independently if assigned
+      if (memberData.trainer_id) {
+        try {
+          const { data: trainerData } = await supabase
+            .from('users')
+            .select('name')
+            .eq('id', memberData.trainer_id)
+            .maybeSingle();
+          if (trainerData) {
+            memberData.users = trainerData;
+          }
+        } catch {
+          // Graceful fallback: trainer remains empty without breaking member profile load
+        }
       }
 
       // Auto-heal missing qr_token

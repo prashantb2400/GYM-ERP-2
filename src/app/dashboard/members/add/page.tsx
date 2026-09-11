@@ -22,6 +22,11 @@ import {
   ChevronLeft,
   Camera,
   Upload,
+  Printer,
+  ScanFace,
+  QrCode,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { INDIAN_STATES, BLOOD_GROUPS, GENDER_OPTIONS, FITNESS_LEVELS, PAYMENT_MODES, KYC_DOC_TYPES } from '@/lib/utils/constants';
@@ -29,12 +34,18 @@ import { calculateGST } from '@/lib/utils/format';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
 import { useBranch } from '@/hooks/useBranch';
+import { useGym } from '@/hooks/useGym';
 import { CameraCaptureModal } from '@/components/shared/CameraCaptureModal';
+import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
+import { PrintIdCardModal } from '@/components/members/PrintIdCardModal';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 
 export default function AddMemberPage() {
   const supabase = createClient();
   const router = useRouter();
   const { user } = useAuth();
+  const { gym } = useGym();
   const { canAddMember, maxMembers, usage, planName } = usePlanLimits();
   const { branches, selectedBranchId, isOwner } = useBranch();
 
@@ -43,6 +54,55 @@ export default function AddMemberPage() {
   const [trainers, setTrainers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [memberBranchId, setMemberBranchId] = useState('');
+
+  // Post-Registration Action States
+  const [createdMember, setCreatedMember] = useState<any | null>(null);
+  const [createdInvoice, setCreatedInvoice] = useState<any | null>(null);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [faceEnrollOpen, setFaceEnrollOpen] = useState(false);
+  const [printIdOpen, setPrintIdOpen] = useState(false);
+  const [faceEnrolledSuccess, setFaceEnrolledSuccess] = useState(false);
+
+  const handleResetForm = () => {
+    setName('');
+    setPhone('');
+    setWhatsappPhone('');
+    setEmail('');
+    setDob('');
+    setGender('');
+    setBloodGroup('');
+    setAddress('');
+    setCity('');
+    setState('');
+    setPin('');
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setEmergencyName('');
+    setEmergencyRelation('');
+    setEmergencyPhone('');
+    setSelectedPlanId('');
+    setDiscountPercent('0');
+    setAmountPaid('0');
+    setPaymentMode('');
+    setTransactionId('');
+    setTrainerId('');
+    setHasLocker(false);
+    setLockerNumber('');
+    setHeightCm('');
+    setWeightKg('');
+    setFitnessLevel('');
+    setHealthGoals([]);
+    setMedicalConditions('');
+    setTimingSlot('');
+    setKycType('');
+    setKycFile(null);
+    setKycPreview(null);
+    setCreatedMember(null);
+    setCreatedInvoice(null);
+    setFaceEnrolledSuccess(false);
+    setSuccessModalOpen(false);
+    setStep(1);
+  };
 
   useEffect(() => {
     if (selectedBranchId) {
@@ -422,9 +482,14 @@ export default function AddMemberPage() {
           status: 'pending',
         });
       }
-
-      toast.success('Member onboarded successfully!');
-      router.push('/dashboard/members');
+      toast.success(`🎉 ${memberData.name} onboarded successfully!`);
+      setCreatedMember({
+        ...memberData,
+        plan_name: selectedPlan?.name,
+        branch_name: branches.find(b => b.id === branchToAssign)?.name || 'Main Branch',
+      });
+      setCreatedInvoice(invoiceData);
+      setSuccessModalOpen(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       toast.error(msg);
@@ -1152,6 +1217,214 @@ export default function AddMemberPage() {
         }}
         title="Capture Member Profile Snapshot"
       />
+
+      {/* Post-Registration Success & Immediate Actions Modal */}
+      <Dialog open={successModalOpen} onOpenChange={(open) => !open && setSuccessModalOpen(false)}>
+        <DialogContent className="max-w-lg bg-zinc-950 border-zinc-800 text-zinc-100 p-6">
+          <DialogHeader className="text-left">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                <CheckCircle2 className="h-6 w-6 text-green-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-zinc-100">
+                  Member Registered Successfully!
+                </DialogTitle>
+                <DialogDescription className="text-xs text-zinc-400 mt-0.5">
+                  <strong className="text-zinc-200">{createdMember?.name}</strong> has been enrolled with code{' '}
+                  <span className="font-mono text-purple-300 font-bold bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
+                    {createdMember?.member_code}
+                  </span>
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Quick Summary Card */}
+          <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-3.5 space-y-2 text-xs my-2">
+            <div className="flex justify-between">
+              <span className="text-zinc-400">Plan Enrolled:</span>
+              <span className="font-semibold text-purple-300">{createdMember?.plan_name || 'Standard'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-400">Branch:</span>
+              <span className="font-semibold text-zinc-200">{createdMember?.branch_name || 'Main Branch'}</span>
+            </div>
+            <div className="flex justify-between border-t border-zinc-800/60 pt-2">
+              <span className="text-zinc-400">Total Invoice Amount:</span>
+              <span className="font-semibold text-zinc-200">₹{createdInvoice?.total || totalAmount}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-400">Amount Paid:</span>
+              <span className="font-semibold text-green-400">₹{createdInvoice?.amount_paid || amountPaid}</span>
+            </div>
+            {Number(createdInvoice?.amount_due || amountDue) > 0 && (
+              <div className="flex justify-between text-amber-400 font-semibold">
+                <span>Balance Due:</span>
+                <span>₹{createdInvoice?.amount_due || amountDue}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Counter Actions with Precautions */}
+          <div className="space-y-2.5 pt-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+              Immediate Counter Actions (With Precautions)
+            </p>
+
+            {/* Action 1: Print Invoice Receipt */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <Printer className="h-4 w-4 text-purple-400" />
+                  <span className="text-xs font-bold text-zinc-200">Print Invoice Receipt</span>
+                  <Badge variant="outline" className="text-[9px] text-green-400 border-green-500/30">Tax Invoice</Badge>
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  Generate official printed receipt for customer payment records.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (createdInvoice?.id) {
+                    window.open(`/api/invoices/${createdInvoice.id}/pdf`, '_blank');
+                  }
+                }}
+                className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 h-8 font-semibold shrink-0 ml-3"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Print Receipt
+              </Button>
+            </div>
+
+            {/* Action 2: Face ID Biometrics */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <ScanFace className="h-4 w-4 text-purple-400" />
+                  <span className="text-xs font-bold text-zinc-200">Enroll Face ID Biometrics</span>
+                  {faceEnrolledSuccess ? (
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[9px]">Enrolled ✓</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[9px] text-amber-400 border-amber-500/30">Optional</Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  Contactless kiosk check-in. <em>Precaution: DPDP consent required; can be skipped.</em>
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={faceEnrolledSuccess ? "outline" : "default"}
+                onClick={() => setFaceEnrollOpen(true)}
+                className={faceEnrolledSuccess 
+                  ? "border-green-700/50 text-green-400 text-xs h-8 shrink-0 ml-3" 
+                  : "bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 h-8 font-semibold shrink-0 ml-3"
+                }
+              >
+                <ScanFace className="h-3.5 w-3.5" />
+                {faceEnrolledSuccess ? 'Re-enroll' : 'Enroll Face'}
+              </Button>
+            </div>
+
+            {/* Action 3: Print Member ID Card */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <QrCode className="h-4 w-4 text-purple-400" />
+                  <span className="text-xs font-bold text-zinc-200">Print Member ID Card</span>
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  Physical badge with QR attendance pass and gym branding.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPrintIdOpen(true)}
+                className="border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs gap-1.5 h-8 shrink-0 ml-3"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Print ID Card
+              </Button>
+            </div>
+          </div>
+
+          {/* Navigation options */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-zinc-900 mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetForm}
+              className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-xs"
+            >
+              + Add Another Member
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/dashboard/members')}
+                className="text-zinc-400 text-xs"
+              >
+                Members List
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => router.push(`/dashboard/members/${createdMember?.id}`)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold"
+              >
+                View Profile →
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Face Enrollment Modal */}
+      {createdMember && (
+        <FaceEnrollmentModal
+          isOpen={faceEnrollOpen}
+          onClose={() => setFaceEnrollOpen(false)}
+          member={{
+            id: createdMember.id,
+            name: createdMember.name,
+            member_code: createdMember.member_code,
+            face_enrolled: faceEnrolledSuccess,
+            photo_url: createdMember.photo_url,
+          }}
+          onSuccess={() => {
+            setFaceEnrolledSuccess(true);
+            toast.success(`Face ID enrolled for ${createdMember.name}!`);
+          }}
+        />
+      )}
+
+      {/* Print ID Card Modal */}
+      {createdMember && (
+        <PrintIdCardModal
+          isOpen={printIdOpen}
+          onClose={() => setPrintIdOpen(false)}
+          gymName={gym?.name}
+          member={{
+            id: createdMember.id,
+            name: createdMember.name,
+            member_code: createdMember.member_code,
+            photo_url: createdMember.photo_url,
+            phone: createdMember.phone,
+            blood_group: createdMember.blood_group,
+            plan_name: createdMember.plan_name,
+            plan_start_date: createdMember.plan_start_date,
+            plan_end_date: createdMember.plan_end_date,
+            branch_name: createdMember.branch_name,
+            emergency_contact: createdMember.emergency_contact,
+            qr_token: createdMember.qr_token,
+            status: createdMember.status,
+            admission_date: createdMember.admission_date,
+          }}
+        />
+      )}
     </div>
   );
 }
