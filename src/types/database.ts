@@ -227,6 +227,10 @@ export interface Member {
   face_descriptor?: number[] | null;
   consent_given_at?: string | null;
   biometric_enrolled: boolean;
+  fingerprint_template?: any | null;
+  fingerprint_finger?: 'right_thumb' | 'right_index' | 'left_thumb' | 'left_index' | string | null;
+  fingerprint_quality?: number | null;
+  fingerprint_enrolled_at?: string | null;
   qr_token: string;
   kyc_status: 'pending' | 'verified' | 'rejected';
   birthday_notified_year: number | null;

@@ -24,6 +24,7 @@ import {
   Upload,
   Printer,
   ScanFace,
+  Fingerprint,
   QrCode,
   CheckCircle2,
   Sparkles,
@@ -37,6 +38,7 @@ import { useBranch } from '@/hooks/useBranch';
 import { useGym } from '@/hooks/useGym';
 import { CameraCaptureModal } from '@/components/shared/CameraCaptureModal';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
+import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
 import { PrintIdCardModal } from '@/components/members/PrintIdCardModal';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -60,8 +62,10 @@ export default function AddMemberPage() {
   const [createdInvoice, setCreatedInvoice] = useState<any | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [faceEnrollOpen, setFaceEnrollOpen] = useState(false);
+  const [fingerprintEnrollOpen, setFingerprintEnrollOpen] = useState(false);
   const [printIdOpen, setPrintIdOpen] = useState(false);
   const [faceEnrolledSuccess, setFaceEnrolledSuccess] = useState(false);
+  const [fingerprintEnrolledSuccess, setFingerprintEnrolledSuccess] = useState(false);
 
   const handleResetForm = () => {
     setName('');
@@ -100,6 +104,8 @@ export default function AddMemberPage() {
     setCreatedMember(null);
     setCreatedInvoice(null);
     setFaceEnrolledSuccess(false);
+    setFingerprintEnrolledSuccess(false);
+    setFingerprintEnrollOpen(false);
     setSuccessModalOpen(false);
     setStep(1);
   };
@@ -1298,7 +1304,37 @@ export default function AddMemberPage() {
               </Button>
             </div>
 
-            {/* Action 2: Face ID Biometrics */}
+            {/* Action 2: Biometric Fingerprint */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <Fingerprint className="h-4 w-4 text-purple-400" />
+                  <span className="text-xs font-bold text-zinc-200">Enroll Fingerprint Biometrics</span>
+                  {fingerprintEnrolledSuccess ? (
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[9px]">Enrolled ✓</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[9px] text-purple-400 border-purple-500/30">Primary</Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  Instant optical touch check-in. <em>Mantra MFS100 / SecuGen / Virtual sensor.</em>
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={fingerprintEnrolledSuccess ? "outline" : "default"}
+                onClick={() => setFingerprintEnrollOpen(true)}
+                className={fingerprintEnrolledSuccess 
+                  ? "border-green-700/50 text-green-400 text-xs h-8 shrink-0 ml-3" 
+                  : "bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 h-8 font-semibold shrink-0 ml-3"
+                }
+              >
+                <Fingerprint className="h-3.5 w-3.5" />
+                {fingerprintEnrolledSuccess ? 'Re-enroll' : 'Enroll Finger'}
+              </Button>
+            </div>
+
+            {/* Action 3: Face ID Biometrics */}
             <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
@@ -1328,7 +1364,7 @@ export default function AddMemberPage() {
               </Button>
             </div>
 
-            {/* Action 3: Print Member ID Card */}
+            {/* Action 4: Print Member ID Card */}
             <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
@@ -1381,6 +1417,25 @@ export default function AddMemberPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Fingerprint Enrollment Modal */}
+      {createdMember && (
+        <FingerprintEnrollmentModal
+          isOpen={fingerprintEnrollOpen}
+          onClose={() => setFingerprintEnrollOpen(false)}
+          member={{
+            id: createdMember.id,
+            name: createdMember.name,
+            member_code: createdMember.member_code,
+            biometric_enrolled: fingerprintEnrolledSuccess,
+            photo_url: createdMember.photo_url,
+          }}
+          onSuccess={() => {
+            setFingerprintEnrolledSuccess(true);
+            toast.success(`Fingerprint biometric enrolled for ${createdMember.name}!`);
+          }}
+        />
+      )}
 
       {/* Face Enrollment Modal */}
       {createdMember && (

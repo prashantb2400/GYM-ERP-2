@@ -25,6 +25,7 @@ import {
   Printer,
   PauseCircle,
   ScanFace,
+  Fingerprint,
   QrCode,
   ShieldCheck,
   DollarSign,
@@ -38,6 +39,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
+import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
 import { PrintIdCardModal } from '@/components/members/PrintIdCardModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -88,6 +90,7 @@ export default function MemberDetailPage() {
   const [freezeDays, setFreezeDays] = useState('7');
   const [freezing, setFreezing] = useState(false);
   const [faceEnrollOpen, setFaceEnrollOpen] = useState(false);
+  const [fingerprintEnrollOpen, setFingerprintEnrollOpen] = useState(false);
   const [printIdOpen, setPrintIdOpen] = useState(false);
 
   const loadMemberDetails = async () => {
@@ -361,6 +364,20 @@ export default function MemberDetailPage() {
             Print ID Card
           </Button>
 
+          {/* Enroll Fingerprint */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFingerprintEnrollOpen(true)}
+            className={member.biometric_enrolled 
+              ? "border-green-800/40 bg-green-950/20 text-green-300 hover:bg-green-950/40 text-xs gap-1.5" 
+              : "border-purple-800/40 bg-purple-950/20 text-purple-300 hover:bg-purple-950/40 text-xs gap-1.5"
+            }
+          >
+            <Fingerprint className="h-4 w-4" />
+            {member.biometric_enrolled ? 'Fingerprint Enrolled ✓' : 'Enroll Fingerprint'}
+          </Button>
+
           {/* Enroll Face ID */}
           <Button
             variant="outline"
@@ -545,6 +562,71 @@ export default function MemberDetailPage() {
                 <Printer className="h-3.5 w-3.5" />
                 Preview & Print Member ID
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Biometric Fingerprint Status Card */}
+          <Card className="border-zinc-800 bg-zinc-900/40">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold text-zinc-200 flex items-center gap-2">
+                  <Fingerprint className="h-4 w-4 text-purple-400" />
+                  Biometric Fingerprint Pass
+                </CardTitle>
+                <Badge className={member.biometric_enrolled 
+                  ? "bg-green-500/10 text-green-400 border-green-500/20 text-[10px]" 
+                  : "bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px]"
+                }>
+                  {member.biometric_enrolled ? 'Enrolled ✓' : 'Not Enrolled'}
+                </Badge>
+              </div>
+              <CardDescription className="text-xs text-zinc-400 mt-1">
+                High-accuracy optical minutiae template for turnstile and kiosk check-in.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs">
+              {member.biometric_enrolled ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-green-400 bg-green-950/20 border border-green-900/30 p-2.5 rounded-xl">
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
+                    <span className="text-[11px]">Ready for one-touch biometric scanner check-in.</span>
+                  </div>
+                  <div className="text-[10px] text-zinc-400 space-y-0.5">
+                    {member.fingerprint_finger && (
+                      <p>Enrolled Finger: <strong className="text-zinc-200 capitalize">{member.fingerprint_finger.replace('_', ' ')}</strong></p>
+                    )}
+                    {member.fingerprint_quality && (
+                      <p>Quality Score: <strong className="text-green-400">{member.fingerprint_quality}%</strong></p>
+                    )}
+                    {member.fingerprint_enrolled_at && (
+                      <p className="text-zinc-500">Enrolled: {formatDate(member.fingerprint_enrolled_at)}</p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFingerprintEnrollOpen(true)}
+                    className="w-full gap-2 border-zinc-800 hover:bg-zinc-800 text-zinc-200 text-xs"
+                  >
+                    <Fingerprint className="h-3.5 w-3.5 text-purple-400" />
+                    Manage / Re-enroll Fingerprint
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-zinc-400 text-[11px] leading-relaxed">
+                    Capture member's thumbprint to enable one-touch attendance on the kiosk.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => setFingerprintEnrollOpen(true)}
+                    className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold"
+                  >
+                    <Fingerprint className="h-3.5 w-3.5" />
+                    Enroll Fingerprint Now
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1097,6 +1179,26 @@ export default function MemberDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Fingerprint Enrollment Modal */}
+      {member && (
+        <FingerprintEnrollmentModal
+          isOpen={fingerprintEnrollOpen}
+          onClose={() => setFingerprintEnrollOpen(false)}
+          member={{
+            id: member.id,
+            name: member.name,
+            member_code: member.member_code,
+            biometric_enrolled: member.biometric_enrolled,
+            fingerprint_finger: member.fingerprint_finger,
+            photo_url: member.photo_url,
+          }}
+          onSuccess={() => {
+            setMember((prev: any) => ({ ...prev, biometric_enrolled: true }));
+            loadMemberDetails();
+          }}
+        />
+      )}
 
       {/* Face ID Enrollment Modal */}
       {member && (

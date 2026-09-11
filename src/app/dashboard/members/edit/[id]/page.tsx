@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, ArrowLeft, Save, Camera, Upload, User, ScanFace } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, Camera, Upload, User, ScanFace, Fingerprint } from 'lucide-react';
 import { toast } from 'sonner';
 import { INDIAN_STATES, BLOOD_GROUPS, GENDER_OPTIONS, FITNESS_LEVELS, MEMBER_STATUSES } from '@/lib/utils/constants';
 import { CameraCaptureModal } from '@/components/shared/CameraCaptureModal';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
+import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
 
 export default function EditMemberPage() {
   const supabase = createClient();
@@ -36,6 +37,9 @@ export default function EditMemberPage() {
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [faceEnrollOpen, setFaceEnrollOpen] = useState(false);
   const [faceEnrolled, setFaceEnrolled] = useState(false);
+  const [fingerprintEnrollOpen, setFingerprintEnrollOpen] = useState(false);
+  const [fingerprintEnrolled, setFingerprintEnrolled] = useState(false);
+  const [fingerprintFinger, setFingerprintFinger] = useState<string | null>(null);
   const [memberCode, setMemberCode] = useState('');
 
   // Form states
@@ -132,6 +136,8 @@ export default function EditMemberPage() {
         setPhotoUrl(memberData.photo_url || null);
         setPhotoPreview(memberData.photo_url || null);
         setFaceEnrolled(memberData.face_enrolled || false);
+        setFingerprintEnrolled(memberData.biometric_enrolled || false);
+        setFingerprintFinger(memberData.fingerprint_finger || null);
         setMemberCode(memberData.member_code || '');
 
       } catch (err: unknown) {
@@ -542,6 +548,40 @@ export default function EditMemberPage() {
               </CardContent>
             </Card>
 
+            {/* Biometric Fingerprint Card */}
+            <Card className="border-zinc-800 bg-zinc-900/40">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold text-zinc-200 flex items-center gap-2">
+                    <Fingerprint className="h-4 w-4 text-purple-400" />
+                    Biometric Fingerprint Pass
+                  </CardTitle>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    fingerprintEnrolled
+                      ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                  }`}>
+                    {fingerprintEnrolled ? 'Enrolled ✓' : 'Not Enrolled'}
+                  </span>
+                </div>
+                <CardDescription className="text-xs text-zinc-400 mt-1">
+                  Optical minutiae template used for one-touch kiosk attendance.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFingerprintEnrollOpen(true)}
+                  className="w-full gap-2 border-zinc-700 hover:bg-zinc-800 text-zinc-200 text-xs"
+                >
+                  <Fingerprint className="h-4 w-4 text-purple-400" />
+                  {fingerprintEnrolled ? 'Re-enroll / Update Fingerprint' : 'Enroll Fingerprint'}
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Biometric Face ID Card */}
             <Card className="border-zinc-800 bg-zinc-900/40">
               <CardHeader className="pb-3">
@@ -693,6 +733,22 @@ export default function EditMemberPage() {
           setPhotoPreview(previewUrl);
         }}
         title="Update Member Profile Snapshot"
+      />
+
+      <FingerprintEnrollmentModal
+        isOpen={fingerprintEnrollOpen}
+        onClose={() => setFingerprintEnrollOpen(false)}
+        member={{
+          id: memberId,
+          name,
+          member_code: memberCode,
+          biometric_enrolled: fingerprintEnrolled,
+          fingerprint_finger: fingerprintFinger,
+          photo_url: photoPreview || photoUrl,
+        }}
+        onSuccess={() => {
+          setFingerprintEnrolled(true);
+        }}
       />
 
       <FaceEnrollmentModal

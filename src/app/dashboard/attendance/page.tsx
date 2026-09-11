@@ -5,8 +5,9 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranch } from '@/hooks/useBranch';
 import type { Member, Attendance } from '@/types/database';
-import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace } from 'lucide-react';
+import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace, Fingerprint } from 'lucide-react';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
+import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -37,6 +38,7 @@ export default function AttendancePage() {
   const [checkedInMemberIds, setCheckedInMemberIds] = useState<Set<string>>(new Set());
   const [checkingInId, setCheckingInId] = useState<string | null>(null);
   const [enrollingMember, setEnrollingMember] = useState<Member | null>(null);
+  const [enrollingFingerprintMember, setEnrollingFingerprintMember] = useState<Member | null>(null);
   
   const [absentees, setAbsentees] = useState<Member[]>([]);
   const [loadingAbsent, setLoadingAbsent] = useState(false);
@@ -68,7 +70,7 @@ export default function AttendancePage() {
         setIsSearching(true);
         let query = supabase
           .from('members')
-          .select('id, name, phone, member_code, status, plan_end_date, total_due, photo_url, face_enrolled, branch_id')
+          .select('id, name, phone, member_code, status, plan_end_date, total_due, photo_url, face_enrolled, biometric_enrolled, fingerprint_finger, branch_id')
           .eq('gym_id', user.gymId);
 
         if (user.role === 'trainer' && user.staffRecordId) {
@@ -375,6 +377,21 @@ export default function AttendancePage() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => setEnrollingFingerprintMember(member)}
+                          className={cn(
+                            'gap-1.5 text-xs rounded-xl px-3 py-5 border',
+                            member.biometric_enrolled
+                              ? 'border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20'
+                              : 'border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                          )}
+                        >
+                          <Fingerprint className="w-4 h-4 text-purple-400" />
+                          <span>{member.biometric_enrolled ? 'Fingerprint ✓' : 'Enroll Finger'}</span>
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => setEnrollingMember(member)}
                           className={cn(
                             'gap-1.5 text-xs rounded-xl px-3 py-5 border',
@@ -587,9 +604,9 @@ export default function AttendancePage() {
             </Button>
           </Link>
           <Link href="/dashboard/attendance/kiosk">
-            <Button className="gap-2 shadow-lg">
-              <Camera className="h-4 w-4" />
-              Open QR Kiosk
+            <Button className="gap-2 shadow-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold">
+              <Fingerprint className="h-4 w-4" />
+              Fingerprint Kiosk
             </Button>
           </Link>
         </div>
@@ -627,6 +644,18 @@ export default function AttendancePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {enrollingFingerprintMember && (
+        <FingerprintEnrollmentModal
+          isOpen={!!enrollingFingerprintMember}
+          member={enrollingFingerprintMember}
+          onClose={() => setEnrollingFingerprintMember(null)}
+          onSuccess={() => {
+            setDebouncedQuery(q => q + ' ');
+            setTimeout(() => setDebouncedQuery(q => q.trim()), 50);
+          }}
+        />
+      )}
 
       {enrollingMember && (
         <FaceEnrollmentModal

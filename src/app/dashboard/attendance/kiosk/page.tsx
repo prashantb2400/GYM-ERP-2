@@ -1,221 +1,350 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useBranch } from '@/hooks/useBranch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Volume2, VolumeX, Loader2, QrCode, UserCheck } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  ArrowLeft,
+  Fingerprint,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Volume2,
+  VolumeX,
+  Loader2,
+  UserCheck,
+  RefreshCw,
+  Cpu,
+  Search,
+  Users,
+  ShieldCheck,
+} from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/utils/api-client';
+import { FingerprintScannerManager } from '@/lib/fingerprint/drivers';
+import { identifyMemberFromRoster } from '@/lib/fingerprint/matcher';
+import type { RosterMemberFingerprint, ScannerDeviceInfo, ScannerDriverId, FingerType } from '@/lib/fingerprint/types';
 
-const SCANNER_CONTAINER_ID = 'qr-reader';
+type KioskResultState = 'idle' | 'scanning' | 'success' | 'already' | 'expired' | 'error';
 
-type ScanResult = {
-  state: 'idle' | 'success' | 'already' | 'expired' | 'error';
+interface KioskResult {
+  state: KioskResultState;
   memberName?: string;
   memberPhoto?: string;
   memberCode?: string;
   message?: string;
-};
+  totalDue?: number;
+  time?: string;
+  matchScore?: number;
+}
 
-export default function KioskPage() {
+export default function FingerprintKioskPage() {
   const { user } = useAuth();
+  const { selectedBranchId, isOwner } = useBranch();
   const gymId = user?.gymId;
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [scanResult, setScanResult] = useState<ScanResult>({ state: 'idle' });
-  const [isProcessing, setIsProcessing] = useState(false);
+  const effectiveBranchId = !isOwner ? user?.branchId : selectedBranchId;
+
+  const [roster, setRoster] = useState<RosterMemberFingerprint[]>([]);
+  const [loadingRoster, setLoadingRoster] = useState(true);
+  const [deviceInfo, setDeviceInfo] = useState<ScannerDeviceInfo | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [kioskResult, setKioskResult] = useState<KioskResult>({ state: 'idle' });
   const [todayCount, setTodayCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [recentCheckins, setRecentCheckins] = useState<Array<{ name: string; time: string; photo?: string }>>([]);
-  const lastScannedRef = useRef<string>('');
+  const [manualQuery, setManualQuery] = useState('');
+  const [isManualProcessing, setIsManualProcessing] = useState(false);
+
+  const scannerManager = FingerprintScannerManager.getInstance();
   const resultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHandlingScanRef = useRef(false);
 
   const supabase = createClient();
 
-  // Fetch today's count
-  useEffect(() => {
-    if (!gymId) return;
-    const today = new Date().toISOString().split('T')[0];
-    supabase
-      .from('attendance')
-      .select('id', { count: 'exact', head: true })
-      .eq('gym_id', gymId)
-      .eq('date', today)
-      .then(({ count }) => {
-        setTodayCount(count || 0);
-      });
-  }, [gymId, supabase]);
-
-  // Play success beep using Web Audio API
-  const playBeep = useCallback((success: boolean) => {
+  // Play Web Audio feedback sound
+  const playChime = useCallback((success: boolean, type: 'success' | 'already' | 'error' = 'success') => {
     if (!soundEnabled) return;
     try {
-      const ctx = new AudioContext();
-      const oscillator = ctx.createOscillator();
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      oscillator.connect(gain);
+      osc.connect(gain);
       gain.connect(ctx.destination);
-      oscillator.frequency.value = success ? 880 : 440;
-      oscillator.type = 'sine';
-      gain.gain.value = 0.3;
-      oscillator.start();
-      oscillator.stop(ctx.currentTime + (success ? 0.15 : 0.3));
+
+      if (type === 'already') {
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } else if (success) {
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08); // E5
+        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.16); // G5
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      } else {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      }
     } catch {
-      // Audio not available, silently ignore
+      // Audio not supported in environment
     }
   }, [soundEnabled]);
 
-  // Process a scanned QR code
-  const processQrCode = useCallback(async (decodedText: string) => {
-    if (isProcessing) return;
-    if (decodedText === lastScannedRef.current) return;
-
-    // Parse the QR payload
-    let qrToken = decodedText.trim();
-    const match = decodedText.match(/^gymerp:\/\/checkin\/(.+)$/);
-    if (match) {
-      qrToken = match[1].trim();
+  // Load roster of enrolled fingerprint templates
+  const loadRoster = useCallback(async () => {
+    if (!gymId) return;
+    setLoadingRoster(true);
+    try {
+      const branchParam = effectiveBranchId ? `&branchId=${effectiveBranchId}` : '';
+      const res = await fetchWithAuth(`/api/attendance/fingerprint-roster?gymId=${gymId}${branchParam}`);
+      const data = await res.json();
+      if (res.ok && data.roster) {
+        setRoster(data.roster);
+      }
+    } catch (err) {
+      console.error('Failed to load fingerprint roster:', err);
+    } finally {
+      setLoadingRoster(false);
     }
-    if (!qrToken) return;
+  }, [gymId, effectiveBranchId]);
 
-    lastScannedRef.current = decodedText;
-    setIsProcessing(true);
+  // Load today's check-in stats
+  const fetchTodayCount = useCallback(async () => {
+    if (!gymId) return;
+    const today = new Date().toISOString().split('T')[0];
+    let query = supabase
+      .from('attendance')
+      .select('id, member_name, check_in_time, members(photo_url)')
+      .eq('gym_id', gymId)
+      .eq('date', today)
+      .order('check_in_time', { ascending: false });
 
-    // Clear any previous result timeout
-    if (resultTimeoutRef.current) {
-      clearTimeout(resultTimeoutRef.current);
+    if (effectiveBranchId) {
+      query = query.eq('branch_id', effectiveBranchId);
     }
+
+    const { data, count } = await query;
+    if (data) {
+      setTodayCount(data.length);
+      setRecentCheckins(
+        data.slice(0, 5).map((log: any) => ({
+          name: log.member_name,
+          time: new Date(log.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          photo: log.members?.photo_url,
+        }))
+      );
+    }
+  }, [gymId, effectiveBranchId, supabase]);
+
+  // Detect scanner hardware
+  const detectHardware = useCallback(async () => {
+    try {
+      const info = await scannerManager.detectActiveScanner();
+      setDeviceInfo(info);
+    } catch {
+      setDeviceInfo({
+        driverId: 'virtual',
+        name: 'Virtual Optical Sensor (Simulator)',
+        connected: true,
+      });
+    }
+  }, [scannerManager]);
+
+  useEffect(() => {
+    detectHardware();
+    loadRoster();
+    fetchTodayCount();
+  }, [detectHardware, loadRoster, fetchTodayCount]);
+
+  // Process live scan from sensor
+  const handleScanTouch = async (finger: FingerType = 'right_thumb') => {
+    if (isHandlingScanRef.current) return;
+    isHandlingScanRef.current = true;
+    setIsScanning(true);
+    setKioskResult({ state: 'scanning' });
+
+    if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
 
     try {
-      const res = await fetchWithAuth('/api/attendance/qr-checkin', {
+      // 1. Capture fingerprint via active driver
+      const capture = await scannerManager.capture(finger);
+      if (!capture.success || !capture.template) {
+        throw new Error(capture.error || 'Optical sensor could not read print');
+      }
+
+      // 2. Perform high-speed 1:N minutiae matching against loaded roster
+      const match = identifyMemberFromRoster(capture.template, roster);
+
+      if (!match.matched || !match.member) {
+        setKioskResult({
+          state: 'error',
+          message: 'Fingerprint not recognized. Please enroll or try again.',
+        });
+        playChime(false, 'error');
+        return;
+      }
+
+      const matchedMember = match.member;
+      const score = match.matchResult?.score || 85;
+
+      // 3. Post check-in to server
+      const checkinRes = await fetchWithAuth('/api/attendance/fingerprint-checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qrToken, gymId, branchId: user?.branchId }),
+        body: JSON.stringify({
+          gymId,
+          branchId: effectiveBranchId,
+          memberId: matchedMember.id,
+          score,
+          driverId: capture.driverId,
+        }),
       });
 
-      const data = await res.json();
+      const checkinData = await checkinRes.json();
 
-      if (!res.ok) {
-        if (res.status === 403) {
-          setScanResult({
+      if (!checkinRes.ok) {
+        if (checkinRes.status === 403) {
+          setKioskResult({
             state: 'expired',
-            memberName: data.member_name,
-            memberPhoto: data.member_photo,
-            message: data.error,
+            memberName: checkinData.member_name,
+            memberCode: checkinData.member_code,
+            memberPhoto: checkinData.member_photo,
+            message: checkinData.error,
           });
-          playBeep(false);
+          playChime(false, 'error');
         } else {
-          setScanResult({
+          setKioskResult({
             state: 'error',
-            message: data.error || 'Check-in failed',
+            message: checkinData.error || 'Check-in failed',
           });
-          playBeep(false);
+          playChime(false, 'error');
         }
-      } else if (data.already_marked) {
-        setScanResult({
+      } else if (checkinData.already_marked) {
+        setKioskResult({
           state: 'already',
-          memberName: data.member_name,
-          memberPhoto: data.member_photo,
-          memberCode: data.member_code,
+          memberName: checkinData.member_name,
+          memberCode: checkinData.member_code,
+          memberPhoto: checkinData.member_photo,
+          totalDue: checkinData.total_due,
           message: 'Already checked in today',
         });
-        playBeep(false);
+        playChime(true, 'already');
       } else {
-        setScanResult({
+        setKioskResult({
           state: 'success',
-          memberName: data.member_name,
-          memberPhoto: data.member_photo,
-          memberCode: data.member_code,
+          memberName: checkinData.member_name,
+          memberCode: checkinData.member_code,
+          memberPhoto: checkinData.member_photo,
+          totalDue: checkinData.total_due,
+          time: checkinData.checked_in_at,
+          matchScore: score,
         });
-        playBeep(true);
-        setTodayCount(prev => prev + 1);
-        setRecentCheckins(prev => [
-          { name: data.member_name, time: data.checked_in_at, photo: data.member_photo },
+        playChime(true, 'success');
+        setTodayCount((prev) => prev + 1);
+        setRecentCheckins((prev) => [
+          {
+            name: checkinData.member_name,
+            time: checkinData.checked_in_at,
+            photo: checkinData.member_photo,
+          },
           ...prev.slice(0, 4),
         ]);
       }
-    } catch {
-      setScanResult({ state: 'error', message: 'Network error. Please try again.' });
-      playBeep(false);
-    } finally {
-      setIsProcessing(false);
-      // Auto-reset after 3 seconds
-      resultTimeoutRef.current = setTimeout(() => {
-        setScanResult({ state: 'idle' });
-        lastScannedRef.current = '';
-      }, 3000);
-    }
-  }, [isProcessing, gymId, playBeep]);
-
-  // Start camera
-  const startScanner = useCallback(async () => {
-    try {
-      setCameraError(null);
-      const html5Qr = new Html5Qrcode(SCANNER_CONTAINER_ID);
-      scannerRef.current = html5Qr;
-
-      await html5Qr.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 280, height: 280 },
-          aspectRatio: 1,
-        },
-        (decodedText) => {
-          processQrCode(decodedText);
-        },
-        () => {
-          // QR code not found in frame, keep scanning
-        }
-      );
-      setCameraActive(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Camera access denied';
-      setCameraError(msg);
-      setCameraActive(false);
+      const msg = err instanceof Error ? err.message : 'Sensor read failed';
+      setKioskResult({ state: 'error', message: msg });
+      playChime(false, 'error');
+    } finally {
+      setIsScanning(false);
+      isHandlingScanRef.current = false;
+
+      // Auto-reset kiosk view to ready state after 3.5 seconds
+      resultTimeoutRef.current = setTimeout(() => {
+        setKioskResult({ state: 'idle' });
+      }, 3500);
     }
-  }, [processQrCode]);
+  };
 
-  // Stop camera
-  const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
-      } catch {
-        // Already stopped
+  // Manual search fallback (e.g. member with injured finger)
+  const handleManualCheckIn = async (member: RosterMemberFingerprint) => {
+    setIsManualProcessing(true);
+    if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
+
+    try {
+      const res = await fetchWithAuth('/api/attendance/fingerprint-checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gymId,
+          branchId: effectiveBranchId,
+          memberId: member.id,
+          score: 100,
+          driverId: 'manual_desk',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Manual check-in failed');
+
+      if (data.already_marked) {
+        setKioskResult({
+          state: 'already',
+          memberName: data.member_name,
+          memberCode: data.member_code,
+          memberPhoto: data.member_photo,
+          message: 'Already checked in today',
+        });
+        playChime(true, 'already');
+      } else {
+        setKioskResult({
+          state: 'success',
+          memberName: data.member_name,
+          memberCode: data.member_code,
+          memberPhoto: data.member_photo,
+          time: data.checked_in_at,
+        });
+        playChime(true, 'success');
+        setTodayCount((prev) => prev + 1);
+        setManualQuery('');
       }
-      scannerRef.current = null;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed';
+      setKioskResult({ state: 'error', message: msg });
+      playChime(false, 'error');
+    } finally {
+      setIsManualProcessing(false);
+      resultTimeoutRef.current = setTimeout(() => {
+        setKioskResult({ state: 'idle' });
+      }, 3500);
     }
-    setCameraActive(false);
-  }, []);
+  };
 
-  // Auto-start camera on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      startScanner();
-    }, 500);
-
-    return () => {
-      clearTimeout(timer);
-      if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-      }
-    };
-  }, [startScanner]);
+  const filteredRoster = manualQuery.trim()
+    ? roster.filter(
+        (m) =>
+          m.name.toLowerCase().includes(manualQuery.toLowerCase()) ||
+          m.member_code.toLowerCase().includes(manualQuery.toLowerCase())
+      )
+    : [];
 
   return (
-    <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/80 border-b border-zinc-800 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden text-zinc-100 select-none">
+      {/* Top Navigation Bar */}
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
         <Link href="/dashboard/attendance">
           <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-2">
             <ArrowLeft className="h-4 w-4" />
@@ -223,147 +352,283 @@ export default function KioskPage() {
           </Button>
         </Link>
 
-        <div className="flex items-center gap-2">
-          <QrCode className="h-5 w-5 text-primary" />
-          <span className="font-bold text-zinc-100 text-sm sm:text-base">QR Attendance Kiosk</span>
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-lg bg-purple-950/60 border border-purple-800/40 flex items-center justify-center">
+            <Fingerprint className="h-5 w-5 text-purple-400 animate-pulse" />
+          </div>
+          <div>
+            <h1 className="font-black text-sm sm:text-base tracking-tight text-zinc-100">
+              Biometric Fingerprint Kiosk
+            </h1>
+            <p className="text-[10px] text-zinc-400 font-mono">
+              {roster.length} Enrolled Members Active
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className={cameraActive ? "text-green-400 border-green-500/20 bg-green-500/10 font-bold" : "text-zinc-500 font-bold"}>
-            {cameraActive ? "Live" : "Idle"}
-          </Badge>
+        <div className="flex items-center gap-2.5">
+          {/* Driver Switcher / Status */}
+          <Select
+            value={deviceInfo?.driverId || 'virtual'}
+            onValueChange={(val) => {
+              scannerManager.setActiveDriver(val as ScannerDriverId);
+              detectHardware();
+            }}
+          >
+            <SelectTrigger className="h-8 text-xs border-zinc-800 bg-zinc-900 text-zinc-300 w-36">
+              <SelectValue placeholder="Driver" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+              <SelectItem value="mantra">Mantra MFS100</SelectItem>
+              <SelectItem value="secugen">SecuGen Pro 20</SelectItem>
+              <SelectItem value="bridge">Hardware Bridge</SelectItem>
+              <SelectItem value="virtual">Virtual Sensor</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => {
+              detectHardware();
+              loadRoster();
+            }}
+            disabled={loadingRoster}
+            className="h-8 w-8 text-zinc-400 hover:text-zinc-200"
+            title="Refresh Roster & Hardware"
+          >
+            <RefreshCw className={`h-4 w-4 ${loadingRoster ? 'animate-spin text-purple-400' : ''}`} />
+          </Button>
+
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+            title={soundEnabled ? 'Mute Chimes' : 'Enable Chimes'}
           >
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            {soundEnabled ? <Volume2 className="h-4 w-4 text-purple-400" /> : <VolumeX className="h-4 w-4" />}
           </button>
-          <Badge className="bg-primary/10 text-primary border-primary/20 font-bold">
-            {todayCount} today
+
+          <Badge className="bg-purple-600/10 text-purple-300 border-purple-500/30 font-bold px-2.5 py-1">
+            {todayCount} Checked In
           </Badge>
         </div>
       </div>
 
-      {/* Main Scanner Area */}
-      <div className="flex-1 flex flex-col items-center justify-center relative px-4">
-        {/* Scanner viewport */}
-        <div className="relative w-full max-w-[360px] aspect-square">
-          {/* Camera feed */}
+      {/* Main Kiosk Viewport */}
+      <div className="flex-1 flex flex-col items-center justify-center relative px-4 py-6 max-w-4xl mx-auto w-full">
+        {/* Optical Sensor Prism Stage */}
+        <div className="flex flex-col items-center justify-center">
+          {/* Circular scanner prism */}
           <div
-            id={SCANNER_CONTAINER_ID}
+            onClick={() => handleScanTouch('right_thumb')}
             className={cn(
-              'w-full h-full rounded-2xl overflow-hidden bg-zinc-900 border-2 transition-colors duration-300',
-              scanResult.state === 'success' ? 'border-green-500' :
-              scanResult.state === 'already' ? 'border-blue-500' :
-              scanResult.state === 'expired' ? 'border-red-500' :
-              scanResult.state === 'error' ? 'border-red-500' :
-              'border-zinc-700'
+              'relative h-56 w-56 sm:h-64 sm:w-64 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-500 group select-none shadow-2xl',
+              isScanning
+                ? 'border-purple-500 bg-purple-950/20 shadow-[0_0_60px_rgba(168,85,247,0.5)] scale-105'
+                : kioskResult.state === 'success'
+                ? 'border-green-500 bg-green-950/20 shadow-[0_0_50px_rgba(34,197,94,0.4)]'
+                : kioskResult.state === 'already'
+                ? 'border-blue-500 bg-blue-950/20 shadow-[0_0_40px_rgba(59,130,246,0.3)]'
+                : kioskResult.state === 'expired' || kioskResult.state === 'error'
+                ? 'border-red-500 bg-red-950/20 shadow-[0_0_40px_rgba(239,68,68,0.3)]'
+                : 'border-zinc-800 bg-zinc-900/60 hover:border-purple-500/60 hover:shadow-[0_0_40px_rgba(168,85,247,0.25)]'
             )}
-          />
+          >
+            {/* Concentric glowing rings */}
+            <div className="absolute inset-3 rounded-full border border-dashed border-zinc-800/80 animate-[spin_60s_linear_infinite]" />
+            <div className="absolute inset-8 rounded-full border border-zinc-800/50" />
 
-          {/* Camera error overlay */}
-          {cameraError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 rounded-2xl p-6 text-center">
-              <CameraOff className="h-12 w-12 text-zinc-600 mb-4" />
-              <p className="text-zinc-400 text-sm mb-4">{cameraError}</p>
-              <Button onClick={async () => { await stopScanner(); await startScanner(); }} className="gap-2">
-                <Camera className="h-4 w-4" /> Retry Camera
-              </Button>
+            {/* Glowing biometric fingerprint icon */}
+            <Fingerprint
+              className={cn(
+                'h-24 w-24 sm:h-28 sm:w-28 transition-all duration-300',
+                isScanning
+                  ? 'text-purple-400 scale-110 animate-pulse'
+                  : kioskResult.state === 'success'
+                  ? 'text-green-400'
+                  : kioskResult.state === 'already'
+                  ? 'text-blue-400'
+                  : kioskResult.state === 'expired' || kioskResult.state === 'error'
+                  ? 'text-red-400'
+                  : 'text-zinc-500 group-hover:text-purple-400 group-hover:scale-105'
+              )}
+            />
+
+            {/* Laser scanning beam */}
+            {isScanning && (
+              <div className="absolute inset-x-8 h-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent shadow-[0_0_15px_#c084fc] animate-bounce" />
+            )}
+
+            {/* Interactive hint on prism */}
+            <div className="absolute bottom-6 text-[11px] font-bold tracking-wider uppercase text-zinc-400 group-hover:text-purple-300 transition-colors">
+              {isScanning ? 'Verifying...' : 'Touch Sensor'}
+            </div>
+          </div>
+
+          <p className="text-xs text-zinc-500 mt-4 text-center">
+            {deviceInfo?.name} • Place registered thumb firmly on optical sensor
+          </p>
+        </div>
+
+        {/* Dynamic Result Banner */}
+        <div className="mt-6 w-full max-w-md min-h-[110px] flex items-center justify-center">
+          {kioskResult.state === 'idle' && (
+            <div className="text-center text-zinc-500 text-xs py-2">
+              <span className="inline-flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full">
+                <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
+                1:N Optical Minutiae Matcher Active
+              </span>
             </div>
           )}
 
-          {/* Processing overlay */}
-          {isProcessing && (
-            <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/60 rounded-2xl backdrop-blur-sm">
-              <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          {kioskResult.state === 'scanning' && (
+            <div className="flex items-center gap-3 bg-purple-950/30 border border-purple-800/50 rounded-2xl p-4 w-full animate-in fade-in duration-200">
+              <Loader2 className="h-8 w-8 text-purple-400 animate-spin shrink-0" />
+              <div>
+                <p className="text-purple-300 font-bold text-sm">Scanning Biometrics...</p>
+                <p className="text-purple-400/70 text-xs">Matching minutiae against {roster.length} gym members</p>
+              </div>
+            </div>
+          )}
+
+          {kioskResult.state === 'success' && (
+            <div className="flex items-center gap-4 bg-green-950/40 border border-green-700/60 rounded-2xl p-4 w-full shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <Avatar className="h-14 w-14 border-2 border-green-500/60">
+                <AvatarImage src={kioskResult.memberPhoto || ''} />
+                <AvatarFallback className="bg-green-900 text-green-200 font-black text-lg">
+                  {getInitials(kioskResult.memberName || '')}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-green-300 text-lg font-black">{kioskResult.memberName}</p>
+                  <Badge className="bg-green-500/20 text-green-300 border-green-500/30 text-[9px]">Verified ✓</Badge>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-green-400/80 mt-0.5">
+                  <span className="font-mono">{kioskResult.memberCode}</span>
+                  <span>•</span>
+                  <span>{kioskResult.time}</span>
+                  {kioskResult.totalDue && kioskResult.totalDue > 0 ? (
+                    <>
+                      <span>•</span>
+                      <span className="text-amber-400 font-bold">₹{kioskResult.totalDue} Due</span>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+              <CheckCircle2 className="h-9 w-9 text-green-400 shrink-0" />
+            </div>
+          )}
+
+          {kioskResult.state === 'already' && (
+            <div className="flex items-center gap-4 bg-blue-950/40 border border-blue-700/50 rounded-2xl p-4 w-full shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <Avatar className="h-14 w-14 border-2 border-blue-500/50">
+                <AvatarImage src={kioskResult.memberPhoto || ''} />
+                <AvatarFallback className="bg-blue-900 text-blue-200 font-bold text-lg">
+                  {getInitials(kioskResult.memberName || '')}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="text-blue-300 text-base font-bold">{kioskResult.memberName}</p>
+                <p className="text-blue-400 text-xs">Already checked in today ✓</p>
+                <p className="text-zinc-400 text-[10px] font-mono mt-0.5">{kioskResult.memberCode}</p>
+              </div>
+              <UserCheck className="h-8 w-8 text-blue-400 shrink-0" />
+            </div>
+          )}
+
+          {kioskResult.state === 'expired' && (
+            <div className="flex items-center gap-4 bg-red-950/40 border border-red-800/60 rounded-2xl p-4 w-full shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <Avatar className="h-14 w-14 border-2 border-red-500/50">
+                <AvatarImage src={kioskResult.memberPhoto || ''} />
+                <AvatarFallback className="bg-red-900 text-red-200 font-bold text-lg">
+                  {getInitials(kioskResult.memberName || '')}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="text-red-300 text-base font-bold">{kioskResult.memberName}</p>
+                <p className="text-red-400 text-xs font-semibold">{kioskResult.message}</p>
+                <p className="text-zinc-500 text-[10px]">Please renew membership at desk</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-400 shrink-0" />
+            </div>
+          )}
+
+          {kioskResult.state === 'error' && (
+            <div className="flex items-center gap-3 bg-red-950/40 border border-red-800/60 rounded-2xl p-4 w-full shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <XCircle className="h-8 w-8 text-red-400 shrink-0" />
+              <div>
+                <p className="text-red-300 font-bold text-sm">Access Denied</p>
+                <p className="text-red-400/80 text-xs">{kioskResult.message}</p>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Result Display */}
-        <div className="mt-6 w-full max-w-[400px] min-h-[120px] flex items-center justify-center">
-          {scanResult.state === 'idle' && (
-            <div className="text-center text-zinc-500">
-              <p className="text-sm">Point camera at a member&apos;s QR code</p>
-            </div>
-          )}
+        {/* Quick Manual Search Fallback */}
+        <div className="w-full max-w-md mt-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <Input
+              value={manualQuery}
+              onChange={(e) => setManualQuery(e.target.value)}
+              placeholder="Injured finger? Search name or code..."
+              className="pl-9 h-9 bg-zinc-900/60 border-zinc-800 text-xs text-zinc-200 placeholder:text-zinc-600 rounded-xl"
+            />
+          </div>
 
-          {scanResult.state === 'success' && (
-            <div className="flex items-center gap-4 bg-green-950/30 border border-green-800/50 rounded-2xl p-5 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Avatar className="h-14 w-14 border-2 border-green-500/50">
-                <AvatarImage src={scanResult.memberPhoto || ''} />
-                <AvatarFallback className="bg-green-900 text-green-300 text-lg font-bold">
-                  {getInitials(scanResult.memberName || '')}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-green-400 text-lg font-bold">{scanResult.memberName}</p>
-                <p className="text-green-500/70 text-sm font-mono">{scanResult.memberCode}</p>
-              </div>
-              <CheckCircle2 className="h-10 w-10 text-green-400 shrink-0" />
-            </div>
-          )}
-
-          {scanResult.state === 'already' && (
-            <div className="flex items-center gap-4 bg-blue-950/30 border border-blue-800/50 rounded-2xl p-5 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Avatar className="h-14 w-14 border-2 border-blue-500/50">
-                <AvatarImage src={scanResult.memberPhoto || ''} />
-                <AvatarFallback className="bg-blue-900 text-blue-300 text-lg font-bold">
-                  {getInitials(scanResult.memberName || '')}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-blue-400 text-lg font-bold">{scanResult.memberName}</p>
-                <p className="text-blue-500/70 text-sm">Already checked in today ✓</p>
-              </div>
-              <UserCheck className="h-10 w-10 text-blue-400 shrink-0" />
-            </div>
-          )}
-
-          {scanResult.state === 'expired' && (
-            <div className="flex items-center gap-4 bg-red-950/30 border border-red-800/50 rounded-2xl p-5 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Avatar className="h-14 w-14 border-2 border-red-500/50">
-                <AvatarImage src={scanResult.memberPhoto || ''} />
-                <AvatarFallback className="bg-red-900 text-red-300 text-lg font-bold">
-                  {getInitials(scanResult.memberName || '')}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-red-400 text-lg font-bold">{scanResult.memberName}</p>
-                <p className="text-red-500/70 text-sm">{scanResult.message}</p>
-              </div>
-              <AlertTriangle className="h-10 w-10 text-red-400 shrink-0" />
-            </div>
-          )}
-
-          {scanResult.state === 'error' && (
-            <div className="flex items-center gap-4 bg-red-950/30 border border-red-800/50 rounded-2xl p-5 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <XCircle className="h-10 w-10 text-red-400 shrink-0" />
-              <p className="text-red-400 font-medium">{scanResult.message}</p>
+          {filteredRoster.length > 0 && (
+            <div className="mt-1 bg-zinc-900 border border-zinc-800 rounded-xl p-2 max-h-40 overflow-y-auto space-y-1 shadow-2xl">
+              {filteredRoster.slice(0, 4).map((m) => (
+                <div
+                  key={m.id}
+                  onClick={() => handleManualCheckIn(m)}
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={m.photo_url || ''} />
+                      <AvatarFallback className="text-[10px] bg-zinc-800 text-zinc-300">
+                        {getInitials(m.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-xs font-semibold text-zinc-200">{m.name}</p>
+                      <p className="text-[10px] text-zinc-500 font-mono">{m.member_code}</p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-6 text-[10px] border-zinc-700">
+                    Check In
+                  </Button>
+                </div>
+              ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* Bottom Recent Check-ins */}
+      {/* Bottom Recent Check-ins Bar */}
       {recentCheckins.length > 0 && (
-        <div className="px-4 pb-4 pt-2 bg-zinc-900/50 border-t border-zinc-800">
-          <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold mb-2">Recent</p>
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {recentCheckins.map((checkin, i) => (
-              <div key={i} className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 shrink-0">
-                <Avatar className="h-7 w-7">
-                  <AvatarImage src={checkin.photo || ''} />
-                  <AvatarFallback className="text-[10px] bg-zinc-800 text-zinc-400">
-                    {getInitials(checkin.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-xs font-medium text-zinc-300 whitespace-nowrap">{checkin.name}</p>
-                  <p className="text-[10px] text-zinc-600">{checkin.time}</p>
+        <div className="px-4 pb-3 pt-2 bg-zinc-900/60 border-t border-zinc-800 backdrop-blur-sm">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Recent Check-ins</p>
+            <div className="flex gap-2.5 overflow-x-auto pb-0.5">
+              {recentCheckins.map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 bg-zinc-950/80 border border-zinc-800/80 rounded-lg px-2.5 py-1.5 shrink-0 shadow-sm"
+                >
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={item.photo || ''} />
+                    <AvatarFallback className="text-[9px] bg-zinc-800 text-zinc-400">
+                      {getInitials(item.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs font-medium text-zinc-300">{item.name}</span>
+                  <span className="text-[10px] text-purple-400 font-mono">{item.time}</span>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
