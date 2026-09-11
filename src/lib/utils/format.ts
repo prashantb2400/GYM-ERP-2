@@ -7,22 +7,36 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatDate(date: string | Date): string {
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+export function formatDate(date?: string | Date | null): string {
+  if (!date) return '';
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return '';
+  }
 }
 
-export function formatDateTime(date: string | Date): string {
-  return new Date(date).toLocaleString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+export function formatDateTime(date?: string | Date | null): string {
+  if (!date) return '';
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
 }
 
 export function formatPhone(phone: string): string {
@@ -45,20 +59,28 @@ export function formatInvoiceNumber(count: number): string {
   return `INV-${year}-${String(count).padStart(4, '0')}`;
 }
 
-export function getInitials(name: string): string {
-  return name
-    .split(' ')
+export function getInitials(name?: string | null): string {
+  if (!name || typeof name !== 'string') return 'GY';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'GY';
+  return parts
     .map(n => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
 }
 
-export function getDaysRemaining(endDate: string | Date): number {
-  const end = new Date(endDate);
-  const now = new Date();
-  const diffTime = end.getTime() - now.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+export function getDaysRemaining(endDate?: string | Date | null): number {
+  if (!endDate) return 0;
+  try {
+    const end = new Date(endDate);
+    if (isNaN(end.getTime())) return 0;
+    const now = new Date();
+    const diffTime = end.getTime() - now.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  } catch {
+    return 0;
+  }
 }
 
 export function calculateBMI(weightKg: number, heightCm: number): number {

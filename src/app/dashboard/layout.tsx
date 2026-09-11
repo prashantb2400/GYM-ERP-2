@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { AdminTopbar } from '@/components/layout/AdminTopbar';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
 import { BranchProvider } from '@/hooks/useBranch';
 import { useRouter, usePathname } from 'next/navigation';
@@ -24,7 +24,7 @@ export default function AdminDashboardLayout({
 
   React.useEffect(() => {
     if (!loading && isAuthenticated && user && user.role === 'owner' && !user.gymId && !isOnboarding) {
-      router.push('/dashboard/onboarding');
+      router.replace('/dashboard/onboarding');
     }
   }, [loading, isAuthenticated, user, router, isOnboarding]);
 
@@ -38,6 +38,7 @@ export default function AdminDashboardLayout({
     return <>{children}</>;
   }
 
+  // Session verification in progress
   if (loading && !isAuthenticated) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
@@ -61,31 +62,46 @@ export default function AdminDashboardLayout({
     );
   }
 
-  return (
-    <BranchProvider>
-      <div className="flex h-screen overflow-hidden bg-zinc-950">
-        {/* Desktop Sidebar (hidden on mobile) */}
-        <div className="hidden lg:block">
-          <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-        </div>
-
-        {/* Mobile Drawer Sidebar */}
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="p-0 bg-zinc-900 border-zinc-800 w-[260px] text-white">
-            <AdminSidebar collapsed={false} setCollapsed={() => {}} />
-          </SheetContent>
-        </Sheet>
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          <AdminTopbar onMenuClick={() => setMobileOpen(true)} />
-          <main className="flex-1 overflow-y-auto bg-zinc-950 p-6 lg:p-8 pb-12">
-            <ErrorBoundary>
-              {children}
-            </ErrorBoundary>
-          </main>
+  // Owner without gym workspace: cleanly redirect to onboarding instead of rendering blank dashboard
+  if (user && user.role === 'owner' && !user.gymId && !isOnboarding) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
+          <p className="text-sm text-zinc-400">Configuring gym workspace...</p>
         </div>
       </div>
-    </BranchProvider>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <BranchProvider>
+        <div className="flex h-screen overflow-hidden bg-zinc-950">
+          {/* Desktop Sidebar (hidden on mobile) */}
+          <div className="hidden lg:block">
+            <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+          </div>
+
+          {/* Mobile Drawer Sidebar */}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetContent side="left" className="p-0 bg-zinc-900 border-zinc-800 w-[260px] text-white">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              <AdminSidebar collapsed={false} setCollapsed={() => {}} />
+            </SheetContent>
+          </Sheet>
+
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+            <AdminTopbar onMenuClick={() => setMobileOpen(true)} />
+            <main className="flex-1 overflow-y-auto bg-zinc-950 p-6 lg:p-8 pb-12">
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
+            </main>
+          </div>
+        </div>
+      </BranchProvider>
+    </ErrorBoundary>
   );
 }

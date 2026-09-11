@@ -24,6 +24,9 @@ export function useAuth() {
         (currentStore.member && currentStore.member.authId === supabaseUser.id)
       ) {
         // Session already loaded with valid gymId and active for this user
+        if (currentStore.loading) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -123,7 +126,15 @@ export function useAuth() {
       }
     );
 
+    // Safety watchdog: ensure loading state always resolves within 3.5 seconds
+    const watchdogTimer = setTimeout(() => {
+      if (useAuthStore.getState().loading) {
+        setLoading(false);
+      }
+    }, 3500);
+
     return () => {
+      clearTimeout(watchdogTimer);
       subscription.unsubscribe();
     };
   }, [setSession, setLoading, setError, logout, router]);

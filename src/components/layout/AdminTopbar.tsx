@@ -55,11 +55,13 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
         .limit(3);
 
       kycDocs?.forEach(doc => {
+        const memberName = (doc.members as any)?.name || 'Member';
+        const docType = (doc.document_type || 'document').toUpperCase();
         list.push({
           id: doc.id,
           type: 'kyc',
           title: 'Pending KYC Verification',
-          description: `${(doc.members as any)?.name} uploaded ${doc.document_type.toUpperCase()}`,
+          description: `${memberName} uploaded ${docType}`,
           time: doc.uploaded_at,
           link: '/dashboard/kyc',
         });
@@ -241,7 +243,9 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
                   <div key={n.id} className="p-3 hover:bg-zinc-800/30 transition-colors">
                     <div className="font-bold text-xs text-zinc-200">{n.title}</div>
                     <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{n.description}</p>
-                    <span className="text-[9px] text-zinc-500 block mt-1">{new Date(n.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-[9px] text-zinc-500 block mt-1">
+                      {n.time ? new Date(n.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
                   </div>
                 ))
               )}
@@ -254,15 +258,15 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
         {/* User profile widget */}
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
-            <div className="text-sm font-medium text-foreground">{user?.name}</div>
+            <div className="text-sm font-medium text-foreground">{user?.name || 'User'}</div>
             <div className="text-xs text-muted-foreground">{getRoleLabel(user?.role)}</div>
           </div>
           <Avatar className="h-9 w-9 border border-border bg-muted">
             {user?.photoUrl ? (
-              <AvatarImage src={user.photoUrl} alt={user.name} />
+              <AvatarImage src={user.photoUrl} alt={user.name || 'Avatar'} />
             ) : null}
             <AvatarFallback className="text-xs font-bold bg-purple-900 text-purple-200">
-              {user?.name ? getInitials(user.name) : 'GY'}
+              {user?.name?.trim() ? getInitials(user.name) : 'GY'}
             </AvatarFallback>
           </Avatar>
         </div>

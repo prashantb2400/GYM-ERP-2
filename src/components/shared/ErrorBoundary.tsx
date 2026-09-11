@@ -40,9 +40,14 @@ export class ErrorBoundary extends Component<Props, State> {
             <AlertTriangle className="h-6 w-6" />
           </div>
           <h2 className="text-lg font-bold text-zinc-100 mb-2">Something went wrong</h2>
-          <p className="text-sm text-zinc-400 max-w-md mb-6">
+          <p className="text-sm text-zinc-400 max-w-md mb-3">
             An unexpected error occurred while loading this view. You can reload the page or return to the dashboard.
           </p>
+          {this.state.error?.message && (
+            <p className="text-xs text-red-400 font-mono bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg max-w-lg mb-6 break-words">
+              {this.state.error.message}
+            </p>
+          )}
           <div className="flex gap-3">
             <Button
               onClick={() => {
