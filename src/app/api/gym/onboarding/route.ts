@@ -4,24 +4,62 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let user: any = null;
 
-    if (authError || !user) {
+    // Check Bearer token from header first (immune to cookie issues)
+    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      if (token) {
+        try {
+          const { data: { user: tokenUser } } = await supabaseAdmin.auth.getUser(token);
+          if (tokenUser) {
+            user = tokenUser;
+          }
+        } catch (tokenErr) {
+          console.warn('Bearer token verification failed in onboarding:', tokenErr);
+        }
+      }
+    }
+
+    if (!user) {
+      try {
+        const supabase = await createClient();
+        const { data: { user: cookieUser } } = await supabase.auth.getUser();
+        user = cookieUser;
+      } catch (cookieErr) {
+        console.warn('Cookie session retrieval failed in onboarding:', cookieErr);
+      }
+    }
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
     }
 
     // Check if user already has an assigned gym
     const { data: existingUser } = await supabaseAdmin
       .from('users')
-      .select('id, gym_id, role')
+      .select('id, gym_id, branch_id, role')
       .eq('auth_id', user.id)
       .maybeSingle();
 
     if (existingUser?.gym_id) {
+      let resolvedBranchId = existingUser.branch_id || null;
+      if (!resolvedBranchId) {
+        const { data: defaultBranch } = await supabaseAdmin
+          .from('branches')
+          .select('id')
+          .eq('gym_id', existingUser.gym_id)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        resolvedBranchId = defaultBranch?.id || null;
+      }
+
       return NextResponse.json({
         success: true,
         gymId: existingUser.gym_id,
+        branchId: resolvedBranchId,
         message: 'Gym workspace already exists',
       });
     }
@@ -190,36 +228,33 @@ export async function POST(request: Request) {
     // 6. Create or Update Owner User Profile in public.users
     const ownerName = user.user_metadata?.full_name || contactEmail?.split('@')[0] || 'Gym Owner';
 
-    if (existingUser) {
-      const { error: updateErr } = await supabaseAdmin
-        .from('users')
-        .update({
-          gym_id: gymId,
-          branch_id: branchId,
-          name: ownerName,
-          email: contactEmail,
-          role: 'owner',
-          permissions: ['*'],
-          is_active: true,
-        })
-        .eq('id', existingUser.id);
+    const { error: userUpsertErr } = await supabaseAdmin
+      .from('users')
+      .upsert({
+        auth_id: user.id,
+        gym_id: gymId,
+        branch_id: branchId,
+        name: ownerName,
+        email: contactEmail,
+        role: 'owner',
+        permissions: ['*'],
+        is_active: true,
+      }, { onConflict: 'auth_id' });
 
-      if (updateErr) throw updateErr;
-    } else {
-      const { error: insertErr } = await supabaseAdmin
-        .from('users')
-        .insert({
-          auth_id: user.id,
-          gym_id: gymId,
-          branch_id: branchId,
-          name: ownerName,
-          email: contactEmail,
-          role: 'owner',
-          permissions: ['*'],
-          is_active: true,
-        });
-
-      if (insertErr) throw insertErr;
+    if (userUpsertErr) {
+      console.warn('Upsert by auth_id failed, attempting fallback update:', userUpsertErr);
+      if (contactEmail) {
+        await supabaseAdmin
+          .from('users')
+          .update({
+            auth_id: user.id,
+            gym_id: gymId,
+            branch_id: branchId,
+            role: 'owner',
+            is_active: true,
+          })
+          .eq('email', contactEmail);
+      }
     }
 
     return NextResponse.json({

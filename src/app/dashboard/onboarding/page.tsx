@@ -39,10 +39,17 @@ export default function OnboardingPage() {
       setEmail(authUser.email || '');
 
       try {
-        const res = await fetch('/api/auth/me');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const headers: Record<string, string> = {};
+        if (sessionData?.session?.access_token) {
+          headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+        }
+
+        const res = await fetch('/api/auth/me', { headers });
         if (res.ok) {
           const authData = await res.json();
           if (authData.user?.gymId) {
+            localStorage.setItem('gymerp_cached_gym_id', authData.user.gymId);
             useAuthStore.getState().setSession({ user: authData.user, member: null });
             router.replace('/dashboard');
             return;
@@ -68,9 +75,17 @@ export default function OnboardingPage() {
     try {
       setLoading(true);
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (sessionData?.session?.access_token) {
+        headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+      }
+
       const res = await fetch('/api/gym/onboarding', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           gymName: gymName.trim(),
           phone: phone.trim() || null,
@@ -86,9 +101,13 @@ export default function OnboardingPage() {
         throw new Error(data.error || 'Failed to create gym workspace');
       }
 
+      if (data.gymId) {
+        localStorage.setItem('gymerp_cached_gym_id', data.gymId);
+      }
+
       // Sync active session from /api/auth/me so store and layout recognize gymId immediately
       try {
-        const meRes = await fetch('/api/auth/me');
+        const meRes = await fetch('/api/auth/me', { headers });
         if (meRes.ok) {
           const meData = await meRes.json();
           if (meData.user) {
@@ -110,7 +129,10 @@ export default function OnboardingPage() {
       }
 
       toast.success('Workspace created! You have a 14-day Pro trial. 🎉');
-      window.location.href = '/dashboard';
+      router.replace('/dashboard');
+      setTimeout(() => {
+        window.location.replace('/dashboard');
+      }, 300);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       toast.error(msg);

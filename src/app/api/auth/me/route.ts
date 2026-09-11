@@ -3,30 +3,75 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { AuthUser, AuthMember } from '@/types/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    let authUser: any = null;
 
-    if (authError || !authUser) {
+    // Check Bearer token from header first (immune to cookie issues)
+    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      if (token) {
+        try {
+          const { data: { user: tokenUser } } = await supabaseAdmin.auth.getUser(token);
+          if (tokenUser) {
+            authUser = tokenUser;
+          }
+        } catch (tokenErr) {
+          console.warn('Bearer token verification failed:', tokenErr);
+        }
+      }
+    }
+
+    // Fallback to cookie session
+    if (!authUser) {
+      try {
+        const supabase = await createClient();
+        const { data: { user: cookieUser } } = await supabase.auth.getUser();
+        authUser = cookieUser;
+      } catch (cookieErr) {
+        console.warn('Cookie session retrieval failed:', cookieErr);
+      }
+    }
+
+    if (!authUser) {
       return NextResponse.json({ user: null, member: null });
     }
 
     // 1. Query users table with supabaseAdmin (bypasses RLS, immune to recursion)
-    const { data: userData } = await supabaseAdmin
+    let userData: any = null;
+    const { data: userByAuth } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('auth_id', authUser.id)
       .maybeSingle();
 
+    if (userByAuth) {
+      userData = userByAuth;
+    } else if (authUser.email) {
+      const { data: userByEmail } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('email', authUser.email)
+        .maybeSingle();
+
+      if (userByEmail) {
+        userData = userByEmail;
+        await supabaseAdmin
+          .from('users')
+          .update({ auth_id: authUser.id })
+          .eq('id', userByEmail.id);
+      }
+    }
+
     if (userData && userData.gym_id) {
       const userPayload: AuthUser = {
         id: userData.id,
-        authId: userData.auth_id,
+        authId: userData.auth_id || authUser.id,
         gymId: userData.gym_id,
         branchId: userData.branch_id || null,
         name: userData.name,
-        email: userData.email,
+        email: userData.email || authUser.email,
         role: userData.role,
         permissions: userData.permissions || [],
         photoUrl: userData.photo_url || null,
@@ -41,13 +86,34 @@ export async function GET() {
     }
 
     // 2. Auto-heal: Check if a gym workspace was created for this owner
-    const { data: ownerGym } = await supabaseAdmin
+    let ownerGym: any = null;
+    const { data: gymByOwner } = await supabaseAdmin
       .from('gyms')
       .select('id, name')
       .eq('owner_id', authUser.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (gymByOwner) {
+      ownerGym = gymByOwner;
+    } else if (authUser.email) {
+      const { data: gymByEmail } = await supabaseAdmin
+        .from('gyms')
+        .select('id, name')
+        .eq('email', authUser.email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (gymByEmail) {
+        ownerGym = gymByEmail;
+        await supabaseAdmin
+          .from('gyms')
+          .update({ owner_id: authUser.id })
+          .eq('id', gymByEmail.id);
+      }
+    }
 
     if (ownerGym) {
       const { data: primaryBranch } = await supabaseAdmin
@@ -60,69 +126,37 @@ export async function GET() {
 
       const ownerName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Gym Owner';
 
-      if (userData) {
-        // Update existing user with gym_id
-        await supabaseAdmin
-          .from('users')
-          .update({
-            gym_id: ownerGym.id,
-            branch_id: primaryBranch?.id || null,
-            role: 'owner',
-            permissions: ['*'],
-            is_active: true,
-          })
-          .eq('id', userData.id);
+      // Atomic upsert on users table
+      const { data: syncedUser } = await supabaseAdmin
+        .from('users')
+        .upsert({
+          auth_id: authUser.id,
+          gym_id: ownerGym.id,
+          branch_id: primaryBranch?.id || null,
+          name: userData?.name || ownerName,
+          email: authUser.email,
+          role: 'owner',
+          permissions: ['*'],
+          is_active: true,
+        }, { onConflict: 'auth_id' })
+        .select()
+        .maybeSingle();
 
-        return NextResponse.json({
-          user: {
-            id: userData.id,
-            authId: userData.auth_id,
-            gymId: ownerGym.id,
-            branchId: primaryBranch?.id || null,
-            name: userData.name || ownerName,
-            email: userData.email || authUser.email,
-            role: 'owner',
-            permissions: ['*'],
-            photoUrl: userData.photo_url || null,
-            isActive: true,
-          },
-          member: null,
-        });
-      } else {
-        // Insert new user row
-        const { data: newUser } = await supabaseAdmin
-          .from('users')
-          .insert({
-            auth_id: authUser.id,
-            gym_id: ownerGym.id,
-            branch_id: primaryBranch?.id || null,
-            name: ownerName,
-            email: authUser.email,
-            role: 'owner',
-            permissions: ['*'],
-            is_active: true,
-          })
-          .select()
-          .single();
-
-        if (newUser) {
-          return NextResponse.json({
-            user: {
-              id: newUser.id,
-              authId: newUser.auth_id,
-              gymId: newUser.gym_id,
-              branchId: newUser.branch_id,
-              name: newUser.name,
-              email: newUser.email,
-              role: newUser.role,
-              permissions: newUser.permissions || [],
-              photoUrl: newUser.photo_url,
-              isActive: newUser.is_active,
-            },
-            member: null,
-          });
-        }
-      }
+      return NextResponse.json({
+        user: {
+          id: syncedUser?.id || userData?.id || authUser.id,
+          authId: authUser.id,
+          gymId: ownerGym.id,
+          branchId: primaryBranch?.id || null,
+          name: syncedUser?.name || userData?.name || ownerName,
+          email: authUser.email,
+          role: 'owner',
+          permissions: ['*'],
+          photoUrl: syncedUser?.photo_url || null,
+          isActive: true,
+        },
+        member: null,
+      });
     }
 
     // 3. Query members table for member portal

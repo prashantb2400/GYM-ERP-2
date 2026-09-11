@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/store/authStore';
-import { AuthUser, AuthMember } from '@/types/auth';
+import { AuthUser, AuthMember, DEFAULT_PERMISSIONS } from '@/types/auth';
 
 export function useAuth() {
   const supabase = createClient();
@@ -31,28 +31,48 @@ export function useAuth() {
         if (!currentStore.user && !currentStore.member) {
           setLoading(true);
         }
-        // Call server-side /api/auth/me to bypass client RLS quirks and recursion
-        const res = await fetch('/api/auth/me');
+        // Call server-side /api/auth/me with Authorization Bearer header for resilient auth
+        const { data: sessionData } = await supabase.auth.getSession();
+        const headers: Record<string, string> = {};
+        if (sessionData?.session?.access_token) {
+          headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+        }
+
+        const res = await fetch('/api/auth/me', { headers });
         if (res.ok) {
           const data = await res.json();
           if (data.user || data.member) {
-            setSession({ user: data.user, member: data.member });
+            let resolvedUser = data.user;
+            if (resolvedUser) {
+              if (resolvedUser.gymId) {
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('gymerp_cached_gym_id', resolvedUser.gymId);
+                }
+              } else if (typeof window !== 'undefined') {
+                const cachedGymId = localStorage.getItem('gymerp_cached_gym_id');
+                if (cachedGymId) {
+                  resolvedUser = { ...resolvedUser, gymId: cachedGymId };
+                }
+              }
+            }
+            setSession({ user: resolvedUser, member: data.member });
             return;
           }
         }
 
-        // Fallback: If not found in either, they might be a newly signed-up owner
+        // Fallback: If not found in either, check cached gymId before defaulting to blank
+        const cachedGymId = typeof window !== 'undefined' ? localStorage.getItem('gymerp_cached_gym_id') : null;
         const isNewOwner = supabaseUser.app_metadata?.provider === 'google' || supabaseUser.user_metadata?.iss || !!supabaseUser.email;
         if (isNewOwner) {
           const authUser: AuthUser = {
             id: supabaseUser.id,
             authId: supabaseUser.id,
-            gymId: '',
+            gymId: cachedGymId || '',
             branchId: null,
             name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Gym Owner',
             email: supabaseUser.email || null,
             role: 'owner',
-            permissions: ['settings.manage', 'settings.view'],
+            permissions: DEFAULT_PERMISSIONS.owner,
             photoUrl: supabaseUser.user_metadata?.avatar_url || null,
             isActive: true,
           };

@@ -6,7 +6,7 @@ import { AdminTopbar } from '@/components/layout/AdminTopbar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useAuth } from '@/hooks/useAuth';
 import { BranchProvider } from '@/hooks/useBranch';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 export default function AdminDashboardLayout({
@@ -16,14 +16,20 @@ export default function AdminDashboardLayout({
 }) {
   const { user, loading, isAuthenticated } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const isOnboarding = pathname === '/dashboard/onboarding';
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   React.useEffect(() => {
-    if (!loading && isAuthenticated && user && user.role === 'owner' && !user.gymId) {
+    if (!loading && isAuthenticated && user && user.role === 'owner' && !user.gymId && !isOnboarding) {
       router.push('/dashboard/onboarding');
     }
-  }, [loading, isAuthenticated, user, router]);
+  }, [loading, isAuthenticated, user, router, isOnboarding]);
+
+  if (isOnboarding) {
+    return <>{children}</>;
+  }
 
   if (loading && !isAuthenticated) {
     return (
