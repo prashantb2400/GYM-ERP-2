@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/server/auth-helper';
 import { isSuperAdmin } from '@/lib/platform/auth';
 import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 
 // GET /api/branches - List branches for caller's gym
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error: authErr } = await getAuthUser(request);
+    if (!user || authErr) {
+      return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -45,10 +44,9 @@ export async function GET(request: Request) {
 // POST /api/branches - Create a new branch (Owner only)
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error: authErr } = await getAuthUser(request);
+    if (!user || authErr) {
+      return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
     const scope = await getBranchScope(user.id);
@@ -91,10 +89,9 @@ export async function POST(request: Request) {
 // PATCH /api/branches - Update a branch (Owner only)
 export async function PATCH(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error: authErr } = await getAuthUser(request);
+    if (!user || authErr) {
+      return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
     const scope = await getBranchScope(user.id);

@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/server/auth-helper';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { user, error: authError } = await getAuthUser(request);
     
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
     }
     
     // Verify caller is an owner
-    const { data: callerData } = await supabase
+    const { data: callerData } = await supabaseAdmin
       .from('users')
       .select('id, gym_id, role')
       .eq('auth_id', user.id)

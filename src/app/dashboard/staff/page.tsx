@@ -28,6 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils/format';
 import { toast } from 'sonner';
+import { fetchWithAuth } from '@/lib/utils/api-client';
 import { Permission, DEFAULT_PERMISSIONS } from '@/types/auth';
 
 const AVAILABLE_PERMISSIONS: { value: Permission; label: string; group: string }[] = [
@@ -175,7 +176,7 @@ export default function StaffCRUDPage() {
       // 2. Create auth user in Supabase (Next.js route handles auth signup securely via API key,
       // but for client testing, we call the signUp flow or API call).
       // We'll call a dedicated Next.js API route that handles creating auth user bypass
-      const res = await fetch('/api/staff/create', {
+      const res = await fetchWithAuth('/api/staff/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

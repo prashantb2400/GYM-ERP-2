@@ -1002,9 +1002,11 @@ export default function MemberDetailPage() {
                   {attendance.map((entry) => {
                     const methodLabel = 
                       entry.method === 'face_recognition' ? 'Face ID' :
+                      entry.method === 'fingerprint' ? 'Fingerprint' :
                       entry.method === 'qr_scan' ? 'QR Kiosk' : 'Manual';
                     const methodColor =
                       entry.method === 'face_recognition' ? 'bg-purple-950/60 text-purple-300 border-purple-800/40' :
+                      entry.method === 'fingerprint' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/40' :
                       entry.method === 'qr_scan' ? 'bg-blue-950/60 text-blue-300 border-blue-800/40' :
                       'bg-zinc-800 text-zinc-400 border-zinc-700';
 

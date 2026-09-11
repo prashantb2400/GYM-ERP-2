@@ -311,7 +311,8 @@ export class VirtualOpticalScannerDriver implements FingerprintScannerDriver {
 
     // Quality between 78 and 96%
     const quality = Math.floor(Math.random() * 18) + 78;
-    const seed = `simulated_${finger}_${Math.floor(Date.now() / (1000 * 60 * 60 * 24))}`;
+    // Deterministic seed per finger ensures simulated templates remain consistent across days
+    const seed = `simulated_${finger}`;
     const minutiae = synthesizeMinutiaeFromSeed(seed, quality);
 
     const template: FingerprintTemplate = {

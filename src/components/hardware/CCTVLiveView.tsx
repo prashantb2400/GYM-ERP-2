@@ -119,6 +119,25 @@ export function CCTVLiveView({ cameraId, cameraName, location, rtspUrl, showCont
     }
   };
 
+  const handleSnapshot = () => {
+    if (!imgRef.current) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = imgRef.current.naturalWidth || 640;
+      canvas.height = imgRef.current.naturalHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(imgRef.current, 0, 0);
+        const link = document.createElement('a');
+        link.download = `snapshot_${cameraName.replace(/\s+/g, '_')}_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
+    } catch (err) {
+      console.warn('Snapshot capture failed:', err);
+    }
+  };
+
   return (
     <div className="flex flex-col border rounded-lg overflow-hidden bg-card shadow-sm w-full max-w-3xl">
       <div className="flex items-center justify-between p-3 border-b bg-muted/30">
@@ -204,7 +223,7 @@ export function CCTVLiveView({ cameraId, cameraName, location, rtspUrl, showCont
               <ScanFace className="w-4 h-4 mr-2" />
               {isDetecting ? 'Stop Detection' : 'Start Detection'}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => {}}>
+            <Button variant="outline" size="sm" onClick={handleSnapshot}>
               <Camera className="w-4 h-4 mr-2" />
               Snapshot
             </Button>

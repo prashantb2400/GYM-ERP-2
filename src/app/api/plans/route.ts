@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/server/auth-helper';
 import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 
 // GET /api/plans - List membership plans for caller's gym
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error: authErr } = await getAuthUser(request);
+    if (!user || authErr) {
+      return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -38,10 +37,9 @@ export async function GET(request: Request) {
 // POST /api/plans - Create a new membership plan
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error: authErr } = await getAuthUser(request);
+    if (!user || authErr) {
+      return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
     const scope = await getBranchScope(user.id);
@@ -119,10 +117,9 @@ export async function POST(request: Request) {
 // PATCH /api/plans - Update an existing membership plan
 export async function PATCH(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error: authErr } = await getAuthUser(request);
+    if (!user || authErr) {
+      return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
     const scope = await getBranchScope(user.id);
@@ -172,10 +169,9 @@ export async function PATCH(request: Request) {
 // DELETE /api/plans - Delete a membership plan
 export async function DELETE(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error: authErr } = await getAuthUser(request);
+    if (!user || authErr) {
+      return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
     const scope = await getBranchScope(user.id);

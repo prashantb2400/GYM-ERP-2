@@ -127,8 +127,15 @@ export function BiometricStatus({
 
         <div className="p-3 border-t bg-card flex gap-2">
           {status === 'offline' ? (
-            <Button variant="outline" className="w-full" size="sm" onClick={() => {}}>
-              <ServerOff className="w-4 h-4 mr-2" /> Reconnect
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              size="sm" 
+              onClick={handleSync}
+              disabled={syncing}
+            >
+              <ServerOff className={`w-4 h-4 mr-2 ${syncing ? 'animate-pulse' : ''}`} /> 
+              {syncing ? 'Reconnecting...' : 'Reconnect'}
             </Button>
           ) : (
             <Button 
