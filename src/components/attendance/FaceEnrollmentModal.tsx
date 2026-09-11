@@ -9,6 +9,7 @@ import { Camera, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw } from 'l
 import { toast } from 'sonner';
 import { loadFaceApiModels } from '@/lib/face-attendance/models';
 import { averageDescriptors } from '@/lib/face-attendance/matcher';
+import { fetchWithAuth } from '@/lib/utils/api-client';
 
 interface FaceEnrollmentModalProps {
   isOpen: boolean;
@@ -151,7 +152,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
         setStatusMessage('Computing stable 128-d vector average...');
         const averagedVector = averageDescriptors(descriptors);
 
-        const res = await fetch(`/api/members/${member.id}/face-enroll`, {
+        const res = await fetchWithAuth(`/api/members/${member.id}/face-enroll`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -180,7 +181,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
   const handleDeleteEnrollment = async () => {
     try {
       setIsDeleting(true);
-      const res = await fetch(`/api/members/${member.id}/face-enroll`, {
+      const res = await fetchWithAuth(`/api/members/${member.id}/face-enroll`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete face descriptor');

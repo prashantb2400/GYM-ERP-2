@@ -22,6 +22,7 @@ export interface MatchResult {
 export interface AttendanceEvent {
   id?: string;
   gymId: string;
+  branchId?: string;
   memberId: string;
   memberName: string;
   type: 'in' | 'out';

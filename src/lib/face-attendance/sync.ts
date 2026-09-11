@@ -6,23 +6,29 @@ import {
   getPendingAttendanceEvents,
   removeSyncedEvent,
 } from './offline-db';
+import { fetchWithAuth } from '@/lib/utils/api-client';
 
 /**
  * Synchronizes the member face roster from Supabase into IndexedDB.
  * Falls back to offline IndexedDB cache if network is unavailable.
  */
-export async function syncRoster(gymId: string): Promise<{ roster: FaceDescriptorRecord[]; isOffline: boolean }> {
+export async function syncRoster(gymId: string, branchId?: string): Promise<{ roster: FaceDescriptorRecord[]; isOffline: boolean }> {
   if (typeof window === 'undefined') {
     return { roster: [], isOffline: false };
   }
 
   if (navigator.onLine) {
     try {
-      const res = await fetch(`/api/attendance/face-roster?gymId=${gymId}`);
+      const url = branchId 
+        ? `/api/attendance/face-roster?gymId=${gymId}&branchId=${branchId}` 
+        : `/api/attendance/face-roster?gymId=${gymId}`;
+      const res = await fetchWithAuth(url);
       if (res.ok) {
         const data: FaceDescriptorRecord[] = await res.json();
         await saveRosterToOfflineDB(gymId, data);
         return { roster: data, isOffline: false };
+      } else {
+        console.warn(`Face roster sync returned status ${res.status}: ${res.statusText}`);
       }
     } catch (err) {
       console.warn('Network fetch failed for face roster, falling back to IndexedDB:', err);
@@ -46,7 +52,7 @@ export async function recordAttendanceEvent(
 
   if (navigator.onLine) {
     try {
-      const res = await fetch('/api/attendance/face-checkin', {
+      const res = await fetchWithAuth('/api/attendance/face-checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(event),
@@ -78,7 +84,7 @@ export async function flushAttendanceQueue(): Promise<{ syncedCount: number; rem
 
   for (const item of pending) {
     try {
-      const res = await fetch('/api/attendance/face-checkin', {
+      const res = await fetchWithAuth('/api/attendance/face-checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),

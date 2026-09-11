@@ -37,13 +37,68 @@ export async function getBranchScope(
   const { requestedGymId, requestedBranchId } = options || {};
 
   // 1. Fetch user record from database
-  const { data: userData } = await supabaseAdmin
+  const userQuery = supabaseAdmin
     .from('users')
     .select('id, gym_id, branch_id, role, is_active')
-    .eq('auth_id', authUserId)
-    .single();
+    .eq('auth_id', authUserId);
 
-  if (!userData || !userData.is_active) {
+  let { data: userData } = typeof (userQuery as any).maybeSingle === 'function'
+    ? await (userQuery as any).maybeSingle()
+    : await userQuery.single();
+
+  // Auto-heal owner profile if gym exists
+  if (!userData || !userData.gym_id) {
+    try {
+      const gymQuery = supabaseAdmin
+        .from('gyms')
+        .select('id')
+        .eq('owner_id', authUserId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const { data: ownerGym } = typeof (gymQuery as any).maybeSingle === 'function'
+        ? await (gymQuery as any).maybeSingle()
+        : await gymQuery.single();
+
+      if (ownerGym) {
+        const branchQuery = supabaseAdmin
+          .from('branches')
+          .select('id')
+          .eq('gym_id', ownerGym.id)
+          .order('created_at', { ascending: true })
+          .limit(1);
+
+        const { data: primaryBranch } = typeof (branchQuery as any).maybeSingle === 'function'
+          ? await (branchQuery as any).maybeSingle()
+          : await branchQuery.single();
+
+        const upsertQuery = supabaseAdmin
+          .from('users')
+          .upsert({
+            auth_id: authUserId,
+            gym_id: ownerGym.id,
+            branch_id: primaryBranch?.id || null,
+            role: 'owner',
+            permissions: ['*'],
+            name: 'Gym Owner',
+            is_active: true,
+          }, { onConflict: 'auth_id' })
+          .select('id, gym_id, branch_id, role, is_active');
+
+        const { data: autoUser } = typeof (upsertQuery as any).maybeSingle === 'function'
+          ? await (upsertQuery as any).maybeSingle()
+          : await upsertQuery.single();
+
+        if (autoUser) {
+          userData = autoUser;
+        }
+      }
+    } catch {
+      // Ignore auto-heal error and proceed to permission check
+    }
+  }
+
+  if (!userData || userData.is_active === false) {
     // Check if platform superadmin
     const superAdmin = await isSuperAdmin(authUserId);
     if (superAdmin) {

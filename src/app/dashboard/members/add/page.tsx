@@ -319,6 +319,7 @@ export default function AddMemberPage() {
           gym_id: user.gymId,
           branch_id: branchToAssign,
           member_code: memberCode,
+          qr_token: crypto.randomUUID(),
           name: name.trim(),
           phone: phone,
           whatsapp_phone: whatsappPhone || phone,

@@ -25,7 +25,7 @@ export function euclideanDistance(a: ArrayLike<number>, b: ArrayLike<number>): n
  * Converts a Euclidean distance into a normalized confidence percentage [0.0 - 1.0].
  * Threshold is treated as 50% confidence.
  */
-export function distanceToConfidence(distance: number, threshold = 0.52): number {
+export function distanceToConfidence(distance: number, threshold = 0.55): number {
   if (distance <= 0) return 1.0;
   if (distance >= 1.0) return 0.0;
   // Non-linear scaling prioritizing high-confidence matches (<0.40)
@@ -84,7 +84,7 @@ export function averageDescriptors(descriptors: ArrayLike<number>[]): number[] {
 export function findBestMatch(
   queryDescriptor: ArrayLike<number>,
   roster: FaceDescriptorRecord[],
-  threshold = 0.52
+  threshold = 0.55
 ): MatchResult | null {
   if (!roster || roster.length === 0) return null;
 

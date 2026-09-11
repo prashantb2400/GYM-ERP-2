@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isSuperAdmin } from '@/lib/platform/auth';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
+import { getAuthUser } from '@/lib/server/auth-helper';
 
 export async function POST(
   request: Request,
@@ -22,10 +23,9 @@ export async function POST(
     const params = await props.params;
     const { id: memberId } = params;
 
-    const supabase = await createClient();
-    const { data: { user: sessionUser } } = await supabase.auth.getUser();
-    if (!sessionUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user: sessionUser, error: authErr } = await getAuthUser(request);
+    if (!sessionUser || authErr) {
+      return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
     // Resolve caller's scope for tenant & branch isolation
@@ -106,10 +106,9 @@ export async function DELETE(
     const params = await props.params;
     const { id: memberId } = params;
 
-    const supabase = await createClient();
-    const { data: { user: sessionUser } } = await supabase.auth.getUser();
-    if (!sessionUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user: sessionUser, error: authErr } = await getAuthUser(request);
+    if (!sessionUser || authErr) {
+      return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
     // Resolve caller's scope for tenant & branch isolation

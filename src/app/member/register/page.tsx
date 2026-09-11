@@ -168,6 +168,7 @@ function RegisterForm() {
         gym_id: gymId,
         branch_id: primaryBranch?.id || null,
         member_code: memberCode,
+        qr_token: crypto.randomUUID(),
         name: name.trim(),
         phone: cleanPhone,
         dob: dob || null,

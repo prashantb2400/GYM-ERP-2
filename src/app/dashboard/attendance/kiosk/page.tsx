@@ -11,6 +11,7 @@ import { ArrowLeft, Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Vol
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { fetchWithAuth } from '@/lib/utils/api-client';
 
 const SCANNER_CONTAINER_ID = 'qr-reader';
 
@@ -93,10 +94,10 @@ export default function KioskPage() {
     }
 
     try {
-      const res = await fetch('/api/attendance/qr-checkin', {
+      const res = await fetchWithAuth('/api/attendance/qr-checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qrToken, gymId }),
+        body: JSON.stringify({ qrToken, gymId, branchId: user?.branchId }),
       });
 
       const data = await res.json();

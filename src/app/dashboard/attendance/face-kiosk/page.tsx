@@ -60,6 +60,7 @@ export default function FaceKioskPage() {
 
   const [roster, setRoster] = useState<FaceDescriptorRecord[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
 
@@ -70,6 +71,20 @@ export default function FaceKioskPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const faceApiRef = useRef<any>(null);
+
+  const handleRefreshRoster = async () => {
+    if (!gymId) return;
+    setIsRefreshing(true);
+    try {
+      const { roster: loadedRoster, isOffline } = await syncRoster(gymId, user?.branchId || undefined);
+      setRoster(loadedRoster);
+      setIsOnline(!isOffline);
+    } catch (err) {
+      console.error('Manual roster refresh failed:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const isDetectingRef = useRef(false);
   const cooldownMapRef = useRef<Map<string, number>>(new Map());
@@ -158,7 +173,7 @@ export default function FaceKioskPage() {
         }
 
         if (gymId && mounted) {
-          const { roster: loadedRoster, isOffline } = await syncRoster(gymId);
+          const { roster: loadedRoster, isOffline } = await syncRoster(gymId, user?.branchId || undefined);
           if (mounted) {
             setRoster(loadedRoster);
             setIsOnline(!isOffline);
@@ -177,7 +192,7 @@ export default function FaceKioskPage() {
     const handleOnline = () => {
       setIsOnline(true);
       if (gymId) {
-        syncRoster(gymId).then(({ roster: r }) => setRoster(r));
+        syncRoster(gymId, user?.branchId || undefined).then(({ roster: r }) => setRoster(r));
         flushAttendanceQueue().then(({ remainingCount }) => setPendingQueueCount(remainingCount));
       }
     };
@@ -251,7 +266,7 @@ export default function FaceKioskPage() {
           // Process each detected face against the roster
           const currentTime = Date.now();
           for (const det of detections) {
-            const match = findBestMatch(det.descriptor, roster, 0.52);
+            const match = findBestMatch(det.descriptor, roster, 0.55);
 
             if (match) {
               const lastScanned = cooldownMapRef.current.get(match.memberId) || 0;
@@ -265,6 +280,7 @@ export default function FaceKioskPage() {
                 // Determine attendance event payload
                 const eventPayload: AttendanceEvent = {
                   gymId: gymId || '',
+                  branchId: user?.branchId || undefined,
                   memberId: match.memberId,
                   memberName: match.name,
                   type: mode === 'out' ? 'out' : mode === 'in' ? 'in' : 'in',
@@ -400,6 +416,19 @@ export default function FaceKioskPage() {
             {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
             {isOnline ? `${roster.length} Synced` : `Offline (${pendingQueueCount} queued)`}
           </Badge>
+
+          {/* Refresh Roster Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshRoster}
+            disabled={isRefreshing}
+            className="h-7 px-2 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white gap-1"
+            title="Reload enrolled face descriptors from server"
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
 
           {/* Sound Toggle */}
           <button
