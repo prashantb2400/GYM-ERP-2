@@ -14,7 +14,7 @@ let humanLoadingPromise: Promise<any> | null = null;
  * Initializes and warms up the Human AI engine in browser client environments.
  * Safe for Next.js SSR (guards against server execution).
  */
-export async function getHumanInstance(modelBasePath = '/models/human'): Promise<any> {
+export async function getHumanInstance(modelBasePath = '/models/human/'): Promise<any> {
   if (typeof window === 'undefined') {
     throw new Error('Human can only be initialized in browser client environments');
   }
@@ -31,11 +31,14 @@ export async function getHumanInstance(modelBasePath = '/models/human'): Promise
     try {
       const { Human } = await import('@vladmandic/human');
 
+      // Ensure modelBasePath ends with slash
+      const normalizedPath = modelBasePath.endsWith('/') ? modelBasePath : `${modelBasePath}/`;
+
       const config = {
-        modelBasePath,
+        modelBasePath: normalizedPath,
         backend: 'webgl' as const,
         async: true,
-        warmup: 'face',
+        warmup: 'none', // 'none' avoids synthetic warmup stalls; WebGL kernels compile cleanly on first real frame
         cacheSensitivity: 0.7,
         filter: {
           enabled: true,
@@ -65,6 +68,9 @@ export async function getHumanInstance(modelBasePath = '/models/human'): Promise
           description: {
             enabled: true,
             modelPath: 'faceres.json',
+          },
+          emotion: {
+            enabled: false,
           },
           antispoof: {
             enabled: true,
