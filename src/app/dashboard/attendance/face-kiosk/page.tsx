@@ -442,7 +442,7 @@ export default function FaceKioskPage() {
               if (isReadyToLog) {
                 const lastScanned = cooldownMapRef.current.get(match.memberId) || 0;
                 const elapsedMs = currentTime - lastScanned;
-                const COOLDOWN_MS = 30000; // 30 seconds
+                const COOLDOWN_MS = 2000; // 2 seconds minimal debounce to prevent burst network calls
 
                 if (elapsedMs > COOLDOWN_MS) {
                   // Member recognized through multi-frame consensus and ready to log!
@@ -498,10 +498,10 @@ export default function FaceKioskPage() {
                     }
                   });
 
-                  // Auto-clear banner after 3.5 seconds
+                  // Auto-clear banner after 2.5 seconds
                   bannerTimeoutRef.current = setTimeout(() => {
                     setRecognitionBanner({ state: 'idle' });
-                  }, 3500);
+                  }, 2500);
 
                   break; // Process one member per loop cycle to maintain clean UI
                 }
@@ -734,7 +734,10 @@ export default function FaceKioskPage() {
           {recognitionBanner.state === 'idle' && (
             <div className="text-center text-zinc-500">
               <p className="text-sm font-medium">Walk in front of camera to check in/out</p>
-              <p className="text-xs text-zinc-600 mt-0.5">30s cooldown per member</p>
+              <p className="text-xs text-emerald-400/90 flex items-center justify-center gap-1.5 mt-1 font-mono">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Continuous real-time vigilance active
+              </p>
             </div>
           )}
 
