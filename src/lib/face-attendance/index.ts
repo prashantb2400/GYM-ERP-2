@@ -4,3 +4,4 @@ export * from './models';
 export * from './offline-db';
 export * from './sync';
 export * from './consensus-tracker';
+export * from './liveness';

@@ -275,14 +275,32 @@ export default function FaceKioskPage() {
             const match = findBestMatch(det.descriptor, roster, 0.48, 0.38);
 
             if (match) {
-              const consensus = consensusTrackerRef.current.evaluate(match, currentTime);
+              const leftEye = det.landmarks ? det.landmarks.getLeftEye() : undefined;
+              const rightEye = det.landmarks ? det.landmarks.getRightEye() : undefined;
+              const centroid = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+
+              const consensus = consensusTrackerRef.current.evaluate(match, currentTime, {
+                leftEye,
+                rightEye,
+                centroid,
+              });
               const isReadyToLog = consensus.isConfirmed;
 
               // Draw interactive biometric lock reticle on canvas
               if (canvasCtx) {
-                const hudColor = isReadyToLog ? '#10b981' : consensus.progress >= 0.5 ? '#06b6d4' : '#8b5cf6';
+                const isSpoofSuspect = consensus.liveness?.flags.includes('zero_motion_spoof_suspect');
+                const hudColor = isReadyToLog
+                  ? '#10b981'
+                  : isSpoofSuspect
+                  ? '#f59e0b'
+                  : consensus.progress >= 0.5
+                  ? '#06b6d4'
+                  : '#8b5cf6';
+
                 const label = isReadyToLog
                   ? `${match.name} · Verified ✓`
+                  : isSpoofSuspect
+                  ? `${match.name} (Checking Liveness...)`
                   : `${match.name} (${Math.round(consensus.progress * 100)}%)`;
 
                 const x = box.x;

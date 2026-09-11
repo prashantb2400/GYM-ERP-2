@@ -1,4 +1,5 @@
 import { MatchResult } from './types';
+import { Point2D, LivenessMetrics, evaluateLiveness } from './liveness';
 
 interface CandidateState {
   memberId: string;
@@ -11,6 +12,14 @@ interface CandidateState {
   bestDistance: number;
   bestConfidence: number;
   tier: 'high' | 'medium';
+  centroids: Point2D[];
+  blinkDetected: boolean;
+}
+
+export interface LivenessObservation {
+  leftEye?: Point2D[];
+  rightEye?: Point2D[];
+  centroid?: Point2D;
 }
 
 export interface ConsensusVerification {
@@ -19,6 +28,7 @@ export interface ConsensusVerification {
   match: MatchResult;
   framesObserved: number;
   targetFrames: number;
+  liveness?: LivenessMetrics;
 }
 
 export class ConsensusTracker {
@@ -26,22 +36,29 @@ export class ConsensusTracker {
   private readonly windowMs: number;
   private readonly highConfidenceRequiredFrames: number;
   private readonly mediumConfidenceRequiredFrames: number;
+  private readonly requireLiveness: boolean;
 
   constructor(options?: {
     windowMs?: number;
     highConfidenceRequiredFrames?: number;
     mediumConfidenceRequiredFrames?: number;
+    requireLiveness?: boolean;
   }) {
     this.windowMs = options?.windowMs ?? 650; // 650ms temporal window
     this.highConfidenceRequiredFrames = options?.highConfidenceRequiredFrames ?? 2;
     this.mediumConfidenceRequiredFrames = options?.mediumConfidenceRequiredFrames ?? 3;
+    this.requireLiveness = options?.requireLiveness ?? false;
   }
 
   /**
    * Evaluates a candidate match against temporal history.
    * Returns whether multi-frame consensus has been satisfied.
    */
-  public evaluate(match: MatchResult, nowMs = Date.now()): ConsensusVerification {
+  public evaluate(
+    match: MatchResult,
+    nowMs = Date.now(),
+    observation?: LivenessObservation
+  ): ConsensusVerification {
     const { memberId, tier = 'medium', distance, confidence } = match;
     const targetFrames = tier === 'high' ? this.highConfidenceRequiredFrames : this.mediumConfidenceRequiredFrames;
 
@@ -60,6 +77,8 @@ export class ConsensusTracker {
         bestDistance: distance,
         bestConfidence: confidence,
         tier,
+        centroids: observation?.centroid ? [observation.centroid] : [],
+        blinkDetected: false,
       };
       this.candidates.set(memberId, state);
     } else {
@@ -73,9 +92,34 @@ export class ConsensusTracker {
       if (tier === 'high') {
         state.tier = 'high';
       }
+      if (observation?.centroid) {
+        state.centroids.push(observation.centroid);
+        if (state.centroids.length > 8) {
+          state.centroids.shift();
+        }
+      }
     }
 
-    const isConfirmed = state.count >= targetFrames;
+    // Evaluate liveness if observation is supplied
+    let livenessMetrics: LivenessMetrics | undefined;
+    if (observation) {
+      livenessMetrics = evaluateLiveness({
+        leftEye: observation.leftEye,
+        rightEye: observation.rightEye,
+        centroidHistory: state.centroids,
+        blinkObserved: state.blinkDetected,
+      });
+      if (livenessMetrics.isBlinking) {
+        state.blinkDetected = true;
+      }
+    }
+
+    let isConfirmed = state.count >= targetFrames;
+    if (isConfirmed && this.requireLiveness && livenessMetrics && !livenessMetrics.isLive) {
+      // Hold confirmation if liveness threshold is not met
+      isConfirmed = false;
+    }
+
     const progress = Math.min(1.0, Math.round((state.count / targetFrames) * 100) / 100);
 
     const verifiedResult: MatchResult = {
@@ -101,6 +145,7 @@ export class ConsensusTracker {
       match: verifiedResult,
       framesObserved: state.count,
       targetFrames,
+      liveness: livenessMetrics,
     };
   }
 
