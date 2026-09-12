@@ -77,6 +77,7 @@ export default function StaffCRUDPage() {
 
   const [loading, setLoading] = useState(true);
   const [staffList, setStaffList] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
   
   // Add Staff Modal states
   const [openAddModal, setOpenAddModal] = useState(false);
@@ -104,16 +105,17 @@ export default function StaffCRUDPage() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('users')
-        .select('*, branches(name)')
-        .eq('gym_id', user.gymId)
-        .order('role', { ascending: true });
-
-      if (error) throw error;
-      setStaffList(data || []);
+      setError(null);
+      const res = await fetchWithAuth('/api/staff');
+      if (!res.ok) {
+        const result = await res.json().catch(() => ({}));
+        throw new Error(result.error || 'Failed to load staff list');
+      }
+      const result = await res.json();
+      setStaffList(result.staff || []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -154,28 +156,14 @@ export default function StaffCRUDPage() {
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !loginId.trim() || !password.trim() || !role) {
-      toast.error('Please fill in all fields');
+    if (!name.trim() || !loginId.trim() || !password.trim() || !role) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
     try {
       setAdding(true);
 
-      // 1. Check if loginId is already taken
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('login_id', loginId.trim())
-        .limit(1);
-
-      if (existingUser && existingUser.length > 0) {
-        throw new Error('This Login ID is already taken. Please choose a different one.');
-      }
-
-      // 2. Create auth user in Supabase (Next.js route handles auth signup securely via API key,
-      // but for client testing, we call the signUp flow or API call).
-      // We'll call a dedicated Next.js API route that handles creating auth user bypass
       const res = await fetchWithAuth('/api/staff/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,7 +171,7 @@ export default function StaffCRUDPage() {
           gymId: user?.gymId,
           branchId: branchId || undefined,
           name: name.trim(),
-          email: email.trim(),
+          email: email.trim() || undefined,
           phone: phone.trim(),
           loginId: loginId.trim(),
           password: password,
@@ -233,13 +221,17 @@ export default function StaffCRUDPage() {
     try {
       setSavingPerms(true);
 
-      const { error } = await supabase
-        .from('users')
-        .update({ permissions: selectedPermissions })
-        .eq('id', selectedStaffId)
-        .eq('gym_id', user?.gymId);
+      const res = await fetchWithAuth('/api/staff', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedStaffId,
+          permissions: selectedPermissions,
+        }),
+      });
 
-      if (error) throw error;
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to save staff permissions');
 
       toast.success('Staff permissions updated successfully!');
       setOpenPermsModal(false);
@@ -260,15 +252,19 @@ export default function StaffCRUDPage() {
     if (!confirm(`Are you sure you want to ${currentVal ? 'deactivate' : 'activate'} staff user: ${name}?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ is_active: !currentVal })
-        .eq('id', id)
-        .eq('gym_id', user?.gymId);
+      const res = await fetchWithAuth('/api/staff', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          is_active: !currentVal,
+        }),
+      });
 
-      if (error) throw error;
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to update staff status');
+
       toast.success(currentVal ? 'Staff deactivated' : 'Staff activated');
-      
       setStaffList(prev => prev.map(s => s.id === id ? { ...s, is_active: !currentVal } : s));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';

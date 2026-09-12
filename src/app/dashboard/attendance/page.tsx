@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranch } from '@/hooks/useBranch';
 import type { Member, Attendance } from '@/types/database';
-import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace, Fingerprint } from 'lucide-react';
+import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace, Fingerprint, FileSpreadsheet } from 'lucide-react';
+import { exportToExcel } from '@/lib/export/excel-export';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
 import { Input } from '@/components/ui/input';
@@ -239,6 +240,43 @@ export default function AttendancePage() {
       };
     }
   }, [user?.gymId, effectiveBranchId, loadAbsentees]);
+
+  const handleExportAttendance = () => {
+    if (todayLogs.length === 0) {
+      toast.warning('No attendance records logged today yet');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const logData = todayLogs.map(log => ({
+      'Member Code': log.members?.member_code || '-',
+      'Member Name': log.member_name || log.members?.name || 'Member',
+      'Check-in Time': log.check_in_time ? new Date(log.check_in_time).toLocaleTimeString('en-IN') : '-',
+      'Date': log.date || today,
+      'Method': log.method === 'face_recognition' ? 'Face ID' : log.method === 'fingerprint' ? 'Fingerprint' : log.method === 'qr_scan' ? 'QR Code' : 'Manual',
+      'Branch': branches.find(b => b.id === log.branch_id)?.name || 'Main Branch',
+      'Notes': log.notes || '',
+    }));
+
+    const summaryData = [
+      { 'Metric': 'Total Check-ins Today', 'Value': todayLogs.length },
+      { 'Metric': 'Face ID Check-ins', 'Value': todayLogs.filter(l => l.method === 'face_recognition').length },
+      { 'Metric': 'Fingerprint Check-ins', 'Value': todayLogs.filter(l => l.method === 'fingerprint').length },
+      { 'Metric': 'QR Code Check-ins', 'Value': todayLogs.filter(l => l.method === 'qr_scan').length },
+      { 'Metric': 'Manual Check-ins', 'Value': todayLogs.filter(l => l.method === 'manual').length },
+      { 'Metric': 'Report Date', 'Value': today },
+    ];
+
+    exportToExcel({
+      filename: `attendance_logs_${today}.xlsx`,
+      sheets: [
+        { sheetName: 'Today Check-ins', data: logData },
+        { sheetName: 'Attendance Summary', data: summaryData },
+      ],
+    });
+
+    toast.success(`Exported ${todayLogs.length} attendance records`);
+  };
 
   const handleCheckIn = async (member: Member) => {
     if (!user?.gymId) return;
@@ -597,6 +635,16 @@ export default function AttendancePage() {
           <p className="text-zinc-500 mt-1">Search members or scan QR codes to log attendance.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportAttendance}
+            disabled={todayLogs.length === 0}
+            className="gap-1.5 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+            Export Excel
+          </Button>
           <Link href="/dashboard/attendance/face-kiosk">
             <Button className="gap-2 shadow-xl bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:via-indigo-500 hover:to-purple-500 text-white font-semibold border-0">
               <div className="flex items-center -space-x-1">

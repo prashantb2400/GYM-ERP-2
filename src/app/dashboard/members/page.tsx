@@ -20,6 +20,8 @@ import {
   Fingerprint,
   Loader2,
   Download,
+  FileSpreadsheet,
+  ChevronDown,
   MessageCircle,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -35,6 +37,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials, formatDate, formatPhone } from '@/lib/utils/format';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { exportToExcel, exportToCSV } from '@/lib/export/excel-export';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { QuickAddMember } from '@/components/shared/QuickAddMember';
@@ -185,15 +194,15 @@ export default function MembersListPage() {
     }
   };
 
-  const handleExportCSV = async () => {
+  const handleExport = async (format: 'xlsx' | 'csv' = 'xlsx') => {
     if (!user?.gymId) return;
-    
+
     try {
-      toast.info('Preparing export...');
-      
+      toast.info(`Preparing ${format.toUpperCase()} export...`);
+
       let query = supabase
         .from('members')
-        .select('member_code, name, phone, email, status, plan_end_date, admission_date, total_due, plans(name)')
+        .select('member_code, name, phone, email, gender, blood_group, status, plan_end_date, admission_date, total_due, total_paid, attendance_count, last_attendance, face_enrolled, biometric_enrolled, plans(name), branches(name)')
         .eq('gym_id', user.gymId);
 
       if (user.role === 'trainer' && user.staffRecordId) {
@@ -201,42 +210,95 @@ export default function MembersListPage() {
       }
 
       const { data, error } = await query.order('name', { ascending: true });
-      
+
       if (error) throw error;
       if (!data || data.length === 0) {
         toast.warning('No members to export');
         return;
       }
-      
-      const headers = ['Member Code', 'Name', 'Phone', 'Email', 'Status', 'Plan', 'Plan End Date', 'Admission Date', 'Dues (₹)'];
-      const rows = data.map(m => [
-        m.member_code || '',
-        m.name || '',
-        m.phone || '',
-        m.email || '',
-        m.status || '',
-        (m.plans as any)?.name || '',
-        m.plan_end_date || '',
-        m.admission_date || '',
-        m.total_due || 0,
-      ]);
-      
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      ].join('\\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `members_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      toast.success(`Exported ${data.length} members`);
+
+      const today = new Date().toISOString().split('T')[0];
+
+      if (format === 'xlsx') {
+        const totalMembers = data.length;
+        const activeMembers = data.filter(m => m.status === 'active').length;
+        const expiredMembers = data.filter(m => m.status === 'expired').length;
+        const totalDues = data.reduce((sum, m) => sum + (Number(m.total_due) || 0), 0);
+        const totalPaid = data.reduce((sum, m) => sum + (Number(m.total_paid) || 0), 0);
+        const faceEnrolled = data.filter(m => m.face_enrolled).length;
+        const fingerEnrolled = data.filter(m => m.biometric_enrolled).length;
+
+        const directoryData = data.map(m => ({
+          'Member Code': m.member_code || '',
+          'Full Name': m.name || '',
+          'Mobile Number': m.phone || '',
+          'Email': m.email || '',
+          'Gender': m.gender ? (m.gender.charAt(0).toUpperCase() + m.gender.slice(1)) : 'Not Specified',
+          'Blood Group': m.blood_group || '-',
+          'Plan Name': (m.plans as any)?.name || 'No Plan',
+          'Status': (m.status || 'active').toUpperCase(),
+          'Admission Date': m.admission_date || '-',
+          'Plan End Date': m.plan_end_date || '-',
+          'Total Dues (₹)': Number(m.total_due) || 0,
+          'Total Paid (₹)': Number(m.total_paid) || 0,
+          'Attendance Count': m.attendance_count || 0,
+          'Last Attendance': m.last_attendance ? new Date(m.last_attendance).toLocaleDateString('en-IN') : '-',
+          'Face ID': m.face_enrolled ? 'Enrolled' : 'Not Enrolled',
+          'Fingerprint': m.biometric_enrolled ? 'Enrolled' : 'Not Enrolled',
+          'Branch': (m.branches as any)?.name || 'Main Branch',
+        }));
+
+        const summaryData = [
+          { 'Metric': 'Total Members', 'Value': totalMembers },
+          { 'Metric': 'Active Members', 'Value': activeMembers },
+          { 'Metric': 'Expired Members', 'Value': expiredMembers },
+          { 'Metric': 'Total Outstanding Dues', 'Value': `₹${totalDues.toLocaleString('en-IN')}` },
+          { 'Metric': 'Total Revenue Collected', 'Value': `₹${totalPaid.toLocaleString('en-IN')}` },
+          { 'Metric': 'Face ID Enrolled Members', 'Value': `${faceEnrolled} (${Math.round((faceEnrolled/totalMembers)*100)}%)` },
+          { 'Metric': 'Fingerprint Enrolled Members', 'Value': `${fingerEnrolled} (${Math.round((fingerEnrolled/totalMembers)*100)}%)` },
+          { 'Metric': 'Report Generated At', 'Value': new Date().toLocaleString('en-IN') },
+        ];
+
+        exportToExcel({
+          filename: `members_directory_${today}.xlsx`,
+          sheets: [
+            { sheetName: 'Members Directory', data: directoryData },
+            { sheetName: 'Executive Summary', data: summaryData },
+          ],
+        });
+      } else {
+        const headers = [
+          'Member Code', 'Full Name', 'Phone', 'Email', 'Gender', 'Blood Group',
+          'Plan', 'Status', 'Admission Date', 'Expiry Date', 'Total Dues (₹)', 'Total Paid (₹)',
+          'Attendance Count', 'Face ID', 'Fingerprint', 'Branch'
+        ];
+        const rows = data.map(m => [
+          m.member_code || '',
+          m.name || '',
+          m.phone || '',
+          m.email || '',
+          m.gender || '',
+          m.blood_group || '',
+          (m.plans as any)?.name || '',
+          m.status || '',
+          m.admission_date || '',
+          m.plan_end_date || '',
+          m.total_due || 0,
+          m.total_paid || 0,
+          m.attendance_count || 0,
+          m.face_enrolled ? 'Yes' : 'No',
+          m.biometric_enrolled ? 'Yes' : 'No',
+          (m.branches as any)?.name || '',
+        ]);
+
+        exportToCSV({
+          filename: `members_${today}.csv`,
+          headers,
+          rows,
+        });
+      }
+
+      toast.success(`Exported ${data.length} members successfully`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       toast.error('Export failed: ' + msg);
@@ -295,10 +357,25 @@ export default function MembersListPage() {
         </div>
         {can('members.add') && (
           <div className="flex gap-2 items-center">
-            <Button variant="outline" size="sm" onClick={handleExportCSV} className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 h-9">
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 h-9 gap-1.5">
+                  <Download className="h-4 w-4" />
+                  Export
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                <DropdownMenuItem onClick={() => handleExport('xlsx')} className="cursor-pointer gap-2 hover:bg-zinc-800 text-xs">
+                  <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+                  <span>Excel Workbook (.xlsx)</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('csv')} className="cursor-pointer gap-2 hover:bg-zinc-800 text-xs">
+                  <Download className="h-4 w-4 text-blue-400" />
+                  <span>CSV Spreadsheet (.csv)</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button 
               variant="outline" 
               className="border-purple-600/50 text-purple-400 hover:bg-purple-600/10 gap-2 font-medium"

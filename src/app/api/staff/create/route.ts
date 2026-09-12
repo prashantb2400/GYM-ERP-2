@@ -10,15 +10,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
     }
     
-    // Verify caller is an owner
+    // Verify caller is an owner (check both users table and gyms table)
     const { data: callerData } = await supabaseAdmin
       .from('users')
       .select('id, gym_id, role')
       .eq('auth_id', user.id)
-      .single();
+      .maybeSingle();
+
+    let gymId = callerData?.gym_id;
+    let isOwner = callerData?.role === 'owner';
+    const createdBy = callerData?.id || null;
+
+    if (!isOwner || !gymId) {
+      const { data: ownedGym } = await supabaseAdmin
+        .from('gyms')
+        .select('id')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+
+      if (ownedGym) {
+        gymId = ownedGym.id;
+        isOwner = true;
+      }
+    }
     
-    if (!callerData || callerData.role !== 'owner') {
-      return NextResponse.json({ error: 'Only gym owners can create staff' }, { status: 403 });
+    if (!isOwner || !gymId) {
+      return NextResponse.json({ error: 'Only gym owners can create staff accounts' }, { status: 403 });
     }
     
     const {
@@ -31,16 +48,28 @@ export async function POST(request: Request) {
       permissions,
       branchId,
     } = await request.json();
-    
-    const gymId = callerData.gym_id; // Server-side resolved
-    const createdBy = callerData.id; // Track who created (users.id FK)
 
-    if (!name || !email || !loginId || !password || !role) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!name?.trim() || !loginId?.trim() || !password?.trim() || !role) {
+      return NextResponse.json({ error: 'Missing required fields: Full Name, Login ID, Password, and Role are required' }, { status: 400 });
+    }
+
+    if (password.trim().length < 6) {
+      return NextResponse.json({ error: 'Password must be at least 6 characters long' }, { status: 400 });
     }
 
     if (!['receptionist', 'trainer'].includes(role)) {
       return NextResponse.json({ error: 'Invalid staff role. Allowed: receptionist, trainer' }, { status: 400 });
+    }
+
+    // Check if Login ID is already taken
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('login_id', loginId.trim())
+      .maybeSingle();
+
+    if (existingUser) {
+      return NextResponse.json({ error: `Login ID "${loginId.trim()}" is already taken. Please choose another.` }, { status: 409 });
     }
 
     // Resolve branch assignment
@@ -51,13 +80,12 @@ export async function POST(request: Request) {
         .select('id')
         .eq('id', branchId)
         .eq('gym_id', gymId)
-        .single();
+        .maybeSingle();
 
-      if (!branch) {
-        return NextResponse.json({ error: 'Invalid branch selected for this gym' }, { status: 400 });
-      }
-      resolvedBranchId = branch.id;
-    } else {
+      resolvedBranchId = branch?.id || null;
+    }
+
+    if (!resolvedBranchId) {
       // Fallback to gym's primary branch
       const { data: primaryBranch } = await supabaseAdmin
         .from('branches')
@@ -65,46 +93,72 @@ export async function POST(request: Request) {
         .eq('gym_id', gymId)
         .order('created_at', { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle();
       resolvedBranchId = primaryBranch?.id || null;
     }
 
-    // 1. Create the user in Supabase Auth using the admin client
-    const { data: authData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
+    // Resolve staff email (fallback to internal deterministic email if duplicate or blank)
+    let staffEmail = email?.trim() || `staff_${loginId.trim().toLowerCase()}_${gymId.slice(0, 8)}@gymerp.internal`;
+    let authData: any = null;
+
+    const authRes = await supabaseAdmin.auth.admin.createUser({
+      email: staffEmail,
+      password: password.trim(),
       email_confirm: true,
-      user_metadata: { full_name: name },
+      user_metadata: { full_name: name.trim() },
     });
 
-    if (createAuthError || !authData.user) {
-      throw new Error(createAuthError?.message || 'Failed to create auth user');
+    if (authRes.error) {
+      if (authRes.error.message?.toLowerCase().includes('already') || authRes.error.message?.toLowerCase().includes('registered')) {
+        // Fallback to timestamped unique internal email
+        staffEmail = `staff_${loginId.trim().toLowerCase()}_${Date.now()}@gymerp.internal`;
+        const retryAuth = await supabaseAdmin.auth.admin.createUser({
+          email: staffEmail,
+          password: password.trim(),
+          email_confirm: true,
+          user_metadata: { full_name: name.trim() },
+        });
+        if (retryAuth.error) throw retryAuth.error;
+        authData = retryAuth.data;
+      } else {
+        throw new Error(authRes.error.message || 'Failed to create auth user');
+      }
+    } else {
+      authData = authRes.data;
     }
 
-    // 2. Insert the corresponding record in the public users table
-    const { error: dbError } = await supabaseAdmin.from('users').insert({
-      auth_id: authData.user.id,
-      gym_id: gymId,
-      branch_id: resolvedBranchId,
-      name,
-      email,
-      phone: phone || null,
-      login_id: loginId,
-      role,
-      permissions,
-      created_by: createdBy || null,
-      is_active: true,
-    });
+    if (!authData?.user) {
+      throw new Error('Failed to generate staff authentication credentials');
+    }
+
+    // Insert user record into public.users
+    const { data: newDbUser, error: dbError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        auth_id: authData.user.id,
+        gym_id: gymId,
+        branch_id: resolvedBranchId,
+        name: name.trim(),
+        email: staffEmail,
+        phone: phone?.trim() || null,
+        login_id: loginId.trim(),
+        role,
+        permissions: permissions || [],
+        created_by: createdBy || null,
+        is_active: true,
+      })
+      .select('*')
+      .single();
 
     if (dbError) {
-      // If db insert fails, clean up the auth user we just created to prevent orphaned accounts
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      // Clean up orphaned auth user on database failure
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id).catch(() => null);
       throw dbError;
     }
 
-    return NextResponse.json({ success: true, userId: authData.user.id });
+    return NextResponse.json({ success: true, user: newDbUser });
   } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+    const msg = err instanceof Error ? err.message : 'An unknown error occurred';
     console.error('Error creating staff account:', err);
     return NextResponse.json({ error: msg || 'Internal server error' }, { status: 500 });
   }

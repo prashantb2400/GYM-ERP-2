@@ -16,7 +16,9 @@ import {
   Save,
   ArrowRight,
   MessageCircle,
+  FileSpreadsheet,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/export/excel-export';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -145,6 +147,43 @@ export default function DueCollectionPage() {
     } finally {
       setBulkSending(false);
     }
+  };
+
+  const handleExportDues = () => {
+    if (duesList.length === 0) {
+      toast.warning('No dues to export');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const totalOutstanding = duesList.reduce((sum, m) => sum + (Number(m.total_due) || 0), 0);
+
+    const duesData = duesList.map(m => ({
+      'Member Code': m.member_code || '',
+      'Member Name': m.name || '',
+      'Mobile Number': m.phone || '',
+      'Email': m.email || '',
+      'Plan': (m.plans as any)?.name || 'No Plan',
+      'Plan Expiry': m.plan_end_date || '-',
+      'Outstanding Due (₹)': Number(m.total_due) || 0,
+      'Last Payment Date': m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('en-IN') : '-',
+    }));
+
+    const summaryData = [
+      { 'Metric': 'Members with Dues', 'Value': duesList.length },
+      { 'Metric': 'Total Outstanding Amount', 'Value': `₹${totalOutstanding.toLocaleString('en-IN')}` },
+      { 'Metric': 'Report Generated At', 'Value': new Date().toLocaleString('en-IN') },
+    ];
+
+    exportToExcel({
+      filename: `outstanding_dues_${today}.xlsx`,
+      sheets: [
+        { sheetName: 'Dues Register', data: duesData },
+        { sheetName: 'Dues Summary', data: summaryData },
+      ],
+    });
+
+    toast.success(`Exported ${duesList.length} due records to Excel`);
   };
 
   const handleSingleReminder = async (member: any) => {
@@ -318,6 +357,16 @@ export default function DueCollectionPage() {
           <p className="text-zinc-500 text-xs mt-1">Track pending member fees, send warnings, and record collections.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportDues}
+            disabled={duesList.length === 0}
+            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 gap-1.5"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+            Export Excel
+          </Button>
           <Button
             onClick={handleBulkReminder}
             disabled={bulkSending || duesList.length === 0}

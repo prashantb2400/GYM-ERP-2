@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
@@ -15,6 +15,13 @@ import {
   Eye,
   Trash,
   Search,
+  Sparkles,
+  Download,
+  Flame,
+  Activity,
+  Calendar,
+  Clock,
+  Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,8 +30,244 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExerciseDay, Exercise } from '@/types/database';
+
+// -------------------------------------------------------------
+// 1-Click Pre-Built Workout Split Templates
+// -------------------------------------------------------------
+interface WorkoutTemplate {
+  id: string;
+  name: string;
+  description: string;
+  splitBadge: string;
+  days: ExerciseDay[];
+}
+
+const PRESET_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
+  {
+    id: 'ppl-3day',
+    name: 'Push - Pull - Legs (3-Day Split)',
+    description: 'Gold standard compound split balancing chest, back, shoulders, arms, and leg development with maximum recovery.',
+    splitBadge: '3 Days / Wk',
+    days: [
+      {
+        day: 'Monday: Push (Chest, Delts & Triceps)',
+        exercises: [
+          { name: 'Barbell Flat Bench Press', sets: 4, reps: '8-10', rest_seconds: 90, notes: 'Touch chest, explosive upward push' },
+          { name: 'Incline Dumbbell Press', sets: 3, reps: '10-12', rest_seconds: 75, notes: '30 degree bench angle, deep chest stretch' },
+          { name: 'Dumbbell Lateral Raises', sets: 4, reps: '12-15', rest_seconds: 45, notes: 'Lead with elbows, strict controlled tempo' },
+          { name: 'Cable Rope Tricep Pushdown', sets: 3, reps: '12-15', rest_seconds: 45, notes: 'Spread rope at the bottom lockout' },
+          { name: 'Overhead Dumbbell Extension', sets: 3, reps: '10-12', rest_seconds: 60, notes: 'Deep stretch behind head for long head triceps' },
+        ],
+      },
+      {
+        day: 'Wednesday: Pull (Back, Rear Delts & Biceps)',
+        exercises: [
+          { name: 'Conventional Barbell Deadlift', sets: 4, reps: '5-6', rest_seconds: 120, notes: 'Neutral spine, tight lats, drive through floor' },
+          { name: 'Lat Pulldown (Wide Grip)', sets: 4, reps: '8-10', rest_seconds: 75, notes: 'Pull elbows down to ribs, squeeze scapula' },
+          { name: 'Seated Cable Row', sets: 3, reps: '10-12', rest_seconds: 60, notes: 'Maintain upright posture, full stretch' },
+          { name: 'Standing Barbell Bicep Curl', sets: 3, reps: '10-12', rest_seconds: 60, notes: 'Elbows pinned to sides, zero body swing' },
+          { name: 'Incline Dumbbell Hammer Curl', sets: 3, reps: '12-15', rest_seconds: 45, notes: 'Targets brachialis and forearm thickness' },
+        ],
+      },
+      {
+        day: 'Friday: Legs & Abs (Quads, Hamstrings & Calves)',
+        exercises: [
+          { name: 'Barbell Back Squat', sets: 4, reps: '8-10', rest_seconds: 120, notes: 'Hit depth below parallel, knees track toes' },
+          { name: 'Romanian Deadlift (RDL)', sets: 3, reps: '10-12', rest_seconds: 90, notes: 'Hinge back at hips, intense hamstring stretch' },
+          { name: 'Leg Press 45 Degree', sets: 3, reps: '12-15', rest_seconds: 75, notes: 'Full depth without lower back peeling up' },
+          { name: 'Standing Calf Raise', sets: 4, reps: '15-20', rest_seconds: 45, notes: 'Pause 2 seconds at the peak contraction' },
+          { name: 'Hanging Leg Raise', sets: 3, reps: '12-15', rest_seconds: 45, notes: 'Curl pelvis up towards chest, avoid swinging' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'bro-split-5day',
+    name: '5-Day Muscle Hypertrophy (Bro Split)',
+    description: 'High-volume single muscle group focus targeting maximum sarcoplasmic hypertrophy and muscle pump.',
+    splitBadge: '5 Days / Wk',
+    days: [
+      {
+        day: 'Monday: Chest Annihilation',
+        exercises: [
+          { name: 'Barbell Flat Bench Press', sets: 4, reps: '8-10', rest_seconds: 90, notes: 'Heavy working sets' },
+          { name: 'Incline Dumbbell Bench Press', sets: 4, reps: '10-12', rest_seconds: 75, notes: 'Focus on upper clavicular head' },
+          { name: 'Standing Cable Chest Flyes', sets: 3, reps: '12-15', rest_seconds: 60, notes: 'Continuous tension on chest' },
+          { name: 'Parallel Bar Dips / Pushups', sets: 3, reps: 'To Failure', rest_seconds: 60, notes: 'Lean forward for lower pecs' },
+        ],
+      },
+      {
+        day: 'Tuesday: Back & Traps Width',
+        exercises: [
+          { name: 'Barbell Deadlift', sets: 4, reps: '6-8', rest_seconds: 120, notes: 'Total posterior chain power' },
+          { name: 'Bent-Over Barbell Row', sets: 4, reps: '8-10', rest_seconds: 90, notes: 'Torso at 45 degrees, pull to navel' },
+          { name: 'Lat Pulldown (Close Grip V-Bar)', sets: 3, reps: '10-12', rest_seconds: 60, notes: 'Lower lat focus' },
+          { name: 'Dumbbell Shrugs', sets: 4, reps: '15', rest_seconds: 45, notes: 'Hold squeeze at top for 2 seconds' },
+        ],
+      },
+      {
+        day: 'Wednesday: 3D Shoulders & Abs',
+        exercises: [
+          { name: 'Seated Dumbbell Overhead Press', sets: 4, reps: '8-10', rest_seconds: 90, notes: 'Full overhead extension' },
+          { name: 'Dumbbell Lateral Raise', sets: 4, reps: '12-15', rest_seconds: 45, notes: 'Side delt burn sets' },
+          { name: 'Rear Delt Face Pulls with Rope', sets: 4, reps: '15-20', rest_seconds: 45, notes: 'Pull to eyes, external rotation' },
+          { name: 'Cable Woodchoppers', sets: 3, reps: '15 / side', rest_seconds: 45, notes: 'Rotate through core' },
+        ],
+      },
+      {
+        day: 'Thursday: Wheels (Legs Quads & Hams)',
+        exercises: [
+          { name: 'Barbell Back Squat', sets: 4, reps: '8-10', rest_seconds: 120, notes: 'Heavy progressive overload' },
+          { name: 'Leg Extension Machine', sets: 4, reps: '12-15', rest_seconds: 60, notes: 'Squeeze quad teardrop at lockout' },
+          { name: 'Lying Hamstring Leg Curl', sets: 4, reps: '10-12', rest_seconds: 60, notes: 'Slow 3-second eccentric release' },
+          { name: 'Standing Calf Raise', sets: 4, reps: '15-20', rest_seconds: 45, notes: 'Full ankle stretch and contraction' },
+        ],
+      },
+      {
+        day: 'Friday: Arms Superset (Biceps & Triceps)',
+        exercises: [
+          { name: 'Barbell EZ-Bar Bicep Curl', sets: 4, reps: '10-12', rest_seconds: 60, notes: 'Strict form' },
+          { name: 'Close-Grip Bench Press', sets: 4, reps: '8-10', rest_seconds: 75, notes: 'Heavy tricep builder' },
+          { name: 'Incline Dumbbell Hammer Curl', sets: 3, reps: '12-15', rest_seconds: 45, notes: 'Forearms and brachialis' },
+          { name: 'Lying Skull Crushers', sets: 3, reps: '10-12', rest_seconds: 60, notes: 'Lower to hairline, press up' },
+          { name: 'Cable Triceps Rope Pushdown', sets: 3, reps: '15', rest_seconds: 45, notes: 'Finisher pump' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'upper-lower-4day',
+    name: 'Upper / Lower (4-Day Split)',
+    description: 'Optimal training frequency hitting every muscle group twice per week for strength and athletic conditioning.',
+    splitBadge: '4 Days / Wk',
+    days: [
+      {
+        day: 'Monday: Upper Power',
+        exercises: [
+          { name: 'Barbell Bench Press', sets: 4, reps: '6-8', rest_seconds: 120, notes: 'Heavy strength sets' },
+          { name: 'Bent-Over Barbell Row', sets: 4, reps: '6-8', rest_seconds: 120, notes: 'Explosive pull to chest' },
+          { name: 'Overhead Military Press', sets: 3, reps: '8-10', rest_seconds: 90, notes: 'Strict standing press' },
+          { name: 'Weighted Pull-ups / Lat Pulldown', sets: 3, reps: '8-10', rest_seconds: 90, notes: 'Full range of motion' },
+        ],
+      },
+      {
+        day: 'Tuesday: Lower Power',
+        exercises: [
+          { name: 'Barbell Back Squat', sets: 4, reps: '6-8', rest_seconds: 120, notes: 'Power squat form' },
+          { name: 'Romanian Deadlift (RDL)', sets: 4, reps: '8-10', rest_seconds: 90, notes: 'Hips back, hamstring stretch' },
+          { name: 'Bulgarian Split Squat', sets: 3, reps: '10 / leg', rest_seconds: 75, notes: 'Unilateral leg drive' },
+          { name: 'Standing Calf Raise', sets: 4, reps: '12-15', rest_seconds: 60, notes: 'Heavy calf overload' },
+        ],
+      },
+      {
+        day: 'Thursday: Upper Hypertrophy',
+        exercises: [
+          { name: 'Incline Dumbbell Press', sets: 4, reps: '10-12', rest_seconds: 75, notes: 'Upper chest focus' },
+          { name: 'Seated Cable Row', sets: 4, reps: '10-12', rest_seconds: 75, notes: 'Mid-back thickness' },
+          { name: 'Dumbbell Lateral Raise', sets: 4, reps: '12-15', rest_seconds: 45, notes: 'Side delt pump' },
+          { name: 'Incline Dumbbell Bicep Curl', sets: 3, reps: '12', rest_seconds: 60, notes: 'Full long head stretch' },
+          { name: 'Overhead Cable Triceps Extension', sets: 3, reps: '12-15', rest_seconds: 60, notes: 'Constant cable tension' },
+        ],
+      },
+      {
+        day: 'Friday: Lower Hypertrophy',
+        exercises: [
+          { name: 'Leg Press 45 Degree', sets: 4, reps: '12-15', rest_seconds: 90, notes: 'High volume quad burner' },
+          { name: 'Lying Hamstring Leg Curl', sets: 4, reps: '12', rest_seconds: 60, notes: 'Control the descent' },
+          { name: 'Walking Dumbbell Lunges', sets: 3, reps: '12 steps / leg', rest_seconds: 60, notes: 'Keep torso upright' },
+          { name: 'Hanging Knee Raises', sets: 3, reps: '15', rest_seconds: 45, notes: 'Core control' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'fullbody-3day',
+    name: 'Full Body Conditioning (3-Day Circuit)',
+    description: 'High-calorie burn total body workout perfect for fat loss, cardiovascular conditioning, and beginner trainees.',
+    splitBadge: '3 Days / Wk',
+    days: [
+      {
+        day: 'Monday: Full Body Circuit A',
+        exercises: [
+          { name: 'Dumbbell Goblet Squats', sets: 3, reps: '12-15', rest_seconds: 60, notes: 'Deep squat with elbows inside knees' },
+          { name: 'Dumbbell Push Press', sets: 3, reps: '10-12', rest_seconds: 60, notes: 'Slight leg dip and drive overhead' },
+          { name: 'Dumbbell Bent-Over Row', sets: 3, reps: '12', rest_seconds: 60, notes: 'Flat back, squeeze upper back' },
+          { name: 'Forearm Plank Hold', sets: 3, reps: '45-60s', rest_seconds: 45, notes: 'Maintain tight abdominal brace' },
+        ],
+      },
+      {
+        day: 'Wednesday: Full Body Circuit B',
+        exercises: [
+          { name: 'Kettlebell / Dumbbell Deadlift', sets: 3, reps: '12', rest_seconds: 60, notes: 'Drive through heels, snap hips' },
+          { name: 'Standard Push-ups', sets: 3, reps: '15-20', rest_seconds: 60, notes: 'Chest touches floor every rep' },
+          { name: 'Lat Pulldown Machine', sets: 3, reps: '12-15', rest_seconds: 60, notes: 'Smooth controlled tempo' },
+          { name: 'Mountain Climbers', sets: 3, reps: '30s fast', rest_seconds: 45, notes: 'High knee drive for conditioning' },
+        ],
+      },
+      {
+        day: 'Friday: Full Body Circuit C',
+        exercises: [
+          { name: 'Walking Dumbbell Lunges', sets: 3, reps: '10 / leg', rest_seconds: 60, notes: 'Knee gently touches turf' },
+          { name: 'Flat Dumbbell Chest Press', sets: 3, reps: '12', rest_seconds: 60, notes: 'Clean press and squeeze' },
+          { name: 'Seated Cable Row', sets: 3, reps: '12', rest_seconds: 60, notes: 'Scapular retraction' },
+          { name: 'Russian Twists', sets: 3, reps: '20 / side', rest_seconds: 45, notes: 'Rotate shoulders side to side' },
+        ],
+      },
+    ],
+  },
+];
+
+// -------------------------------------------------------------
+// Quick Muscle-Group Exercise Library Chips
+// -------------------------------------------------------------
+interface QuickExercise {
+  name: string;
+  sets: number;
+  reps: string;
+  rest: number;
+  notes: string;
+  category: 'Chest' | 'Back' | 'Legs' | 'Shoulders' | 'Arms' | 'Core';
+}
+
+const QUICK_EXERCISES: QuickExercise[] = [
+  // Chest
+  { name: 'Barbell Flat Bench Press', sets: 4, reps: '8-10', rest: 90, notes: 'Touch chest, drive up', category: 'Chest' },
+  { name: 'Incline Dumbbell Press', sets: 3, reps: '10-12', rest: 75, notes: '30 deg incline, upper chest', category: 'Chest' },
+  { name: 'Cable Chest Flyes', sets: 3, reps: '12-15', rest: 60, notes: 'Peak contraction squeeze', category: 'Chest' },
+  { name: 'Parallel Dips / Pushups', sets: 3, reps: '12-15', rest: 60, notes: 'Lean forward for chest focus', category: 'Chest' },
+
+  // Back
+  { name: 'Conventional Deadlift', sets: 4, reps: '5-6', rest: 120, notes: 'Neutral spine, leg drive', category: 'Back' },
+  { name: 'Lat Pulldown Wide Grip', sets: 4, reps: '8-10', rest: 75, notes: 'Pull elbows to ribs', category: 'Back' },
+  { name: 'Bent-Over Barbell Row', sets: 4, reps: '8-10', rest: 90, notes: 'Torso 45 deg, pull to waist', category: 'Back' },
+  { name: 'Seated Cable Row', sets: 3, reps: '10-12', rest: 60, notes: 'Full scapular squeeze', category: 'Back' },
+
+  // Legs
+  { name: 'Barbell Back Squat', sets: 4, reps: '8-10', rest: 120, notes: 'Below parallel depth', category: 'Legs' },
+  { name: 'Romanian Deadlift (RDL)', sets: 3, reps: '10-12', rest: 90, notes: 'Hips back, hamstring stretch', category: 'Legs' },
+  { name: 'Leg Press 45 Degree', sets: 3, reps: '12-15', rest: 75, notes: 'Full range of motion', category: 'Legs' },
+  { name: 'Lying Hamstring Leg Curl', sets: 3, reps: '12', rest: 60, notes: 'Slow controlled negative', category: 'Legs' },
+  { name: 'Standing Calf Raise', sets: 4, reps: '15-20', rest: 45, notes: '2s pause at top contraction', category: 'Legs' },
+
+  // Shoulders
+  { name: 'Overhead Barbell Military Press', sets: 4, reps: '8-10', rest: 90, notes: 'Lock out overhead', category: 'Shoulders' },
+  { name: 'Dumbbell Lateral Raise', sets: 4, reps: '12-15', rest: 45, notes: 'Lead with elbows', category: 'Shoulders' },
+  { name: 'Rear Delt Face Pulls', sets: 3, reps: '15-20', rest: 45, notes: 'External rotation at eyes', category: 'Shoulders' },
+  { name: 'Dumbbell Front Raise', sets: 3, reps: '12-15', rest: 45, notes: 'Raise to chin level', category: 'Shoulders' },
+
+  // Arms
+  { name: 'Barbell Bicep Curl', sets: 3, reps: '10-12', rest: 60, notes: 'Elbows pinned to sides', category: 'Arms' },
+  { name: 'Dumbbell Hammer Curl', sets: 3, reps: '12-15', rest: 45, notes: 'Forearms & brachialis', category: 'Arms' },
+  { name: 'Cable Rope Tricep Pushdown', sets: 3, reps: '12-15', rest: 45, notes: 'Spread rope at lockout', category: 'Arms' },
+  { name: 'Skull Crushers (EZ Bar)', sets: 3, reps: '10-12', rest: 60, notes: 'Lower to forehead', category: 'Arms' },
+
+  // Core
+  { name: 'Hanging Leg Raises', sets: 3, reps: '12-15', rest: 45, notes: 'Curl pelvis up', category: 'Core' },
+  { name: 'Forearm Plank Hold', sets: 3, reps: '45-60s', rest: 45, notes: 'Tight glutes & abs', category: 'Core' },
+  { name: 'Cable Woodchoppers', sets: 3, reps: '15 / side', rest: 45, notes: 'Rotational oblique power', category: 'Core' },
+  { name: 'Ab Roller Wheel', sets: 3, reps: '12-15', rest: 45, notes: 'Controlled rollout', category: 'Core' },
+];
 
 export default function ExercisePlansPage() {
   const supabase = createClient();
@@ -35,6 +278,7 @@ export default function ExercisePlansPage() {
   const [exercises, setExercises] = useState<any[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Assignment Modal states
   const [openAssignModal, setOpenAssignModal] = useState(false);
@@ -44,24 +288,25 @@ export default function ExercisePlansPage() {
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [memberSearch, setMemberSearch] = useState('');
 
-  // Form states (Workout details)
+  // Builder Form states
   const [workoutId, setWorkoutId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isTemplate, setIsTemplate] = useState(true);
-  
-  // Days array
   const [days, setDays] = useState<ExerciseDay[]>([]);
 
-  // Current day builder states
-  const [currentDayName, setCurrentDayName] = useState('');
-  const [currentExercises, setCurrentExercises] = useState<Exercise[]>([]);
-  
-  const [exName, setExName] = useState('');
-  const [exSets, setExSets] = useState('');
-  const [exReps, setExReps] = useState('');
-  const [exRest, setExRest] = useState('');
-  const [exNotes, setExNotes] = useState('');
+  // Active workout day being composed
+  const [activeDayIndex, setActiveDayIndex] = useState<number>(0);
+
+  // Selected muscle group filter in quick chips
+  const [selectedMuscleFilter, setSelectedMuscleFilter] = useState<string>('All');
+
+  // Manual custom exercise adder inputs
+  const [manualExName, setManualExName] = useState('');
+  const [manualExSets, setManualExSets] = useState('');
+  const [manualExReps, setManualExReps] = useState('');
+  const [manualExRest, setManualExRest] = useState('');
+  const [manualExNotes, setManualExNotes] = useState('');
 
   const fetchExercises = async () => {
     if (!user?.gymId) {
@@ -93,7 +338,6 @@ export default function ExercisePlansPage() {
 
   useEffect(() => {
     if (!user?.gymId) return;
-    // Load members for assignment dropdown
     supabase
       .from('members')
       .select('id, name, member_code')
@@ -104,6 +348,21 @@ export default function ExercisePlansPage() {
       });
   }, [user?.gymId]);
 
+  // Total exercises count across all days
+  const workoutSummary = useMemo(() => {
+    let totalExCount = 0;
+    days.forEach(d => {
+      if (Array.isArray(d.exercises)) {
+        totalExCount += d.exercises.length;
+      }
+    });
+
+    return {
+      totalDays: days.length,
+      totalExercises: totalExCount,
+    };
+  }, [days]);
+
   const handleOpenAddModal = () => {
     if (!can('exercise.manage')) {
       toast.error('You do not have permission to manage exercises');
@@ -113,8 +372,22 @@ export default function ExercisePlansPage() {
     setName('');
     setDescription('');
     setIsTemplate(true);
-    setDays([]);
-    resetDayBuilder();
+    setDays([
+      {
+        day: 'Monday: Push (Chest & Triceps)',
+        exercises: [],
+      },
+      {
+        day: 'Wednesday: Pull (Back & Biceps)',
+        exercises: [],
+      },
+      {
+        day: 'Friday: Legs & Core',
+        exercises: [],
+      },
+    ]);
+    setActiveDayIndex(0);
+    resetManualInputs();
     setOpenModal(true);
   };
 
@@ -128,76 +401,146 @@ export default function ExercisePlansPage() {
     setDescription(workout.description || '');
     setIsTemplate(workout.is_template);
     setDays(workout.days || []);
-    resetDayBuilder();
+    setActiveDayIndex(0);
+    resetManualInputs();
     setOpenModal(true);
   };
 
-  const handleOpenAssignModal = (workout: any) => {
-    if (!can('exercise.manage')) {
-      toast.error('You do not have permission to assign workouts');
+  const handleApplyTemplate = (template: WorkoutTemplate) => {
+    setName(template.name);
+    setDescription(template.description);
+    setDays(JSON.parse(JSON.stringify(template.days)));
+    setActiveDayIndex(0);
+    toast.success(`Loaded workout split: "${template.name}"`);
+  };
+
+  const resetManualInputs = () => {
+    setManualExName('');
+    setManualExSets('');
+    setManualExReps('');
+    setManualExRest('');
+    setManualExNotes('');
+  };
+
+  // Add quick chip exercise to the currently active day
+  const handleAddQuickExercise = (ex: QuickExercise) => {
+    if (days.length === 0) {
+      toast.error('Please add a workout day first');
       return;
     }
-    setSelectedWorkout(workout);
-    setSelectedMemberIds([]);
-    setMemberSearch('');
-    setOpenAssignModal(true);
+
+    const targetIdx = activeDayIndex >= 0 && activeDayIndex < days.length ? activeDayIndex : 0;
+    const targetDay = days[targetIdx];
+
+    const newEx: Exercise = {
+      name: ex.name,
+      sets: ex.sets,
+      reps: ex.reps,
+      rest_seconds: ex.rest,
+      notes: ex.notes,
+    };
+
+    const updatedDays = [...days];
+    updatedDays[targetIdx] = {
+      ...targetDay,
+      exercises: [...(targetDay.exercises || []), newEx],
+    };
+
+    setDays(updatedDays);
+    toast.success(`Added ${ex.name} to ${targetDay.day}`);
   };
 
-  const resetDayBuilder = () => {
-    setCurrentDayName('');
-    setCurrentExercises([]);
-    resetExerciseBuilder();
+  // Add custom typed exercise
+  const handleAddManualExercise = () => {
+    if (!manualExName.trim()) {
+      toast.error('Please enter exercise name');
+      return;
+    }
+
+    if (days.length === 0) {
+      toast.error('Please add a workout day first');
+      return;
+    }
+
+    const targetIdx = activeDayIndex >= 0 && activeDayIndex < days.length ? activeDayIndex : 0;
+    const targetDay = days[targetIdx];
+
+    const newEx: Exercise = {
+      name: manualExName.trim(),
+      sets: parseInt(manualExSets) || 3,
+      reps: manualExReps.trim() || '10-12',
+      rest_seconds: parseInt(manualExRest) || 60,
+      notes: manualExNotes.trim() || undefined,
+    };
+
+    const updatedDays = [...days];
+    updatedDays[targetIdx] = {
+      ...targetDay,
+      exercises: [...(targetDay.exercises || []), newEx],
+    };
+
+    setDays(updatedDays);
+    resetManualInputs();
+    toast.success(`Added "${newEx.name}" to ${targetDay.day}`);
   };
 
-  const resetExerciseBuilder = () => {
-    setExName('');
-    setExSets('');
-    setExReps('');
-    setExRest('');
-    setExNotes('');
+  // Inline update an exercise property
+  const handleUpdateExercise = (dayIdx: number, exIdx: number, field: keyof Exercise, val: any) => {
+    const updated = [...days];
+    const exercisesList = [...updated[dayIdx].exercises];
+    exercisesList[exIdx] = {
+      ...exercisesList[exIdx],
+      [field]: field === 'sets' || field === 'rest_seconds' ? parseInt(val) || 0 : val,
+    };
+    updated[dayIdx].exercises = exercisesList;
+    setDays(updated);
   };
 
-  const handleAddExerciseToDay = () => {
-    if (exName.trim() && exSets && exReps) {
-      const newEx: Exercise = {
-        name: exName.trim(),
-        sets: parseInt(exSets) || 3,
-        reps: exReps.trim(),
-        rest_seconds: parseInt(exRest) || 60,
-        notes: exNotes.trim() || undefined,
-      };
-      setCurrentExercises([...currentExercises, newEx]);
-      resetExerciseBuilder();
-    } else {
-      toast.error('Please specify exercise name, sets, and reps');
+  // Remove exercise
+  const handleRemoveExercise = (dayIdx: number, exIdx: number) => {
+    const updated = [...days];
+    updated[dayIdx].exercises = updated[dayIdx].exercises.filter((_, i) => i !== exIdx);
+    setDays(updated);
+  };
+
+  // Add a new workout day
+  const handleAddDayCard = (presetLabel?: string) => {
+    const defaultLabel = presetLabel || `Day ${days.length + 1}: Training`;
+    const newDay: ExerciseDay = {
+      day: defaultLabel,
+      exercises: [],
+    };
+    setDays([...days, newDay]);
+    setActiveDayIndex(days.length);
+  };
+
+  // Remove a workout day
+  const handleRemoveDayCard = (dayIdx: number) => {
+    setDays(days.filter((_, i) => i !== dayIdx));
+    if (activeDayIndex >= dayIdx && activeDayIndex > 0) {
+      setActiveDayIndex(activeDayIndex - 1);
     }
   };
 
-  const handleRemoveExerciseFromDay = (index: number) => {
-    setCurrentExercises(currentExercises.filter((_, i) => i !== index));
-  };
-
-  const handleAddDay = () => {
-    if (currentDayName.trim() && currentExercises.length > 0) {
-      const newDay: ExerciseDay = {
-        day: currentDayName.trim(),
-        exercises: currentExercises,
-      };
-      setDays([...days, newDay]);
-      resetDayBuilder();
-    } else {
-      toast.error('Please specify day name (e.g. Mon Push) and add at least one exercise');
-    }
-  };
-
-  const handleRemoveDay = (idx: number) => {
-    setDays(days.filter((_, i) => i !== idx));
+  // Update day title
+  const handleUpdateDayName = (dayIdx: number, val: string) => {
+    const updated = [...days];
+    updated[dayIdx] = {
+      ...updated[dayIdx],
+      day: val,
+    };
+    setDays(updated);
   };
 
   const handleSaveWorkout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || days.length === 0) {
-      toast.error('Name and at least one day workout schedule are required');
+    if (!name.trim()) {
+      toast.error('Workout plan name is required');
+      return;
+    }
+
+    if (days.length === 0 || days.every(d => !d.exercises || d.exercises.length === 0)) {
+      toast.error('Please add at least one training day with exercises');
       return;
     }
 
@@ -221,14 +564,14 @@ export default function ExercisePlansPage() {
           .eq('gym_id', user?.gymId);
 
         if (error) throw error;
-        toast.success('Workout plan updated');
+        toast.success('Workout plan updated successfully');
       } else {
         const { error } = await supabase
           .from('exercise_charts')
           .insert(payload);
 
         if (error) throw error;
-        toast.success('Workout plan template created');
+        toast.success('Workout plan created successfully');
       }
 
       setOpenModal(false);
@@ -239,6 +582,17 @@ export default function ExercisePlansPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleOpenAssignModal = (workout: any) => {
+    if (!can('exercise.manage')) {
+      toast.error('You do not have permission to assign workouts');
+      return;
+    }
+    setSelectedWorkout(workout);
+    setSelectedMemberIds([]);
+    setMemberSearch('');
+    setOpenAssignModal(true);
   };
 
   const handleAssignWorkout = async (e: React.FormEvent) => {
@@ -261,20 +615,11 @@ export default function ExercisePlansPage() {
           fail++;
         } else {
           success++;
-          await supabase.from('whatsapp_logs').insert({
-            gym_id: user?.gymId,
-            member_id: memberId,
-            recipient_phone: '919876543210',
-            recipient_name: 'Member',
-            message_type: 'document',
-            document_type: 'workout_chart',
-            status: 'delivered',
-          });
         }
       }
 
       if (fail === 0) {
-        toast.success(`✅ Assigned "${selectedWorkout.name}" to ${success} member${success > 1 ? 's' : ''}`);
+        toast.success(`Assigned "${selectedWorkout.name}" to ${success} member${success > 1 ? 's' : ''}`);
       } else {
         toast.warning(`Assigned to ${success}, failed for ${fail}`);
       }
@@ -309,291 +654,721 @@ export default function ExercisePlansPage() {
     }
   };
 
+  // Filtered exercises for listing
+  const filteredWorkouts = useMemo(() => {
+    if (!searchQuery.trim()) return exercises;
+    const q = searchQuery.toLowerCase();
+    return exercises.filter(w =>
+      w.name?.toLowerCase().includes(q) ||
+      w.description?.toLowerCase().includes(q)
+    );
+  }, [exercises, searchQuery]);
+
+  // Filtered quick chips
+  const filteredQuickChips = useMemo(() => {
+    if (selectedMuscleFilter === 'All') return QUICK_EXERCISES;
+    return QUICK_EXERCISES.filter(ex => ex.category === selectedMuscleFilter);
+  }, [selectedMuscleFilter]);
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Workouts & Routines</h2>
-          <p className="text-zinc-500 text-xs mt-1">Design training schedules, log reps/sets/rest limits, and link routines to members.</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Workouts & Training Plans</h2>
+            <Badge className="bg-purple-950/60 text-purple-400 border-purple-800/40 text-xs">
+              {exercises.length} Active Routines
+            </Badge>
+          </div>
+          <p className="text-zinc-500 text-xs mt-1">
+            Design training schedules, use 1-click split templates, log sets/reps/rest, and link routines to member profiles.
+          </p>
         </div>
-        {can('exercise.manage') && (
-          <Button onClick={handleOpenAddModal} className="bg-purple-600 hover:bg-purple-700 text-white gap-2 font-medium">
-            <Plus className="h-4 w-4" /> Create Workout Plan
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {can('exercise.manage') && (
+            <Button
+              onClick={handleOpenAddModal}
+              className="bg-purple-600 hover:bg-purple-700 text-white gap-2 font-medium shadow-md shadow-purple-900/20"
+            >
+              <Plus className="h-4 w-4" /> Create Workout Plan
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Grid: Plan Cards */}
-      {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+      {/* Filter / Search Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-900/40 border border-zinc-800 p-3 rounded-xl">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+          <Input
+            placeholder="Search workout plans by title or goal..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-zinc-950 border-zinc-800 text-xs h-9 text-zinc-200"
+          />
         </div>
-      ) : exercises.length === 0 ? (
-        <div className="text-center py-20 text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
-          No workout plans created yet. Click "Create Workout Plan" to begin.
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+          <span>Tip: Use pre-built workout splits inside the builder for instant weekly routines</span>
+        </div>
+      </div>
+
+      {/* Workout Plan Cards Grid */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+          <p className="text-zinc-500 text-xs">Loading workout plans...</p>
+        </div>
+      ) : filteredWorkouts.length === 0 ? (
+        <div className="text-center py-20 text-zinc-500 border border-dashed border-zinc-800 rounded-xl bg-zinc-900/20">
+          <Dumbbell className="h-10 w-10 text-zinc-600 mx-auto mb-3" />
+          <h3 className="text-sm font-semibold text-zinc-300">No workout plans found</h3>
+          <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+            {searchQuery ? 'Try adjusting your search query' : 'Create your first workout plan or select a 1-click split template to begin.'}
+          </p>
+          {can('exercise.manage') && !searchQuery && (
+            <Button onClick={handleOpenAddModal} className="mt-4 bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> Create First Workout
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {exercises.map((workout) => (
-            <Card key={workout.id} className="border-zinc-800 bg-zinc-900/30 flex flex-col justify-between overflow-hidden">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold text-zinc-100">{workout.name}</CardTitle>
-                <p className="text-zinc-500 text-xs mt-1.5 leading-relaxed truncate">{workout.description || 'No description provided.'}</p>
-              </CardHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredWorkouts.map((workout) => {
+            const planDays = Array.isArray(workout.days) ? workout.days : [];
+            const totalExercisesInPlan = planDays.reduce((acc: number, d: any) => {
+              return acc + (Array.isArray(d.exercises) ? d.exercises.length : 0);
+            }, 0);
 
-              <CardContent className="flex-1 border-t border-zinc-800/40 pt-3 text-xs">
-                <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Days ({workout.days?.length || 0})</span>
-                <div className="space-y-2 mt-2 max-h-[140px] overflow-y-auto">
-                  {workout.days?.map((d: any, idx: number) => (
-                    <div key={idx} className="flex justify-between items-center bg-zinc-950/30 p-2 border border-zinc-800 rounded">
-                      <span className="font-semibold text-zinc-200">{d.day}</span>
-                      <span className="text-purple-400 text-[10px] font-bold">{d.exercises?.length || 0} exercises</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
+            return (
+              <Card
+                key={workout.id}
+                className="border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 transition-colors flex flex-col justify-between overflow-hidden shadow-sm"
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <CardTitle className="text-sm font-bold text-zinc-100 leading-snug line-clamp-1">
+                      {workout.name}
+                    </CardTitle>
+                    <Badge className="bg-purple-950/60 text-purple-300 border border-purple-800/30 text-[10px] font-bold shrink-0">
+                      {planDays.length} Days / Wk
+                    </Badge>
+                  </div>
+                  <p className="text-zinc-500 text-xs mt-1.5 line-clamp-2 leading-relaxed">
+                    {workout.description || 'Customized resistance and conditioning training schedule.'}
+                  </p>
 
-              <CardFooter className="border-t border-zinc-800/40 pt-3 flex gap-2 justify-between bg-zinc-900/10">
-                {can('exercise.manage') ? (
-                  <>
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleOpenAssignModal(workout)}
-                      className="text-purple-400 hover:text-purple-300 hover:bg-purple-950/10 text-xs px-2.5 h-8 gap-1.5 font-medium"
-                    >
-                      <Users className="h-4 w-4" /> Link Member
-                    </Button>
-                    <div className="flex gap-1">
+                  {/* Volume Pills */}
+                  <div className="flex items-center gap-2 pt-2 text-[11px]">
+                    <span className="flex items-center gap-1 text-cyan-400 font-medium bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-900/30">
+                      <Calendar className="h-3 w-3" /> {planDays.length} Training Days
+                    </span>
+                    <span className="flex items-center gap-1 text-emerald-400 font-medium bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-900/30">
+                      <Activity className="h-3 w-3" /> {totalExercisesInPlan} Exercises Total
+                    </span>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="flex-1 border-t border-zinc-800/40 pt-3 text-xs">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+                      Routine Days
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                    {planDays.map((d: any, idx: number) => {
+                      const count = Array.isArray(d.exercises) ? d.exercises.length : 0;
+                      return (
+                        <div
+                          key={idx}
+                          className="flex justify-between items-center bg-zinc-950/40 px-2.5 py-1.5 border border-zinc-800/60 rounded text-xs"
+                        >
+                          <span className="font-semibold text-zinc-200 truncate pr-2">{d.day}</span>
+                          <span className="text-purple-400 text-[10px] font-mono shrink-0 font-medium">
+                            {count} ex
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+
+                <CardFooter className="border-t border-zinc-800/40 pt-3 flex gap-2 justify-between bg-zinc-900/20">
+                  {can('exercise.manage') ? (
+                    <>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenEditModal(workout)}
-                        className="h-8 w-8 text-zinc-400 hover:text-white"
+                        onClick={() => handleOpenAssignModal(workout)}
+                        className="text-purple-400 hover:text-purple-300 hover:bg-purple-950/20 text-xs px-2.5 h-8 gap-1.5 font-medium"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Users className="h-3.5 w-3.5" /> Link Member
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteWorkout(workout.id, workout.name)}
-                        className="h-8 w-8 text-zinc-400 hover:text-red-400"
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-[10px] text-zinc-600 italic">Read-only permissions</span>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Download / Print PDF"
+                          onClick={() => window.open(`/api/exercise/${workout.id}/pdf`, '_blank')}
+                          className="h-8 w-8 text-zinc-400 hover:text-purple-400 hover:bg-zinc-800"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Edit Workout Plan"
+                          onClick={() => handleOpenEditModal(workout)}
+                          className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Delete Plan"
+                          onClick={() => handleDeleteWorkout(workout.id, workout.name)}
+                          className="h-8 w-8 text-zinc-400 hover:text-red-400 hover:bg-zinc-800"
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-zinc-600 italic">Read-only permissions</span>
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      {/* Add/Edit Workout Builder Modal */}
+      {/* ------------------------------------------------------------- */}
+      {/* Modern, Uncluttered Workout Plan Builder Modal */}
+      {/* ------------------------------------------------------------- */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold">{workoutId ? 'Modify Workout Chart' : 'Design Workout Chart'}</DialogTitle>
-            <DialogDescription className="text-zinc-500 text-xs">Configure exercises schedules, sets, reps, and target rest times.</DialogDescription>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-4xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          {/* Modal Header */}
+          <DialogHeader className="p-5 border-b border-zinc-800 shrink-0 bg-zinc-900/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-lg font-bold text-zinc-100 flex items-center gap-2">
+                  <Dumbbell className="h-5 w-5 text-purple-400" />
+                  {workoutId ? 'Modify Workout Chart' : 'Design High-Performance Workout Plan'}
+                </DialogTitle>
+                <DialogDescription className="text-zinc-400 text-xs mt-0.5">
+                  Compose split days, pick 1-click muscle group exercises, and customize sets, reps & rest limits.
+                </DialogDescription>
+              </div>
+
+              {/* Volume summary badge */}
+              <div className="hidden sm:flex items-center gap-3 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg text-xs">
+                <div className="text-right">
+                  <div className="text-[10px] text-zinc-500 uppercase font-semibold">Volume Overview</div>
+                  <div className="text-zinc-200 font-bold">
+                    <span className="text-purple-400">{workoutSummary.totalDays}</span> Days •{' '}
+                    <span className="text-cyan-400">{workoutSummary.totalExercises}</span> Total Exercises
+                  </div>
+                </div>
+              </div>
+            </div>
           </DialogHeader>
 
-          <form onSubmit={handleSaveWorkout} className="space-y-4 pt-4">
-            <div className="grid gap-2">
-              <Label htmlFor="workoutName" className="text-zinc-300 text-xs font-semibold">Workout Plan Name *</Label>
-              <Input
-                id="workoutName"
-                placeholder="e.g. 5-Day Push Pull Legs (PPL)"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="border-zinc-800 bg-zinc-950 text-zinc-100 text-xs"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="desc" className="text-zinc-300 text-xs">Plan Description</Label>
-              <Input
-                id="desc"
-                placeholder="Advanced muscle hypertrophy schedule"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="border-zinc-800 bg-zinc-950 text-zinc-100 text-xs"
-              />
-            </div>
-
-            {/* Routine Day Builder Grid Submodule */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-zinc-800/80 pt-4">
-              {/* Left: Day exercises composer */}
-              <div className="space-y-3.5 border border-zinc-800 p-3 rounded-lg bg-zinc-950/20">
-                <span className="text-[10px] font-extrabold uppercase text-purple-400 tracking-wider">Exercise Composer</span>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="dName" className="text-[10px] text-zinc-400">Day Label *</Label>
-                  <Input
-                    id="dName"
-                    placeholder="e.g. Monday (Push)"
-                    value={currentDayName}
-                    onChange={(e) => setCurrentDayName(e.target.value)}
-                    className="border-zinc-800 bg-zinc-950 text-[11px] h-8"
-                  />
+          {/* Modal Body - Scrollable */}
+          <form onSubmit={handleSaveWorkout} className="flex-1 overflow-y-auto p-5 space-y-6">
+            {/* 1-Click Templates Bar */}
+            {!workoutId && (
+              <div className="bg-purple-950/20 border border-purple-900/30 p-3.5 rounded-xl space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-300">
+                  <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                  <span>1-Click Pre-Built Workout Split Templates (Click to Auto-Fill):</span>
                 </div>
-
-                <div className="border border-zinc-800/50 p-2.5 rounded bg-zinc-950/40 space-y-2">
-                  <span className="text-[9px] text-zinc-500 font-bold block border-b border-zinc-800 pb-1">Exercises</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input placeholder="Incline DB Press" value={exName} onChange={(e) => setExName(e.target.value)} className="text-[10px] h-7 border-zinc-800" />
-                    <Input placeholder="Sets (e.g. 4)" type="number" value={exSets} onChange={(e) => setExSets(e.target.value)} className="text-[10px] h-7 border-zinc-800" />
-                    <Input placeholder="Reps (e.g. 8-12)" value={exReps} onChange={(e) => setExReps(e.target.value)} className="text-[10px] h-7 border-zinc-800" />
-                    <Input placeholder="Rest (e.g. 90s)" type="number" value={exRest} onChange={(e) => setExRest(e.target.value)} className="text-[10px] h-7 border-zinc-800" />
-                  </div>
-                  <Input placeholder="Form notes: Focus on slow negatives" value={exNotes} onChange={(e) => setExNotes(e.target.value)} className="text-[9px] h-7 border-zinc-800" />
-                  
-                  <Button type="button" onClick={handleAddExerciseToDay} size="sm" variant="secondary" className="w-full text-[10px] h-7 bg-zinc-900 hover:bg-zinc-800 text-zinc-400">
-                    <PlusCircle className="h-3.5 w-3.5 mr-1" /> Add Exercise
-                  </Button>
-
-                  {/* Added exercises preview in composer day */}
-                  <div className="space-y-1 max-h-[80px] overflow-y-auto mt-2.5">
-                    {currentExercises.map((ex, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-zinc-900/40 p-1.5 rounded text-[10px] text-zinc-400">
-                        <span className="truncate max-w-[170px]">{ex.name} ({ex.sets}x{ex.reps})</span>
-                        <button type="button" onClick={() => handleRemoveExerciseFromDay(idx)} className="text-red-500 font-bold hover:text-red-400 px-1">
-                          &times;
-                        </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                  {PRESET_WORKOUT_TEMPLATES.map((tmpl) => (
+                    <button
+                      key={tmpl.id}
+                      type="button"
+                      onClick={() => handleApplyTemplate(tmpl)}
+                      className="text-left p-2.5 rounded-lg border border-purple-900/40 bg-zinc-900/80 hover:bg-purple-900/20 hover:border-purple-500/50 transition-all group"
+                    >
+                      <div className="text-[11px] font-bold text-zinc-200 group-hover:text-purple-300 truncate">
+                        {tmpl.name}
                       </div>
-                    ))}
-                  </div>
+                      <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-1">
+                        <span>{tmpl.splitBadge}</span>
+                        <span className="text-purple-400 font-semibold">{tmpl.days.length} Days</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
+              </div>
+            )}
 
-                <Button type="button" onClick={handleAddDay} className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs h-8 font-bold">
-                  Add Day to Workout Chart
-                </Button>
+            {/* Plan Metadata Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label htmlFor="workoutName" className="text-xs font-semibold text-zinc-300">
+                  Workout Routine Name *
+                </Label>
+                <Input
+                  id="workoutName"
+                  placeholder="e.g. 5-Day Hypertrophy PPL or Strength Circuit"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="bg-zinc-900 border-zinc-800 text-xs h-9 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                />
               </div>
 
-              {/* Right: Routine preview summary */}
-              <div className="space-y-2 max-h-[300px] overflow-y-auto border border-zinc-800 p-3 rounded bg-zinc-950/20">
-                <span className="text-[10px] font-extrabold uppercase text-zinc-500 tracking-wider">Plan Summary ({days.length} Days)</span>
-                {days.length === 0 ? (
-                  <div className="text-center text-zinc-600 text-xs py-16">No workouts added to the chart.</div>
-                ) : (
-                  <div className="space-y-2">
-                    {days.map((day, idx) => (
-                      <div key={idx} className="border border-zinc-800 bg-zinc-900/30 p-2.5 rounded relative">
-                        <span className="text-xs font-bold text-zinc-200">{day.day}</span>
-                        <div className="space-y-1 mt-1 text-[10px] text-zinc-400">
-                          {day.exercises.map((ex, i) => (
-                            <div key={i}>• {ex.name} ({ex.sets} sets &times; {ex.reps})</div>
-                          ))}
+              <div className="space-y-1.5">
+                <Label htmlFor="workoutLevel" className="text-xs font-semibold text-zinc-300">
+                  Target Fitness Level
+                </Label>
+                <Input
+                  id="workoutLevel"
+                  placeholder="e.g. Intermediate / Advanced"
+                  className="bg-zinc-900 border-zinc-800 text-xs h-9 text-zinc-100 placeholder:text-zinc-600"
+                />
+              </div>
+
+              <div className="sm:col-span-3 space-y-1.5">
+                <Label htmlFor="desc" className="text-xs text-zinc-400">
+                  Workout Description / Instructions
+                </Label>
+                <Input
+                  id="desc"
+                  placeholder="e.g. Focus on explosive concentric reps and 3-second negative eccentric tempo."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="bg-zinc-900 border-zinc-800 text-xs h-9 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Quick Muscle-Group Exercise Library Chips */}
+            <div className="bg-zinc-900/60 border border-zinc-800 p-3.5 rounded-xl space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-zinc-200">Exercise Movement Library</span>
+                  <span className="text-[10px] text-zinc-500">
+                    (Click to add into active day: <span className="text-purple-400 font-semibold">{days[activeDayIndex]?.day || 'Day'}</span>)
+                  </span>
+                </div>
+
+                {/* Muscle Group Filter Tabs */}
+                <div className="flex items-center gap-1 flex-wrap">
+                  {['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'].map((grp) => (
+                    <button
+                      key={grp}
+                      type="button"
+                      onClick={() => setSelectedMuscleFilter(grp)}
+                      className={`text-[10px] px-2 py-0.5 rounded font-semibold transition-colors ${
+                        selectedMuscleFilter === grp
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 text-zinc-300'
+                      }`}
+                    >
+                      {grp}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Chips */}
+              <div className="flex flex-wrap gap-1.5 max-h-[85px] overflow-y-auto pt-1">
+                {filteredQuickChips.map((ex, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleAddQuickExercise(ex)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-zinc-950 border border-zinc-800 hover:border-purple-500/60 hover:bg-purple-950/20 text-zinc-300 transition-colors"
+                  >
+                    <span>{ex.name}</span>
+                    <span className="text-[10px] text-purple-400 font-mono font-semibold">({ex.sets}x{ex.reps})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Routine Days Composer List */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-purple-400" />
+                  Training Days Schedule ({days.length})
+                </h3>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-zinc-500 hidden sm:inline">Add preset:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {['Mon Push', 'Tue Pull', 'Wed Legs', 'Thu Upper', 'Fri Lower', 'Sat Cardio'].map((preset) => (
+                      <Button
+                        key={preset}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddDayCard(preset)}
+                        className="h-7 text-[10px] px-2 border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300"
+                      >
+                        + {preset}
+                      </Button>
+                    ))}
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleAddDayCard()}
+                      className="h-7 text-[10px] px-2.5 bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Plus className="h-3 w-3 mr-1" /> Custom Day
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {days.length === 0 ? (
+                <div className="text-center py-10 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-xs">
+                  No workout days added. Click "+ Custom Day" or choose one of the presets above.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {days.map((day, dayIdx) => {
+                    const isActive = activeDayIndex === dayIdx;
+                    const exCount = (day.exercises || []).length;
+
+                    return (
+                      <div
+                        key={dayIdx}
+                        onClick={() => setActiveDayIndex(dayIdx)}
+                        className={`border rounded-xl transition-all ${
+                          isActive
+                            ? 'border-purple-500/70 bg-zinc-900/40 shadow-sm shadow-purple-950/20'
+                            : 'border-zinc-800 bg-zinc-900/20 hover:border-zinc-700'
+                        }`}
+                      >
+                        {/* Day Card Header */}
+                        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 bg-zinc-950/40 rounded-t-xl">
+                          <div className="flex items-center gap-3 flex-1">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono ${
+                                isActive ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-400'
+                              }`}
+                            >
+                              Day {dayIdx + 1}
+                            </span>
+                            <Input
+                              value={day.day}
+                              onChange={(e) => handleUpdateDayName(dayIdx, e.target.value)}
+                              placeholder="e.g. Monday: Push (Chest & Shoulders)"
+                              className="h-7 text-xs font-bold bg-transparent border-none text-zinc-200 focus-visible:ring-0 focus-visible:bg-zinc-900 max-w-[340px]"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between sm:justify-end gap-3">
+                            <span className="text-[11px] text-purple-400 font-mono font-semibold">
+                              {exCount} exercises planned
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveDayCard(dayIdx);
+                              }}
+                              className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-zinc-800"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveDay(idx)}
-                          className="absolute top-2 right-2 text-zinc-600 hover:text-red-400 text-xs h-5 w-5 rounded flex items-center justify-center border border-transparent hover:border-zinc-800"
-                        >
-                          &times;
-                        </button>
+
+                        {/* Exercises List in Day */}
+                        <div className="p-3.5 space-y-2">
+                          {(day.exercises || []).length === 0 ? (
+                            <div className="text-center py-4 text-zinc-600 text-xs">
+                              No exercises in this day. Click movement chips above or type below.
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <div className="grid grid-cols-12 gap-2 text-[10px] text-zinc-500 font-semibold px-2 uppercase">
+                                <div className="col-span-4">Exercise Name</div>
+                                <div className="col-span-2">Sets</div>
+                                <div className="col-span-2">Reps</div>
+                                <div className="col-span-1">Rest (s)</div>
+                                <div className="col-span-2">Form Notes</div>
+                                <div className="col-span-1 text-center">Del</div>
+                              </div>
+
+                              {day.exercises.map((ex, exIdx) => (
+                                <div
+                                  key={exIdx}
+                                  className="grid grid-cols-12 gap-2 items-center bg-zinc-950/60 p-1.5 rounded-lg border border-zinc-800/60 text-xs"
+                                >
+                                  <div className="col-span-4">
+                                    <Input
+                                      value={ex.name}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayIdx, exIdx, 'name', e.target.value)
+                                      }
+                                      placeholder="Exercise name"
+                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-200"
+                                    />
+                                  </div>
+                                  <div className="col-span-2">
+                                    <Input
+                                      type="number"
+                                      value={ex.sets || ''}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayIdx, exIdx, 'sets', e.target.value)
+                                      }
+                                      placeholder="Sets"
+                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-purple-400 font-mono font-semibold"
+                                    />
+                                  </div>
+                                  <div className="col-span-2">
+                                    <Input
+                                      value={ex.reps}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayIdx, exIdx, 'reps', e.target.value)
+                                      }
+                                      placeholder="8-12"
+                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 font-mono"
+                                    />
+                                  </div>
+                                  <div className="col-span-1">
+                                    <Input
+                                      type="number"
+                                      value={ex.rest_seconds || ''}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayIdx, exIdx, 'rest_seconds', e.target.value)
+                                      }
+                                      placeholder="60"
+                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-400 font-mono"
+                                    />
+                                  </div>
+                                  <div className="col-span-2">
+                                    <Input
+                                      value={ex.notes || ''}
+                                      onChange={(e) =>
+                                        handleUpdateExercise(dayIdx, exIdx, 'notes', e.target.value)
+                                      }
+                                      placeholder="Optional tips"
+                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-400"
+                                    />
+                                  </div>
+                                  <div className="col-span-1 flex justify-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveExercise(dayIdx, exIdx)}
+                                      className="text-zinc-500 hover:text-red-400 p-1"
+                                    >
+                                      &times;
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Quick Custom Exercise Add Row */}
+                          {isActive && (
+                            <div className="pt-2 border-t border-zinc-800/40">
+                              <div className="grid grid-cols-12 gap-2 items-center bg-zinc-900/40 p-2 rounded-lg border border-dashed border-zinc-800">
+                                <div className="col-span-4">
+                                  <Input
+                                    value={manualExName}
+                                    onChange={(e) => setManualExName(e.target.value)}
+                                    placeholder="+ Custom exercise (e.g. Pec Deck)"
+                                    className="h-7 text-xs bg-zinc-950 border-zinc-800"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <Input
+                                    type="number"
+                                    value={manualExSets}
+                                    onChange={(e) => setManualExSets(e.target.value)}
+                                    placeholder="Sets (3)"
+                                    className="h-7 text-xs bg-zinc-950 border-zinc-800 font-mono"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <Input
+                                    value={manualExReps}
+                                    onChange={(e) => setManualExReps(e.target.value)}
+                                    placeholder="Reps (10-12)"
+                                    className="h-7 text-xs bg-zinc-950 border-zinc-800 font-mono"
+                                  />
+                                </div>
+                                <div className="col-span-1">
+                                  <Input
+                                    type="number"
+                                    value={manualExRest}
+                                    onChange={(e) => setManualExRest(e.target.value)}
+                                    placeholder="Rest (s)"
+                                    className="h-7 text-xs bg-zinc-950 border-zinc-800 font-mono"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <Input
+                                    value={manualExNotes}
+                                    onChange={(e) => setManualExNotes(e.target.value)}
+                                    placeholder="Form notes"
+                                    className="h-7 text-xs bg-zinc-950 border-zinc-800"
+                                  />
+                                </div>
+                                <div className="col-span-1 flex justify-center">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={handleAddManualExercise}
+                                    className="h-7 px-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold"
+                                  >
+                                    Add
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </form>
+
+          {/* Sticky Modal Footer */}
+          <DialogFooter className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-4 text-xs text-zinc-400">
+              <span>
+                Total Routine Days: <strong className="text-purple-400">{workoutSummary.totalDays}</strong>
+              </span>
+              <span>
+                Total Exercises: <strong className="text-cyan-400">{workoutSummary.totalExercises}</strong>
+              </span>
             </div>
 
-            <DialogFooter className="border-t border-zinc-800/60 pt-4 mt-6">
-              <Button type="button" variant="ghost" onClick={() => setOpenModal(false)} className="text-zinc-400 hover:bg-zinc-800 text-xs">
+            <div className="flex items-center gap-2 justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOpenModal(false)}
+                className="text-zinc-400 hover:bg-zinc-900 text-xs"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving} className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2">
+              <Button
+                type="button"
+                onClick={handleSaveWorkout}
+                disabled={saving}
+                className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2 px-4 shadow-lg shadow-purple-900/30"
+              >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Save className="h-4 w-4" />}
-                {workoutId ? 'Save Changes' : 'Create Workout Chart'}
+                {workoutId ? 'Update Workout Plan' : 'Save Workout Plan'}
               </Button>
-            </DialogFooter>
-          </form>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* ------------------------------------------------------------- */}
       {/* Assign Workout Modal Dialog */}
-      <Dialog open={openAssignModal} onOpenChange={(open) => {
-        setOpenAssignModal(open);
-        if (!open) {
-          setSelectedMemberIds([]);
-          setMemberSearch('');
-        }
-      }}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md">
+      {/* ------------------------------------------------------------- */}
+      <Dialog
+        open={openAssignModal}
+        onOpenChange={(open) => {
+          setOpenAssignModal(open);
+          if (!open) {
+            setSelectedMemberIds([]);
+            setMemberSearch('');
+          }
+        }}
+      >
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold">Assign Workout Plan</DialogTitle>
-            <DialogDescription className="text-zinc-500 text-xs">
-              Selecting active member to link with: {selectedWorkout?.name}
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Users className="h-4 w-4 text-purple-400" /> Assign Workout Plan to Members
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400 text-xs">
+              Assigning <span className="text-purple-400 font-semibold">{selectedWorkout?.name}</span> to active gym members.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAssignWorkout} className="space-y-4 pt-4">
+          <form onSubmit={handleAssignWorkout} className="space-y-4 pt-2">
             <div className="space-y-2">
-              <Label className="text-zinc-300 text-sm">Select Members ({selectedMemberIds.length} selected)</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
                 <Input
-                  placeholder="Search members..."
+                  placeholder="Filter members by name or code..."
                   value={memberSearch}
-                  onChange={e => setMemberSearch(e.target.value)}
-                  className="pl-9 bg-zinc-950 border-zinc-700 text-zinc-100 text-sm h-9"
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  className="pl-9 bg-zinc-900 border-zinc-800 text-zinc-100 text-xs h-9"
                 />
               </div>
-              <div className="border border-zinc-800 rounded-lg max-h-48 overflow-y-auto bg-zinc-950">
+
+              <div className="border border-zinc-800 rounded-lg max-h-56 overflow-y-auto bg-zinc-900/30 divide-y divide-zinc-800/40">
                 {members
-                  .filter(m =>
-                    !memberSearch.trim() ||
-                    m.name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
-                    m.member_code?.includes(memberSearch)
+                  .filter(
+                    (m) =>
+                      !memberSearch.trim() ||
+                      m.name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
+                      m.member_code?.toLowerCase().includes(memberSearch.toLowerCase())
                   )
-                  .map(m => (
+                  .map((m) => (
                     <label
                       key={m.id}
-                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-800/60 cursor-pointer border-b border-zinc-800/50 last:border-0"
+                      className="flex items-center gap-3 px-3 py-2 hover:bg-zinc-800/50 cursor-pointer"
                     >
                       <input
                         type="checkbox"
                         checked={selectedMemberIds.includes(m.id)}
-                        onChange={e => {
+                        onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedMemberIds(prev => [...prev, m.id]);
+                            setSelectedMemberIds((prev) => [...prev, m.id]);
                           } else {
-                            setSelectedMemberIds(prev => prev.filter(id => id !== m.id));
+                            setSelectedMemberIds((prev) => prev.filter((id) => id !== m.id));
                           }
                         }}
-                        className="rounded border-zinc-600 accent-purple-500"
+                        className="rounded border-zinc-700 accent-purple-600 h-4 w-4"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm text-zinc-200 truncate">{m.name}</div>
-                        <div className="text-xs text-zinc-500">{m.member_code}</div>
+                        <div className="text-xs font-semibold text-zinc-200 truncate">{m.name}</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">{m.member_code}</div>
                       </div>
                     </label>
-                  ))
-                }
-                {members.filter(m =>
-                  !memberSearch.trim() ||
-                  m.name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
-                  m.member_code?.includes(memberSearch)
-                ).length === 0 && (
-                  <div className="text-center py-4 text-zinc-500 text-sm">No members found</div>
+                  ))}
+                {members.length === 0 && (
+                  <div className="text-center py-6 text-zinc-500 text-xs">No active members found</div>
                 )}
               </div>
+
               {selectedMemberIds.length > 0 && (
-                <p className="text-xs text-purple-400">{selectedMemberIds.length} member{selectedMemberIds.length > 1 ? 's' : ''} selected</p>
+                <p className="text-xs text-purple-400 font-medium">
+                  {selectedMemberIds.length} member{selectedMemberIds.length > 1 ? 's' : ''} selected
+                </p>
               )}
             </div>
 
-            <DialogFooter className="border-t border-zinc-800/60 pt-4 mt-6">
-              <Button type="button" variant="ghost" onClick={() => setOpenAssignModal(false)} className="text-zinc-400 hover:bg-zinc-800 text-xs">
+            <DialogFooter className="border-t border-zinc-800/60 pt-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOpenAssignModal(false)}
+                className="text-zinc-400 hover:bg-zinc-900 text-xs"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={assigning || selectedMemberIds.length === 0} className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2">
+              <Button
+                type="submit"
+                disabled={assigning || selectedMemberIds.length === 0}
+                className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2"
+              >
                 {assigning ? (
-                  <><Loader2 className="h-4 w-4 animate-spin text-white" />Assigning...</>
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-white" /> Assigning...
+                  </>
                 ) : (
                   `Assign to ${selectedMemberIds.length} Member${selectedMemberIds.length !== 1 ? 's' : ''}`
                 )}

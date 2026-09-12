@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { SpotlightCard, GradientText, GlowingBadge, BorderBeam, NumberTicker } from '@/components/magicui';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { exportToCSV } from '@/lib/export/excel-export';
 
 export default function PlatformInvoicesPage() {
   const supabase = createClient();
@@ -144,26 +145,21 @@ export default function PlatformInvoicesPage() {
   };
 
   const exportCSV = () => {
-    const headers = ['Invoice Number', 'Gym Name', 'Plan', 'Amount', 'Status', 'Date'];
-    const csvContent = [
-      headers.join(','),
-      ...invoices.map(inv => [
-        inv.invoice_number,
-        `"${inv.gym_name || inv.gyms?.name || ''}"`,
-        inv.plan_name,
-        inv.amount / 100,
-        inv.status,
-        new Date(inv.created_at).toLocaleDateString()
-      ].join(','))
-    ].join('\\n');
+    const headers = ['Invoice Number', 'Gym Name', 'Plan', 'Amount (₹)', 'Status', 'Date'];
+    const rows = invoices.map(inv => [
+      inv.invoice_number,
+      inv.gym_name || inv.gyms?.name || '',
+      inv.plan_name,
+      inv.amount / 100,
+      inv.status,
+      new Date(inv.created_at).toLocaleDateString(),
+    ]);
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'platform_invoices.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportToCSV({
+      filename: 'platform_invoices.csv',
+      headers,
+      rows,
+    });
   };
 
   const getStatusBadgeColor = (status: string) => {
