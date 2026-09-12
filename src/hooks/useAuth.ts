@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/store/authStore';
@@ -9,39 +9,92 @@ import { AuthUser, AuthMember, DEFAULT_PERMISSIONS } from '@/types/auth';
 export function useAuth() {
   const supabase = createClient();
   const router = useRouter();
-  const { user, member, loading, error, setSession, setLoading, setError, logout } = useAuthStore();
+  const {
+    user,
+    member,
+    loading,
+    error,
+    isInitialized,
+    needsOnboarding,
+    setSession,
+    setLoading,
+    setError,
+    logout,
+  } = useAuthStore();
+
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    const fetchSessionDetails = async (supabaseUser: any) => {
+    let isCancelled = false;
+
+    const fetchSessionDetails = async (supabaseUser: any, forceRefresh = false) => {
       if (!supabaseUser) {
-        setSession({ user: null, member: null });
+        if (!isCancelled) {
+          setSession({ user: null, member: null, needsOnboarding: false });
+        }
         return;
       }
 
+      if (isFetchingRef.current && !forceRefresh) {
+        return;
+      }
+      isFetchingRef.current = true;
+
       const currentStore = useAuthStore.getState();
-      if (
+      const hasValidStoreSession = Boolean(
         (currentStore.user && currentStore.user.authId === supabaseUser.id && currentStore.user.gymId) ||
         (currentStore.member && currentStore.member.authId === supabaseUser.id)
-      ) {
-        // Session already loaded with valid gymId and active for this user
+      );
+
+      // If we already have a valid session with gymId for this user, do not block the UI
+      if (hasValidStoreSession && !forceRefresh) {
         if (currentStore.loading) {
           setLoading(false);
         }
-        return;
+      } else if (!hasValidStoreSession) {
+        setLoading(true);
       }
 
       try {
-        if (!currentStore.user && !currentStore.member) {
-          setLoading(true);
-        }
-        // Call server-side /api/auth/me with Authorization Bearer header for resilient auth
-        const { data: sessionData } = await supabase.auth.getSession();
-        const headers: Record<string, string> = {};
-        if (sessionData?.session?.access_token) {
-          headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+        // 1. Check current Supabase session
+        let { data: sessionData } = await supabase.auth.getSession();
+        let accessToken = sessionData?.session?.access_token;
+        const expiresAt = sessionData?.session?.expires_at ? sessionData.session.expires_at * 1000 : 0;
+        const isExpiringSoon = expiresAt > 0 && expiresAt - Date.now() < 60000;
+
+        // Proactive token refresh if token is missing or expiring soon
+        if (!accessToken || isExpiringSoon) {
+          try {
+            const { data: refreshData } = await supabase.auth.refreshSession();
+            if (refreshData?.session?.access_token) {
+              accessToken = refreshData.session.access_token;
+            }
+          } catch (refreshErr) {
+            console.warn('Session proactive refresh warning:', refreshErr);
+          }
         }
 
-        const res = await fetch('/api/auth/me', { headers });
+        const headers: Record<string, string> = {};
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+
+        // 2. Fetch /api/auth/me
+        let res = await fetch('/api/auth/me', { headers });
+
+        // If unauthorized or returned no user, try reactive refresh once
+        if (!res.ok || res.status === 401) {
+          try {
+            const { data: refreshData } = await supabase.auth.refreshSession();
+            if (refreshData?.session?.access_token) {
+              headers['Authorization'] = `Bearer ${refreshData.session.access_token}`;
+              res = await fetch('/api/auth/me', { headers });
+            }
+          } catch (refreshErr) {
+            console.warn('Session reactive refresh error:', refreshErr);
+          }
+        }
+
         if (res.ok) {
           const data = await res.json();
           if (data.user || data.member) {
@@ -58,16 +111,32 @@ export function useAuth() {
                 }
               }
             }
-            setSession({ user: resolvedUser, member: data.member });
+
+            if (!isCancelled) {
+              setSession({
+                user: resolvedUser,
+                member: data.member,
+                needsOnboarding: data.needsOnboarding ?? Boolean(resolvedUser?.role === 'owner' && !resolvedUser?.gymId),
+              });
+            }
             return;
           }
         }
 
-        // Fallback: If not found in either, check cached gymId before defaulting to blank
+        // 3. Fallback: If store already has a valid user with gymId, NEVER wipe it
+        const storeNow = useAuthStore.getState();
+        if (storeNow.user && storeNow.user.gymId) {
+          if (!isCancelled) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Check if cached gym ID exists in localStorage
         const cachedGymId = typeof window !== 'undefined' ? localStorage.getItem('gymerp_cached_gym_id') : null;
         const validCachedGymId = cachedGymId && cachedGymId !== 'null' && cachedGymId !== 'undefined' ? cachedGymId : '';
-        const isNewOwner = supabaseUser.app_metadata?.provider === 'google' || supabaseUser.user_metadata?.iss || !!supabaseUser.email;
-        if (isNewOwner) {
+
+        if (validCachedGymId && supabaseUser) {
           const authUser: AuthUser = {
             id: supabaseUser.id,
             authId: supabaseUser.id,
@@ -80,20 +149,60 @@ export function useAuth() {
             photoUrl: supabaseUser.user_metadata?.avatar_url || null,
             isActive: true,
           };
-          setSession({ user: authUser, member: null });
+          if (!isCancelled) {
+            setSession({ user: authUser, member: null, needsOnboarding: false });
+          }
           return;
         }
 
-        setSession({ user: null, member: null });
+        // Truly a new owner ONLY if server responded OK and confirmed no gym exists
+        const isNewOwner = Boolean(
+          supabaseUser &&
+          (supabaseUser.app_metadata?.provider === 'google' || supabaseUser.user_metadata?.iss || !!supabaseUser.email)
+        );
+
+        if (isNewOwner && res.ok) {
+          const authUser: AuthUser = {
+            id: supabaseUser.id,
+            authId: supabaseUser.id,
+            gymId: '',
+            branchId: null,
+            name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Gym Owner',
+            email: supabaseUser.email || null,
+            role: 'owner',
+            permissions: DEFAULT_PERMISSIONS.owner,
+            photoUrl: supabaseUser.user_metadata?.avatar_url || null,
+            isActive: true,
+          };
+          if (!isCancelled) {
+            setSession({ user: authUser, member: null, needsOnboarding: true });
+          }
+          return;
+        }
+
+        if (!isCancelled) {
+          setSession({ user: null, member: null, needsOnboarding: false });
+        }
       } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
-        setError(msg || 'Error fetching user details');
+        const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+        // Network error must not wipe existing active session
+        const current = useAuthStore.getState();
+        if (current.user && current.user.gymId) {
+          if (!isCancelled) setLoading(false);
+          return;
+        }
+        if (!isCancelled) {
+          setError(msg || 'Error fetching user details');
+        }
       } finally {
-        setLoading(false);
+        isFetchingRef.current = false;
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    // Get initial user session (check local session cache first for instant response)
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         fetchSessionDetails(session.user);
@@ -101,14 +210,20 @@ export function useAuth() {
         supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
           fetchSessionDetails(supabaseUser);
         }).catch(() => {
-          setSession({ user: null, member: null });
+          const cur = useAuthStore.getState();
+          if (!cur.user && !cur.member) {
+            setSession({ user: null, member: null, needsOnboarding: false });
+          }
         });
       }
     }).catch(() => {
       supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
         fetchSessionDetails(supabaseUser);
       }).catch(() => {
-        setSession({ user: null, member: null });
+        const cur = useAuthStore.getState();
+        if (!cur.user && !cur.member) {
+          setSession({ user: null, member: null, needsOnboarding: false });
+        }
       });
     });
 
@@ -119,7 +234,7 @@ export function useAuth() {
           (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') &&
           session?.user
         ) {
-          fetchSessionDetails(session.user);
+          fetchSessionDetails(session.user, event === 'TOKEN_REFRESHED');
         } else if (event === 'SIGNED_OUT') {
           logout();
           router.push('/login');
@@ -127,7 +242,7 @@ export function useAuth() {
       }
     );
 
-    // Safety watchdog: ensure loading state always resolves within 3.5 seconds
+    // Watchdog timer
     const watchdogTimer = setTimeout(() => {
       if (useAuthStore.getState().loading) {
         setLoading(false);
@@ -135,6 +250,7 @@ export function useAuth() {
     }, 3500);
 
     return () => {
+      isCancelled = true;
       clearTimeout(watchdogTimer);
       subscription.unsubscribe();
     };
@@ -152,6 +268,8 @@ export function useAuth() {
     member,
     loading,
     error,
+    isInitialized,
+    needsOnboarding,
     signOut,
     isAuthenticated: !!user || !!member,
     isOwner: user?.role === 'owner',

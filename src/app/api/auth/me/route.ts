@@ -103,7 +103,7 @@ export async function GET(request: Request) {
           userPayload.staffRecordId = userData.id;
         }
 
-        return NextResponse.json({ user: userPayload, member: null });
+        return NextResponse.json({ user: userPayload, member: null, needsOnboarding: false });
       }
     }
 
@@ -302,6 +302,7 @@ export async function GET(request: Request) {
           isActive: true,
         },
         member: null,
+        needsOnboarding: false,
       });
     }
 
@@ -334,7 +335,7 @@ export async function GET(request: Request) {
         memberCode: memberData.member_code,
         photoUrl: memberData.photo_url,
       };
-      return NextResponse.json({ user: null, member: memberPayload });
+      return NextResponse.json({ user: null, member: memberPayload, needsOnboarding: false });
     }
 
     // 5. Default: Absolutely NO gym exists in the database at all (fresh install pre-onboarding)
@@ -352,10 +353,10 @@ export async function GET(request: Request) {
         photoUrl: authUser.user_metadata?.avatar_url || null,
         isActive: true,
       };
-      return NextResponse.json({ user: fallbackUser, member: null });
+      return NextResponse.json({ user: fallbackUser, member: null, needsOnboarding: true });
     }
 
-    return NextResponse.json({ user: null, member: null });
+    return NextResponse.json({ user: null, member: null, needsOnboarding: false });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Auth session retrieval failure';
     console.error('API /api/auth/me error:', err);

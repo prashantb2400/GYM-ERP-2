@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { GridPattern } from '@/components/magicui/grid-pattern';
 import { Meteors } from '@/components/magicui/meteors';
 import { BorderBeam } from '@/components/magicui/border-beam';
+import { useAuthStore } from '@/store/authStore';
 
 // ── Google SVG Icon ──────────────────────────────────────────────────────────
 function GoogleIcon() {
@@ -82,19 +83,41 @@ function OwnerLoginForm() {
 
       if (signInError) throw signInError;
 
-      // Check if user has an existing gym profile
+      // Check if user has an existing gym profile via /api/auth/me (auto-healing enabled)
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const headers: Record<string, string> = {};
+          if (sessionData?.session?.access_token) {
+            headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+          }
+          const meRes = await fetch('/api/auth/me', { headers });
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            if (meData.user?.gymId) {
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('gymerp_cached_gym_id', meData.user.gymId);
+              }
+              useAuthStore.getState().setSession({ user: meData.user, member: null, needsOnboarding: false });
+              router.push('/dashboard');
+              return;
+            }
+          }
+        } catch (meErr) {
+          console.warn('Login session verification fallback:', meErr);
+        }
+
         const { data: userData } = await supabase
           .from('users')
           .select('gym_id')
           .eq('auth_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (!userData?.gym_id) {
-          router.push('/dashboard/onboarding');
-        } else {
+        if (userData?.gym_id) {
           router.push('/dashboard');
+        } else {
+          router.push('/dashboard/onboarding');
         }
       }
     } catch (err: unknown) {

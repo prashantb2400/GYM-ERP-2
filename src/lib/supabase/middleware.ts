@@ -98,6 +98,16 @@ export async function updateSession(request: NextRequest) {
 
     if (userData) {
       if (!userData.gym_id) {
+        const { data: ownerGym } = await supabaseAdmin
+          .from('gyms')
+          .select('id')
+          .eq('owner_id', user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (ownerGym) {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
         return NextResponse.redirect(new URL('/dashboard/onboarding', request.url));
       }
       if (userData.role === 'owner' || userData.role === 'receptionist') {
@@ -116,6 +126,18 @@ export async function updateSession(request: NextRequest) {
 
     if (memberData || path.startsWith('/member')) {
       return NextResponse.redirect(new URL('/member/dashboard', request.url));
+    }
+
+    // Check if user already owns a gym before defaulting to onboarding
+    const { data: ownerGym } = await supabaseAdmin
+      .from('gyms')
+      .select('id')
+      .eq('owner_id', user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (ownerGym) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
     // Default for /login or /staff/login when no user row exists yet -> onboarding

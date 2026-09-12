@@ -16,7 +16,7 @@ export default function AdminDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, needsOnboarding } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const isOnboarding = pathname === '/dashboard/onboarding';
@@ -30,12 +30,15 @@ export default function AdminDashboardLayout({
         useAuthStore.getState().setSession({
           user: { ...user, gymId: cached },
           member: null,
+          needsOnboarding: false,
         });
         return;
       }
-      router.replace('/dashboard/onboarding');
+      if (needsOnboarding) {
+        router.replace('/dashboard/onboarding');
+      }
     }
-  }, [loading, isAuthenticated, user, router, isOnboarding]);
+  }, [loading, isAuthenticated, user, needsOnboarding, router, isOnboarding]);
 
   React.useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -71,7 +74,7 @@ export default function AdminDashboardLayout({
     );
   }
 
-  // Owner without gym workspace: cleanly redirect to onboarding instead of rendering blank dashboard
+  // Owner without gym workspace: cleanly wait or redirect only if confirmed new owner
   if (user && user.role === 'owner' && !user.gymId && !isOnboarding) {
     const cached = typeof window !== 'undefined' ? localStorage.getItem('gymerp_cached_gym_id') : null;
     if (cached && cached !== 'null' && cached !== 'undefined') {
@@ -84,11 +87,21 @@ export default function AdminDashboardLayout({
         </div>
       );
     }
+    if (needsOnboarding) {
+      return (
+        <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
+            <p className="text-sm text-zinc-400">Setting up gym workspace...</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-50">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
-          <p className="text-sm text-zinc-400">Configuring gym workspace...</p>
+          <p className="text-sm text-zinc-400">Loading gym workspace...</p>
         </div>
       </div>
     );
