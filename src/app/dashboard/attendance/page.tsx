@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranch } from '@/hooks/useBranch';
 import type { Member, Attendance } from '@/types/database';
-import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace, Fingerprint, FileSpreadsheet } from 'lucide-react';
+import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace, Fingerprint, FileSpreadsheet, QrCode } from 'lucide-react';
 import { exportToExcel } from '@/lib/export/excel-export';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
@@ -254,14 +254,14 @@ export default function AttendancePage() {
         'Member Name': log.member_name || log.members?.name || 'Member',
         'Check-in Time': log.check_in_time ? new Date(log.check_in_time).toLocaleTimeString('en-IN') : '-',
         'Date': log.date || today,
-        'Method': log.method === 'face_recognition' ? 'Face ID' : log.method === 'fingerprint' ? 'Fingerprint' : log.method === 'qr_scan' ? 'QR Code' : 'Manual',
+        'Method': log.method === 'face_recognition' ? 'AI Face' : log.method === 'fingerprint' ? 'Fingerprint' : log.method === 'qr_scan' ? 'QR Code' : 'Manual',
         'Branch': branches?.find(b => b.id === log.branch_id)?.name || 'Main Branch',
         'Notes': log.notes || '',
       }));
 
       const summaryData = [
         { 'Metric': 'Total Check-ins Today', 'Value': todayLogs.length },
-        { 'Metric': 'Face ID Check-ins', 'Value': todayLogs.filter(l => l.method === 'face_recognition').length },
+        { 'Metric': 'AI Face Check-ins', 'Value': todayLogs.filter(l => l.method === 'face_recognition').length },
         { 'Metric': 'Fingerprint Check-ins', 'Value': todayLogs.filter(l => l.method === 'fingerprint').length },
         { 'Metric': 'QR Code Check-ins', 'Value': todayLogs.filter(l => l.method === 'qr_scan').length },
         { 'Metric': 'Manual Check-ins', 'Value': todayLogs.filter(l => l.method === 'manual').length },
@@ -566,7 +566,7 @@ export default function AttendancePage() {
                       'text-zinc-400 border-zinc-800 bg-zinc-900'
                     }`}
                   >
-                    {log.method === 'qr_scan' ? 'QR Kiosk' : log.method === 'face_recognition' ? 'Face ID' : log.method === 'fingerprint' ? 'Biometric' : 'Manual'}
+                    {log.method === 'qr_scan' ? 'QR Code' : log.method === 'face_recognition' ? 'AI Face' : log.method === 'fingerprint' ? 'Fingerprint' : 'Manual'}
                   </Badge>
                 </div>
               ))}
@@ -653,18 +653,21 @@ export default function AttendancePage() {
           </Button>
           <Link href="/dashboard/attendance/face-kiosk">
             <Button className="gap-2 shadow-xl bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:via-indigo-500 hover:to-purple-500 text-white font-semibold border-0">
-              <div className="flex items-center -space-x-1">
-                <ScanFace className="h-4 w-4" />
-                <Fingerprint className="h-4 w-4 text-purple-200" />
-              </div>
-              Dual Biometric Kiosk
-              <Badge className="bg-white/20 text-white text-[10px] px-1 py-0 border-0 ml-1">Live</Badge>
+              <ScanFace className="h-4 w-4 text-cyan-200" />
+              AI Face Kiosk
+              <Badge className="bg-white/20 text-white text-[10px] px-1.5 py-0 border-0 ml-1">Live</Badge>
             </Button>
           </Link>
           <Link href="/dashboard/attendance/kiosk">
             <Button variant="outline" className="gap-1.5 border-purple-500/30 text-purple-400 hover:bg-purple-500/10">
               <Fingerprint className="h-4 w-4" />
               Fingerprint Station
+            </Button>
+          </Link>
+          <Link href="/dashboard/attendance/qr-kiosk">
+            <Button variant="outline" className="gap-1.5 border-blue-500/30 text-blue-400 hover:bg-blue-500/10">
+              <QrCode className="h-4 w-4" />
+              QR Code Kiosk
             </Button>
           </Link>
         </div>

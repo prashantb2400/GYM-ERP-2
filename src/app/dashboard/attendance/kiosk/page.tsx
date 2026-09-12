@@ -25,6 +25,7 @@ import {
   Users,
   ShieldCheck,
   ScanFace,
+  QrCode,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
@@ -346,39 +347,64 @@ export default function FingerprintKioskPage() {
     <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden text-zinc-100 select-none">
       {/* Top Navigation Bar */}
       <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
-        <Link href="/dashboard/attendance">
-          <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Exit Kiosk</span>
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/attendance">
+            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Exit Kiosk</span>
+            </Button>
+          </Link>
 
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-purple-950/60 border border-purple-800/40 flex items-center justify-center">
-            <Fingerprint className="h-5 w-5 text-purple-400 animate-pulse" />
-          </div>
-          <div>
-            <h1 className="font-black text-sm sm:text-base tracking-tight text-zinc-100">
-              Biometric Fingerprint Kiosk
-            </h1>
-            <p className="text-[10px] text-zinc-400 font-mono">
-              {roster.length} Enrolled Members Active
-            </p>
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-purple-950/60 border border-purple-800/40 flex items-center justify-center">
+              <Fingerprint className="h-5 w-5 text-purple-400 animate-pulse" />
+            </div>
+            <div>
+              <h1 className="font-black text-sm sm:text-base tracking-tight text-zinc-100">
+                Fingerprint Station
+              </h1>
+              <p className="text-[10px] text-zinc-400 font-mono">
+                {roster.length} Enrolled Members Active
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          {/* Secondary Kiosk: AI Face Recognition */}
+        {/* Universal Kiosk Switcher */}
+        <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs gap-1">
           <Link href="/dashboard/attendance/face-kiosk">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="h-8 text-xs border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 gap-1.5 hidden sm:inline-flex"
+              className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
             >
-              <ScanFace className="h-3.5 w-3.5" />
-              AI Face Kiosk
+              <ScanFace className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">AI Face</span>
             </Button>
           </Link>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2.5 text-xs rounded-lg gap-1.5 bg-purple-600 text-white font-semibold hover:bg-purple-600 cursor-default"
+          >
+            <Fingerprint className="h-3.5 w-3.5 text-white" />
+            <span className="hidden sm:inline">Fingerprint</span>
+          </Button>
+
+          <Link href="/dashboard/attendance/qr-kiosk">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+            >
+              <QrCode className="h-3.5 w-3.5 text-blue-400" />
+              <span className="hidden sm:inline">QR Code</span>
+            </Button>
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-2.5">
 
           {/* Driver Switcher / Status */}
           <Select

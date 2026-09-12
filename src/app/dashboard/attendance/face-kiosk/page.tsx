@@ -20,6 +20,7 @@ import {
   LogOut,
   LogIn,
   Fingerprint,
+  QrCode,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
@@ -797,45 +798,82 @@ export default function FaceKioskPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm sm:text-base tracking-tight text-zinc-100">
-                  Dual-Biometric Kiosk
+                  AI Face Kiosk
                 </span>
                 <Badge className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-zinc-200 border-cyan-500/30 text-[10px] px-1.5 py-0 font-semibold hidden sm:inline-flex">
-                  Simultaneous
+                  Face + Fingerprint
                 </Badge>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Mode Selector (Auto / In Only / Out Only) */}
-        <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs">
-          <button
-            onClick={() => setMode('auto')}
-            className={cn(
-              'px-3 py-1.5 rounded-lg font-medium transition-all',
-              mode === 'auto' ? 'bg-primary text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-            )}
-          >
-            Auto (In/Out)
-          </button>
-          <button
-            onClick={() => setMode('in')}
-            className={cn(
-              'px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1',
-              mode === 'in' ? 'bg-green-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-            )}
-          >
-            <LogIn className="h-3 w-3" /> In Only
-          </button>
-          <button
-            onClick={() => setMode('out')}
-            className={cn(
-              'px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1',
-              mode === 'out' ? 'bg-amber-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-            )}
-          >
-            <LogOut className="h-3 w-3" /> Out Only
-          </button>
+        {/* Universal Kiosk Switcher & Mode Selector */}
+        <div className="flex items-center gap-2">
+          {/* Universal Kiosk Switcher */}
+          <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs rounded-lg gap-1.5 bg-cyan-600 text-white font-semibold hover:bg-cyan-600 cursor-default"
+            >
+              <ScanFace className="h-3.5 w-3.5 text-white" />
+              <span className="hidden sm:inline">AI Face</span>
+            </Button>
+
+            <Link href="/dashboard/attendance/kiosk">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              >
+                <Fingerprint className="h-3.5 w-3.5 text-purple-400" />
+                <span className="hidden sm:inline">Fingerprint</span>
+              </Button>
+            </Link>
+
+            <Link href="/dashboard/attendance/qr-kiosk">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              >
+                <QrCode className="h-3.5 w-3.5 text-blue-400" />
+                <span className="hidden sm:inline">QR Code</span>
+              </Button>
+            </Link>
+          </div>
+
+          {/* Mode Selector (Auto / In Only / Out Only) */}
+          <div className="hidden md:flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs">
+            <button
+              onClick={() => setMode('auto')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg font-medium transition-all',
+                mode === 'auto' ? 'bg-primary text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              Auto (In/Out)
+            </button>
+            <button
+              onClick={() => setMode('in')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1',
+                mode === 'in' ? 'bg-green-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              <LogIn className="h-3 w-3" /> In Only
+            </button>
+            <button
+              onClick={() => setMode('out')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1',
+                mode === 'out' ? 'bg-amber-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              <LogOut className="h-3 w-3" /> Out Only
+            </button>
+          </div>
         </div>
 
         {/* Status Indicators & Controls */}

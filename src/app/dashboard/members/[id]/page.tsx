@@ -1001,9 +1001,9 @@ export default function MemberDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {attendance.map((entry) => {
                     const methodLabel = 
-                      entry.method === 'face_recognition' ? 'Face ID' :
+                      entry.method === 'face_recognition' ? 'AI Face' :
                       entry.method === 'fingerprint' ? 'Fingerprint' :
-                      entry.method === 'qr_scan' ? 'QR Kiosk' : 'Manual';
+                      entry.method === 'qr_scan' ? 'QR Code' : 'Manual';
                     const methodColor =
                       entry.method === 'face_recognition' ? 'bg-purple-950/60 text-purple-300 border-purple-800/40' :
                       entry.method === 'fingerprint' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/40' :
