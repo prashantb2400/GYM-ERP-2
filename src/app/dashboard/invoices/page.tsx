@@ -3,12 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useGym } from '@/hooks/useGym';
 import type { Invoice } from '@/types/database';
 import { usePermission } from '@/hooks/usePermission';
 import {
   Receipt,
   Search,
   Printer,
+  ExternalLink,
   MessageCircle,
   Loader2,
   Calendar,
@@ -34,6 +36,7 @@ type InvoiceWithMembers = Invoice & {
 export default function InvoicesPage() {
   const supabase = createClient();
   const { user } = useAuth();
+  const { gym } = useGym();
   const { can } = usePermission();
 
   const [loading, setLoading] = useState(true);
@@ -45,6 +48,16 @@ export default function InvoicesPage() {
   const [openPrintModal, setOpenPrintModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithMembers | null>(null);
   const [gymDetails, setGymDetails] = useState<any>(null);
+
+  const activeGym: any = gymDetails || gym || {};
+  const displayGym = {
+    name: activeGym.name || 'Gym Center',
+    tagline: activeGym.tagline || '',
+    address: activeGym.address || { street: '', city: '', state: '', pin: '' },
+    phone: activeGym.phone || '',
+    gstin: activeGym.gstin || '',
+    settings: activeGym.settings || {},
+  };
   
   // WhatsApp triggering states
   const [sendingWa, setSendingWa] = useState<string | null>(null);
@@ -119,52 +132,99 @@ export default function InvoicesPage() {
       return;
     }
 
+    const contentHtml = printContent.innerHTML;
+
+    printWindow.document.open();
     printWindow.document.write(`
+      <!DOCTYPE html>
       <html>
         <head>
           <title>Invoice - ${selectedInvoice?.invoice_number || 'Print'}</title>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
           <style>
-            body { font-family: system-ui, sans-serif; padding: 20px; color: #18181b; background: #fff; line-height: 1.5; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-            th, td { border-bottom: 1px solid #e4e4e7; padding: 10px; text-align: left; }
-            th { background-color: #f4f4f5; color: #71717a; font-weight: bold; text-transform: uppercase; font-size: 10px; }
+            * { box-sizing: border-box; }
+            body {
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              padding: 24px;
+              color: #18181b;
+              background: #fff;
+              line-height: 1.5;
+              font-size: 13px;
+            }
+            table { width: 100%; border-collapse: collapse; margin-top: 16px; margin-bottom: 16px; font-size: 12px; }
+            th, td { border-bottom: 1px solid #e4e4e7; padding: 10px 12px; text-align: left; }
+            th { background-color: #f4f4f5; color: #71717a; font-weight: bold; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
             .text-right { text-align: right; }
             .text-center { text-align: center; }
             .flex { display: flex; }
             .justify-between { justify-content: space-between; }
             .justify-end { justify-content: flex-end; }
+            .items-start { align-items: flex-start; }
+            .items-center { align-items: center; }
             .w-full { width: 100%; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+            .grid { display: grid; }
+            .grid-cols-2 { grid-template-columns: 1fr 1fr; }
+            .gap-4 { gap: 16px; }
+            .gap-8 { gap: 32px; }
             .border-b { border-bottom: 1px solid #e4e4e7; }
+            .border-t { border-top: 1px solid #e4e4e7; }
+            .border { border: 1px solid #e4e4e7; }
             .pb-4 { padding-bottom: 16px; }
             .pt-4 { padding-top: 16px; }
-            .font-bold { font-weight: bold; }
+            .pt-6 { padding-top: 24px; }
+            .font-bold { font-weight: 700; }
+            .font-semibold { font-weight: 600; }
             .text-purple-700 { color: #7e22ce; }
-            .text-zinc-500 { color: #71717a; }
-            .text-zinc-600 { color: #52525b; }
-            .text-zinc-400 { color: #a1a1aa; }
+            .text-zinc-950, .text-zinc-900, .text-zinc-800 { color: #18181b; }
+            .text-zinc-700, .text-zinc-600 { color: #52525b; }
+            .text-zinc-500, .text-zinc-400 { color: #71717a; }
             .text-green-700 { color: #15803d; }
             .text-amber-600 { color: #d97706; }
+            .text-red-600 { color: #dc2626; }
             .mt-2 { margin-top: 8px; }
             .mt-1 { margin-top: 4px; }
+            .mt-0\\.5 { margin-top: 2px; }
+            .mb-1\\.5 { margin-bottom: 6px; }
             .italic { font-style: italic; }
             .uppercase { text-transform: uppercase; }
-            .space-y-6 > * + * { margin-top: 24px; }
-            .space-y-2.5 > * + * { margin-top: 10px; }
+            .tracking-wider { letter-spacing: 0.05em; }
+            .tracking-tight { letter-spacing: -0.025em; }
+            .text-xl { font-size: 1.25rem; }
+            .text-lg { font-size: 1.125rem; }
+            .text-sm { font-size: 0.875rem; }
+            .text-xs { font-size: 0.75rem; }
+            .text-\\[10px\\] { font-size: 10px; }
+            .text-\\[9px\\] { font-size: 9px; }
+            .text-\\[9\\.5px\\] { font-size: 9.5px; }
+            .space-y-6 > * + * { margin-top: 20px; }
+            .space-y-2\\.5 > * + * { margin-top: 10px; }
+            .space-y-1 > * + * { margin-top: 4px; }
             .ml-auto { margin-left: auto; }
-            .w-[260px] { width: 260px; }
-            .p-2.5 { padding: 10px; }
-            .border { border: 1px solid #e4e4e7; }
-            .rounded-lg { border-radius: 8px; }
+            .w-\\[260px\\] { width: 260px; }
+            .p-2\\.5 { padding: 10px; }
+            .rounded-lg, .rounded { border-radius: 8px; }
             .bg-zinc-50 { background-color: #fafafa; }
-            .mb-1.5 { margin-bottom: 6px; }
+            .bg-white { background-color: #ffffff; }
             .font-mono { font-family: monospace; }
+            @media print {
+              body { padding: 8mm; margin: 0; }
+              @page { size: A4; margin: 8mm; }
+            }
           </style>
         </head>
-        <body onload="window.print();window.close();">
+        <body>
           <div class="space-y-6">
-            ${printContent.innerHTML}
+            ${contentHtml}
           </div>
+          <script>
+            window.addEventListener('load', function() {
+              setTimeout(function() {
+                window.focus();
+                window.print();
+              }, 300);
+            });
+          </script>
         </body>
       </html>
     `);
@@ -361,18 +421,19 @@ export default function InvoicesPage() {
 
           {/* Printable Invoice Container */}
           <div className="bg-white text-zinc-950 p-8 rounded-lg border border-zinc-200 mt-4 overflow-y-auto max-h-[450px]" id="printable-invoice-area">
-            {selectedInvoice && gymDetails && (
+            {selectedInvoice && (
               <div className="space-y-6 text-sm">
                 {/* Invoice Header */}
                 <div className="flex justify-between items-start border-b border-zinc-200 pb-4">
                   <div>
-                    <h2 className="text-xl font-bold tracking-tight text-purple-700">{gymDetails.name}</h2>
-                    {gymDetails.tagline && <p className="text-xs text-zinc-500 italic mt-0.5">{gymDetails.tagline}</p>}
+                    <h2 className="text-xl font-bold tracking-tight text-purple-700">{displayGym.name}</h2>
+                    {displayGym.tagline && <p className="text-xs text-zinc-500 italic mt-0.5">{displayGym.tagline}</p>}
                     <p className="text-xs text-zinc-600 mt-2">
-                      {gymDetails.address?.street}, {gymDetails.address?.city}, {gymDetails.address?.state} - {gymDetails.address?.pin}
+                      {[displayGym.address?.street, displayGym.address?.city, displayGym.address?.state].filter(Boolean).join(', ')}
+                      {displayGym.address?.pin ? ` - ${displayGym.address.pin}` : ''}
                     </p>
-                    <p className="text-xs text-zinc-600">Phone: {formatPhone(gymDetails.phone)}</p>
-                    {gymDetails.gstin && <p className="text-xs text-zinc-700 font-semibold mt-1">GSTIN: {gymDetails.gstin}</p>}
+                    {displayGym.phone && <p className="text-xs text-zinc-600">Phone: {formatPhone(displayGym.phone)}</p>}
+                    {displayGym.gstin && <p className="text-xs text-zinc-700 font-semibold mt-1">GSTIN: {displayGym.gstin}</p>}
                   </div>
                   <div className="text-right">
                     <h3 className="text-lg font-bold uppercase tracking-wider text-zinc-500">Tax Invoice</h3>
@@ -387,7 +448,9 @@ export default function InvoicesPage() {
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Billed To:</h4>
                     <p className="font-bold text-zinc-800 mt-1">{selectedInvoice.member_name}</p>
-                    <p className="text-xs text-zinc-600 mt-0.5">Phone: {formatPhone(selectedInvoice.members?.phone || '')}</p>
+                    {selectedInvoice.members?.phone && (
+                      <p className="text-xs text-zinc-600 mt-0.5">Phone: {formatPhone(selectedInvoice.members.phone)}</p>
+                    )}
                   </div>
                 </div>
 
@@ -422,7 +485,7 @@ export default function InvoicesPage() {
                         <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5 block">Scan to Pay Outstanding Dues</span>
                         <img 
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(
-                            `upi://pay?pa=${gymDetails.settings?.upi_id || 'reception@paytm'}&pn=${encodeURIComponent(gymDetails.name)}&am=${selectedInvoice.amount_due}&cu=INR&tn=${selectedInvoice.invoice_number}`
+                            `upi://pay?pa=${displayGym.settings?.upi_id || 'reception@paytm'}&pn=${encodeURIComponent(displayGym.name || 'Gym')}&am=${selectedInvoice.amount_due}&cu=INR&tn=${selectedInvoice.invoice_number}`
                           )}`} 
                           alt="UPI QR Code" 
                           className="h-[100px] w-[100px] border border-zinc-200 p-1 bg-white rounded"
@@ -479,13 +542,25 @@ export default function InvoicesPage() {
             )}
           </div>
 
-          <DialogFooter className="border-t border-zinc-800/60 pt-4 mt-6">
-            <Button variant="ghost" onClick={() => setOpenPrintModal(false)} className="text-zinc-400 hover:bg-zinc-800 text-xs">
-              Close Preview
-            </Button>
-            <Button onClick={handlePrint} className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2">
-              <Printer className="h-4 w-4" /> Trigger A4 Print
-            </Button>
+          <DialogFooter className="border-t border-zinc-800/60 pt-4 mt-6 flex flex-col sm:flex-row sm:justify-between items-center gap-3 w-full">
+            <div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`/api/invoices/${selectedInvoice?.id}/pdf`, '_blank')}
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs font-semibold gap-1.5"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> View Official PDF
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setOpenPrintModal(false)} className="text-zinc-400 hover:bg-zinc-800 text-xs">
+                Close Preview
+              </Button>
+              <Button size="sm" onClick={handlePrint} className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2">
+                <Printer className="h-4 w-4" /> Trigger A4 Print
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

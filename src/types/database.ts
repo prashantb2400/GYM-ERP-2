@@ -206,6 +206,7 @@ export interface Member {
   plan_start_date: string | null;
   plan_end_date: string | null;
   admission_date: string;
+  admission_fee?: number;
   status: 'active' | 'expired' | 'frozen' | 'cancelled' | 'pending';
   trainer_id: string | null;
   diet_chart_id: string | null;

@@ -5,6 +5,7 @@ import { isSuperAdmin } from '@/lib/platform/auth';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 import { getAuthUser } from '@/lib/server/auth-helper';
+import { normalizeDescriptor } from '@/lib/face-attendance/matcher';
 
 export async function GET(request: Request) {
   try {
@@ -46,7 +47,6 @@ export async function GET(request: Request) {
       .select('id, name, member_code, photo_url, face_descriptor, branch_id')
       .eq('gym_id', scope.gymId)
       .eq('status', 'active')
-      .eq('face_enrolled', true)
       .not('face_descriptor', 'is', null);
 
     if (branchOnly && scope.branchId) {
@@ -61,7 +61,15 @@ export async function GET(request: Request) {
       let primaryDesc: number[] = [];
       let gallery: number[][] = [];
 
-      const raw = m.face_descriptor;
+      let raw = m.face_descriptor;
+      if (typeof raw === 'string') {
+        try {
+          raw = JSON.parse(raw);
+        } catch {
+          // ignore malformed JSON
+        }
+      }
+
       if (Array.isArray(raw)) {
         if (typeof raw[0] === 'number') {
           // Legacy single 128-d vector
@@ -86,6 +94,14 @@ export async function GET(request: Request) {
         if (primaryDesc.length === 0 && gallery.length > 0) {
           primaryDesc = gallery[0];
         }
+      }
+
+      // Ensure all descriptors are normalized to unit vectors (L2 norm = 1.0)
+      if (primaryDesc.length > 0) {
+        primaryDesc = normalizeDescriptor(primaryDesc);
+      }
+      if (gallery.length > 0) {
+        gallery = gallery.map(d => normalizeDescriptor(d));
       }
 
       return {

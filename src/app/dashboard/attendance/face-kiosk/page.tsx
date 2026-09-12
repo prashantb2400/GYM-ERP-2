@@ -34,6 +34,7 @@ import type { RosterMemberFingerprint, ScannerDeviceInfo, ScannerDriverId, Finge
 import {
   loadFaceApiModels,
   findBestMatch,
+  normalizeDescriptor,
   syncRoster,
   recordAttendanceEvent,
   flushAttendanceQueue,
@@ -384,7 +385,9 @@ export default function FaceKioskPage() {
             const fh = box.height;
 
             // Instant 1:N Euclidean search in 128-D ResNet metric space with Ambiguity Margin Filter
-            const match = findBestMatch(det.descriptor, roster, 0.48, 0.38, 0.04);
+            // Unit-normalize live detection vector for parity with enrolled templates
+            const normDescriptor = normalizeDescriptor(det.descriptor);
+            const match = findBestMatch(normDescriptor, roster, 0.52, 0.42, 0.025);
 
             // Extract true 68-landmark eye coordinates for Soukupová & Čech EAR calculation
             const positions = det.landmarks.positions;

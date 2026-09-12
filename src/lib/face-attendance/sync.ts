@@ -1,4 +1,5 @@
 import { FaceDescriptorRecord, AttendanceEvent } from './types';
+import { normalizeDescriptor } from './matcher';
 import {
   saveRosterToOfflineDB,
   getRosterFromOfflineDB,
@@ -7,6 +8,15 @@ import {
   removeSyncedEvent,
 } from './offline-db';
 import { fetchWithAuth } from '@/lib/utils/api-client';
+
+function normalizeRosterRecords(records: FaceDescriptorRecord[]): FaceDescriptorRecord[] {
+  if (!records || !Array.isArray(records)) return [];
+  return records.map(r => ({
+    ...r,
+    descriptor: r.descriptor && r.descriptor.length > 0 ? normalizeDescriptor(r.descriptor) : r.descriptor,
+    descriptors: r.descriptors && Array.isArray(r.descriptors) ? r.descriptors.map(d => normalizeDescriptor(d)) : r.descriptors,
+  }));
+}
 
 /**
  * Synchronizes the member face roster from Supabase into IndexedDB.
@@ -25,8 +35,9 @@ export async function syncRoster(gymId: string, branchId?: string): Promise<{ ro
       const res = await fetchWithAuth(url);
       if (res.ok) {
         const data: FaceDescriptorRecord[] = await res.json();
-        await saveRosterToOfflineDB(gymId, data);
-        return { roster: data, isOffline: false };
+        const normalized = normalizeRosterRecords(data);
+        await saveRosterToOfflineDB(gymId, normalized);
+        return { roster: normalized, isOffline: false };
       } else {
         console.warn(`Face roster sync returned status ${res.status}: ${res.statusText}`);
       }
@@ -37,7 +48,7 @@ export async function syncRoster(gymId: string, branchId?: string): Promise<{ ro
 
   // Offline fallback
   const cached = await getRosterFromOfflineDB(gymId);
-  return { roster: cached, isOffline: true };
+  return { roster: normalizeRosterRecords(cached), isOffline: true };
 }
 
 /**

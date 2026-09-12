@@ -42,6 +42,7 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [admissionFee, setAdmissionFee] = useState('');
 
   const [amountPaidStr, setAmountPaidStr] = useState('');
   const [paymentMode, setPaymentMode] = useState<'cash' | 'upi' | 'card'>('cash');
@@ -80,6 +81,7 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
     setName(initialData?.name || '');
     setPhone(initialData?.phone || '');
     setSelectedPlanId('');
+    setAdmissionFee('');
     setAmountPaidStr('');
     setPaymentMode('cash');
     setShowOptional(false);
@@ -103,20 +105,22 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
 
     setSelectedPlan(plan);
 
-    const price = Number(plan.price);
-    const base = price / 1.18;
-    const c = base * 0.09;
-    const s = base * 0.09;
+    const price = Number(plan.price) || 0;
+    const adm = Number(admissionFee) || 0;
+    const combinedTotal = price + adm;
+    const base = Math.round((combinedTotal / 1.18) * 100) / 100;
+    const c = Math.round((base * 0.09) * 100) / 100;
+    const s = Math.round((base * 0.09) * 100) / 100;
 
     setBaseAmount(base);
     setCgst(c);
     setSgst(s);
-    setTotalAmount(price);
+    setTotalAmount(combinedTotal);
     
     if (amountPaidStr === '' || Number(amountPaidStr) === totalAmount) {
-      setAmountPaidStr(price.toString());
+      setAmountPaidStr(combinedTotal.toString());
     }
-  }, [selectedPlanId, plans, amountPaidStr, totalAmount]);
+  }, [selectedPlanId, plans, admissionFee, amountPaidStr, totalAmount]);
 
   const handlePhoneChange = (val: string) => {
     const clean = val.replace(/\D/g, '');
@@ -164,7 +168,7 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
       end.setDate(end.getDate() + selectedPlan.duration_days);
       const endDate = end.toISOString().split('T')[0];
 
-      const { data: member, error: memberError } = await supabase.from('members').insert({
+      const memberPayload: any = {
         gym_id: gymId,
         member_code: memberCode,
         name: name.trim(),
@@ -175,12 +179,21 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
         plan_start_date: startDate,
         plan_end_date: endDate,
         admission_date: startDate,
+        admission_fee: Number(admissionFee) || 0,
         total_paid_lifetime: Number(amountPaidStr) || 0,
         total_due: Math.max(0, totalAmount - (Number(amountPaidStr) || 0)),
         created_by: user.id,
-      }).select().single();
+      };
 
-      if (memberError) throw memberError;
+      let { data: member, error: memberError } = await supabase.from('members').insert(memberPayload).select().single();
+      if (memberError && (memberError.message?.includes('admission_fee') || memberError.details?.includes('admission_fee'))) {
+        delete memberPayload.admission_fee;
+        const retry = await supabase.from('members').insert(memberPayload).select().single();
+        member = retry.data;
+        memberError = retry.error;
+      }
+
+      if (memberError || !member) throw memberError;
 
       // Step 3: Generate invoice number
       const { data: invCounter } = await supabase
@@ -190,11 +203,24 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
         .single();
       
       const year = new Date().getFullYear();
-      const invoiceNo = `INV-\${year}-\${String((invCounter?.invoice_count || 0) + 1).padStart(4, '0')}`;
+      const invoiceNo = `INV-${year}-${String((invCounter?.invoice_count || 0) + 1).padStart(4, '0')}`;
 
       // Step 4: Insert invoice
       const amountPaid = Number(amountPaidStr) || 0;
       const amountDue = Math.max(0, totalAmount - amountPaid);
+      const admVal = Number(admissionFee) || 0;
+
+      const lineItems: any[] = [
+        { description: selectedPlan.name, qty: 1, rate: Number(selectedPlan.price) || 0, amount: Number(selectedPlan.price) || 0 },
+      ];
+      if (admVal > 0) {
+        lineItems.push({
+          description: 'One-Time Admission / Registration Fee',
+          qty: 1,
+          rate: admVal,
+          amount: admVal,
+        });
+      }
 
       const { data: invoice, error: invoiceError } = await supabase.from('invoices').insert({
         gym_id: gymId,
@@ -213,7 +239,7 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
         amount_due: amountDue,
         payment_mode: paymentMode,
         status: amountPaid >= totalAmount ? 'paid' : (amountPaid > 0 ? 'partial' : 'pending'),
-        line_items: [{ description: selectedPlan.name, qty: 1, rate: baseAmount, amount: baseAmount }],
+        line_items: lineItems,
         created_by: user.id,
       }).select().single();
 
@@ -442,6 +468,18 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
+                        className="border-zinc-800 bg-zinc-900/50 text-zinc-100"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="q-admission" className="text-zinc-300 text-sm">Admission / Reg Fee (₹)</Label>
+                      <Input
+                        id="q-admission"
+                        type="number"
+                        min={0}
+                        placeholder="0"
+                        value={admissionFee}
+                        onChange={(e) => setAdmissionFee(e.target.value)}
                         className="border-zinc-800 bg-zinc-900/50 text-zinc-100"
                       />
                     </div>

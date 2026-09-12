@@ -516,4 +516,102 @@ describe('Nearest-Neighbor Ambiguity Filter & Collision Prevention', () => {
     expect(result.incompatibleMembers[0].name).toBe('Legacy Member 2');
     expect(result.incompatibleMembers[0].dimension).toBe(1024);
   });
+
+  it('prevents false ambiguity rejection when runner-up candidate is outside the match threshold', () => {
+    // Member A is a valid match in the medium tier (distance 0.45, highConfidence = 0.42, threshold = 0.52)
+    // 128 * (0.03977)^2 ≈ 0.2025 -> sqrt ≈ 0.45
+    const query = new Array(128).fill(0.10);
+    const memberA = new Array(128).fill(0.13977);
+    // Member B is outside the 0.52 threshold (distance 0.53):
+    // 128 * (0.04684)^2 ≈ 0.2809 -> sqrt ≈ 0.53
+    // Difference is 0.53 - 0.45 = 0.08, or let's place Member B right at 0.525:
+    // 128 * (0.0464)^2 ≈ 0.2756 -> sqrt ≈ 0.525 (outside 0.52 threshold)
+    const memberB = new Array(128).fill(0.1464);
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_valid',
+        name: 'Valid Member',
+        memberCode: 'MEM-V',
+        descriptor: memberA,
+      },
+      {
+        memberId: 'mem_nonmatch',
+        name: 'Non Matching Member',
+        memberCode: 'MEM-NM',
+        descriptor: memberB,
+      },
+    ];
+
+    // Even if ambiguityMargin was large (e.g. 0.10 > 0.525 - 0.45 = 0.075),
+    // Member B cannot cause ambiguity rejection because Member B exceeds the threshold!
+    const match = findBestMatch(query, roster, 0.52, 0.42, 0.10);
+    expect(match).not.toBeNull();
+    expect(match!.memberId).toBe('mem_valid');
+    expect(match!.name).toBe('Valid Member');
+  });
+
+  it('correctly triggers ambiguity rejection when BOTH distinct members are within match threshold and within margin', () => {
+    const query = new Array(128).fill(0.10);
+    // Member A at distance ~0.452 (in medium tier: > 0.42, <= 0.52)
+    const memberA = new Array(128).fill(0.140);
+    // Member B at distance ~0.463 (in medium tier: > 0.42, <= 0.52)
+    // Margin is ~0.011 < 0.025
+    const memberB = new Array(128).fill(0.141);
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_cand_1',
+        name: 'Candidate One',
+        memberCode: 'MEM-01',
+        descriptor: memberA,
+      },
+      {
+        memberId: 'mem_cand_2',
+        name: 'Candidate Two',
+        memberCode: 'MEM-02',
+        descriptor: memberB,
+      },
+    ];
+
+    const match = findBestMatch(query, roster, 0.52, 0.42, 0.025);
+    expect(match).toBeNull();
+  });
+
+  it('resolves raw faceapi detection vector mismatch by normalizing before matching', () => {
+    // Simulate faceapi raw output with L2 norm ~ 1.13
+    const rawDetection = new Float32Array(128).fill(0.1);
+    const normOfRaw = Math.sqrt(rawDetection.reduce((s, v) => s + v * v, 0));
+    expect(normOfRaw).toBeGreaterThan(1.10);
+
+    // Enrolled template is normalized to unit length
+    const enrolledNormalized = normalizeDescriptor(rawDetection);
+    const normOfEnrolled = Math.sqrt(enrolledNormalized.reduce((s, v) => s + v * v, 0));
+    expect(normOfEnrolled).toBeCloseTo(1.0, 4);
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_norm_test',
+        name: 'Norm Test Member',
+        memberCode: 'MEM-NORM',
+        descriptor: enrolledNormalized,
+      },
+    ];
+
+    // Case 1: If rawDetection is passed directly without normalization,
+    // artificial scale penalty causes distance to be ~0.131 (and with lighting noise would exceed 0.48)
+    const distRawVsNorm = euclideanDistance(rawDetection, enrolledNormalized);
+    expect(distRawVsNorm).toBeGreaterThan(0.13);
+
+    // Case 2: Once normalized, distance between identical faces is 0,
+    // and live queries match instantly in high tier (< 0.42)
+    const normalizedDetection = normalizeDescriptor(rawDetection);
+    const match = findBestMatch(normalizedDetection, roster, 0.52, 0.42, 0.025);
+
+    expect(match).not.toBeNull();
+    expect(match!.memberId).toBe('mem_norm_test');
+    expect(match!.distance).toBe(0);
+    expect(match!.tier).toBe('high');
+    expect(match!.confidence).toBe(1.0);
+  });
 });

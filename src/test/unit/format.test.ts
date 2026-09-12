@@ -56,6 +56,22 @@ describe('Indian Locale & Health Formatters', () => {
       expect(sgst).toBe(0);
       expect(total).toBe(0);
     });
+
+    it('should compute correct GST for combined plan price and admission fee', () => {
+      const planPrice = 3000;
+      const admissionFee = 500;
+      const combinedSubtotal = planPrice + admissionFee; // 3500
+      const discountPercent = 10;
+      const discountAmount = (combinedSubtotal * discountPercent) / 100; // 350
+      const { cgst, sgst, total } = calculateGST(combinedSubtotal, discountAmount);
+      // Taxable: 3500 - 350 = 3150
+      // CGST: 3150 * 0.09 = 283.5
+      // SGST: 3150 * 0.09 = 283.5
+      // Total: 3150 + 283.5 + 283.5 = 3717
+      expect(cgst).toBe(283.5);
+      expect(sgst).toBe(283.5);
+      expect(total).toBe(3717);
+    });
   });
 
   describe('calculateBMI & Category', () => {

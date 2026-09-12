@@ -177,8 +177,8 @@ export function findBestMatch(
   queryDescriptor: ArrayLike<number>,
   roster: FaceDescriptorRecord[],
   threshold = 0.52,
-  highConfidenceThreshold = 0.38,
-  ambiguityMargin = 0.04
+  highConfidenceThreshold = 0.42,
+  ambiguityMargin = 0.025
 ): MatchResult | null {
   if (!roster || roster.length === 0 || !queryDescriptor) return null;
 
@@ -231,9 +231,11 @@ export function findBestMatch(
     }
 
     if (bestMatch && bestSimilarity >= similarityThreshold) {
-      // Ambiguity filter for high-dim cosine space
+      // Ambiguity filter for high-dim cosine space:
+      // Only reject if runner-up is also a valid match and within margin
       if (
         secondBestMatch &&
+        secondBestSimilarity >= similarityThreshold &&
         secondBestMatch.memberId !== bestMatch.memberId &&
         bestSimilarity < highConfidenceSimilarity &&
         bestSimilarity - secondBestSimilarity < 0.03
@@ -307,14 +309,16 @@ export function findBestMatch(
     const secondBestDistance = Math.sqrt(secondBestSqDistance);
 
     // Ambiguity filter: If in the medium tier and runner-up from a different member
-    // is within ambiguityMargin, reject ambiguous match to prevent cross-member misidentification
+    // is ALSO a valid match (<= maxSqDistance) and within ambiguityMargin,
+    // reject ambiguous match to prevent cross-member misidentification
     if (
       secondBestMatch &&
+      secondBestSqDistance <= maxSqDistance &&
       secondBestMatch.memberId !== bestMatch.memberId &&
       bestDistance > highConfidenceThreshold &&
       secondBestDistance - bestDistance < ambiguityMargin
     ) {
-      // Ambiguous: two members are virtually equidistant to this face query
+      // Ambiguous: two valid matching members are virtually equidistant to this face query
       return null;
     }
 

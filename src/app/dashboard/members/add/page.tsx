@@ -85,6 +85,7 @@ export default function AddMemberPage() {
     setEmergencyRelation('');
     setEmergencyPhone('');
     setSelectedPlanId('');
+    setAdmissionFee('0');
     setDiscountPercent('0');
     setAmountPaid('0');
     setPaymentMode('');
@@ -141,6 +142,7 @@ export default function AddMemberPage() {
 
   // --- Step 2: Plan & Payment ---
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [admissionFee, setAdmissionFee] = useState('0');
   const [planStartDate, setPlanStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [discountPercent, setDiscountPercent] = useState('0');
   const [amountPaid, setAmountPaid] = useState('0');
@@ -224,12 +226,14 @@ export default function AddMemberPage() {
     setPlanEndDate(start.toISOString().split('T')[0]);
 
     // Financial calculations
-    const rawPrice = Number(plan.price);
+    const planPrice = Number(plan.price) || 0;
+    const admFee = Number(admissionFee) || 0;
+    const calcSubtotal = planPrice + admFee;
     const discPercent = Number(discountPercent) || 0;
-    const discAmt = (rawPrice * discPercent) / 100;
-    const { cgst: cgstVal, sgst: sgstVal, total: totalVal } = calculateGST(rawPrice, discAmt);
+    const discAmt = Math.round(((calcSubtotal * discPercent) / 100) * 100) / 100;
+    const { cgst: cgstVal, sgst: sgstVal, total: totalVal } = calculateGST(calcSubtotal, discAmt);
 
-    setSubtotal(rawPrice);
+    setSubtotal(calcSubtotal);
     setDiscountAmount(discAmt);
     setCgst(cgstVal);
     setSgst(sgstVal);
@@ -237,7 +241,7 @@ export default function AddMemberPage() {
 
     const paid = Number(amountPaid) || 0;
     setAmountDue(Math.max(0, totalVal - paid));
-  }, [selectedPlanId, planStartDate, discountPercent, amountPaid, plans]);
+  }, [selectedPlanId, planStartDate, discountPercent, amountPaid, admissionFee, plans]);
 
   // Auto-copy phone to WhatsApp phone by default
   const handlePhoneChange = (val: string) => {
@@ -378,49 +382,65 @@ export default function AddMemberPage() {
 
       // 5. Insert member record
       const branchToAssign = memberBranchId || user.branchId || branches[0]?.id || null;
+      const admFeeNumber = Number(admissionFee) || 0;
 
-      const { data: memberData, error: memberError } = await supabase
+      const memberPayload: any = {
+        gym_id: user.gymId,
+        branch_id: branchToAssign,
+        member_code: memberCode,
+        qr_token: crypto.randomUUID(),
+        name: name.trim(),
+        phone: phone,
+        whatsapp_phone: whatsappPhone || phone,
+        email: email.trim() || null,
+        dob: dob || null,
+        gender: gender || null,
+        blood_group: bloodGroup || null,
+        address: address.trim() || null,
+        city: city.trim() || null,
+        state: state.trim() || null,
+        pin: pin.trim() || null,
+        photo_url: photoUrl,
+        emergency_contact: { name: emergencyName, relation: emergencyRelation, phone: emergencyPhone },
+        current_plan_id: selectedPlanId,
+        plan_start_date: planStartDate,
+        plan_end_date: planEndDate,
+        admission_date: new Date().toISOString().split('T')[0],
+        admission_fee: admFeeNumber,
+        status: 'active',
+        trainer_id: trainerId || null,
+        bmi,
+        height_cm: heightCm ? Number(heightCm) : null,
+        weight_kg: weightKg ? Number(weightKg) : null,
+        health_goals: healthGoals,
+        fitness_level: fitnessLevel || null,
+        medical_conditions: medicalConditions.trim() || null,
+        timing_slot: timingSlot || null,
+        has_locker: hasLocker,
+        locker_number: hasLocker ? lockerNumber.trim() : null,
+        total_due: amountDue,
+        total_paid_lifetime: Number(amountPaid) || 0,
+        kyc_status: kycUrl ? 'pending' : 'pending',
+        created_by: user.id,
+      };
+
+      let { data: memberData, error: memberError } = await supabase
         .from('members')
-        .insert({
-          gym_id: user.gymId,
-          branch_id: branchToAssign,
-          member_code: memberCode,
-          qr_token: crypto.randomUUID(),
-          name: name.trim(),
-          phone: phone,
-          whatsapp_phone: whatsappPhone || phone,
-          email: email.trim() || null,
-          dob: dob || null,
-          gender: gender || null,
-          blood_group: bloodGroup || null,
-          address: address.trim() || null,
-          city: city.trim() || null,
-          state: state.trim() || null,
-          pin: pin.trim() || null,
-          photo_url: photoUrl,
-          emergency_contact: { name: emergencyName, relation: emergencyRelation, phone: emergencyPhone },
-          current_plan_id: selectedPlanId,
-          plan_start_date: planStartDate,
-          plan_end_date: planEndDate,
-          admission_date: new Date().toISOString().split('T')[0],
-          status: 'active',
-          trainer_id: trainerId || null,
-          bmi,
-          height_cm: heightCm ? Number(heightCm) : null,
-          weight_kg: weightKg ? Number(weightKg) : null,
-          health_goals: healthGoals,
-          fitness_level: fitnessLevel || null,
-          medical_conditions: medicalConditions.trim() || null,
-          timing_slot: timingSlot || null,
-          has_locker: hasLocker,
-          locker_number: hasLocker ? lockerNumber.trim() : null,
-          total_due: amountDue,
-          total_paid_lifetime: Number(amountPaid) || 0,
-          kyc_status: kycUrl ? 'pending' : 'pending',
-          created_by: user.id,
-        })
+        .insert(memberPayload)
         .select()
         .single();
+
+      // Graceful fallback if admission_fee column has not been added to remote DB yet
+      if (memberError && (memberError.message?.includes('admission_fee') || memberError.details?.includes('admission_fee'))) {
+        delete memberPayload.admission_fee;
+        const retryResult = await supabase
+          .from('members')
+          .insert(memberPayload)
+          .select()
+          .single();
+        memberData = retryResult.data;
+        memberError = retryResult.error;
+      }
 
       if (memberError || !memberData) {
         throw new Error(memberError?.message || 'Failed to create member row');
@@ -431,6 +451,24 @@ export default function AddMemberPage() {
         p_gym_id: user.gymId,
       });
 
+      const lineItems: any[] = [
+        {
+          description: `Membership Plan: ${selectedPlan?.name}`,
+          qty: 1,
+          rate: Number(selectedPlan?.price) || 0,
+          amount: Number(selectedPlan?.price) || 0,
+        },
+      ];
+
+      if (admFeeNumber > 0) {
+        lineItems.push({
+          description: 'One-Time Admission / Registration Fee',
+          qty: 1,
+          rate: admFeeNumber,
+          amount: admFeeNumber,
+        });
+      }
+
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
@@ -439,14 +477,7 @@ export default function AddMemberPage() {
           invoice_number: invNumber || `INV-${new Date().getFullYear()}-0001`,
           member_id: memberData.id,
           member_name: memberData.name,
-          line_items: [
-            {
-              description: `Membership Plan: ${selectedPlan?.name}`,
-              qty: 1,
-              rate: subtotal,
-              amount: subtotal,
-            },
-          ],
+          line_items: lineItems,
           subtotal,
           discount_percent: Number(discountPercent) || 0,
           discount_amount: discountAmount,
@@ -841,7 +872,22 @@ export default function AddMemberPage() {
 
                   <div className="h-[1px] bg-zinc-800/40 my-4" />
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="admissionFee" className="text-zinc-300 text-sm flex items-center justify-between">
+                        <span>Admission / Registration Fee (₹)</span>
+                        <span className="text-[11px] text-zinc-500 font-normal">One-time fee</span>
+                      </Label>
+                      <Input
+                        id="admissionFee"
+                        type="number"
+                        min={0}
+                        placeholder="0"
+                        value={admissionFee}
+                        onChange={(e) => setAdmissionFee(e.target.value)}
+                        className="border-zinc-800 bg-zinc-950 text-zinc-100 focus:border-purple-600"
+                      />
+                    </div>
                     <div className="grid gap-2">
                       <Label htmlFor="discount" className="text-zinc-300 text-sm">Discount (%)</Label>
                       <Input
@@ -849,22 +895,24 @@ export default function AddMemberPage() {
                         type="number"
                         min={0}
                         max={100}
+                        placeholder="0"
                         value={discountPercent}
                         onChange={(e) => setDiscountPercent(e.target.value)}
                         className="border-zinc-800 bg-zinc-950 text-zinc-100"
                       />
                     </div>
-                    <div className="grid gap-2 col-span-2">
-                      <Label htmlFor="paid" className="text-zinc-300 text-sm font-semibold">Amount Paid (₹) *</Label>
-                      <Input
-                        id="paid"
-                        type="number"
-                        min={0}
-                        value={amountPaid}
-                        onChange={(e) => setAmountPaid(e.target.value)}
-                        className="border-zinc-800 bg-zinc-950 text-zinc-100 font-bold focus:border-purple-600"
-                      />
-                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="paid" className="text-zinc-300 text-sm font-semibold">Amount Paid (₹) *</Label>
+                    <Input
+                      id="paid"
+                      type="number"
+                      min={0}
+                      value={amountPaid}
+                      onChange={(e) => setAmountPaid(e.target.value)}
+                      className="border-zinc-800 bg-zinc-950 text-zinc-100 font-bold focus:border-purple-600"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -900,7 +948,17 @@ export default function AddMemberPage() {
                     <h4 className="text-sm font-bold text-zinc-200 border-b border-zinc-800 pb-2 mb-4">Tax Invoice Breakdown</h4>
                     <div className="space-y-3 text-xs text-zinc-400">
                       <div className="flex justify-between">
-                        <span>Subtotal (Base Price)</span>
+                        <span>Plan Base Price</span>
+                        <span className="font-semibold text-zinc-200">₹{selectedPlan ? Number(selectedPlan.price) : 0}</span>
+                      </div>
+                      {Number(admissionFee) > 0 && (
+                        <div className="flex justify-between text-purple-300">
+                          <span>Admission Fee</span>
+                          <span className="font-semibold">₹{Number(admissionFee)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-zinc-800/60 pt-1 text-zinc-300">
+                        <span>Subtotal</span>
                         <span className="font-semibold text-zinc-200">₹{subtotal}</span>
                       </div>
                       <div className="flex justify-between">
