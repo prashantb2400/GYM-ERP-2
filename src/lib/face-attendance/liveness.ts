@@ -1,6 +1,7 @@
 /**
  * Biometric Liveness & Presentation Attack Detection (PAD)
  * Evaluates Eye Aspect Ratio (EAR), blink dynamics, and micro-motion variance.
+ * Standardized on 68-landmark facial geometry (Soukupová & Čech, 2016).
  * Designed to prevent photo, screen, and static spoof attacks in kiosk environments.
  */
 
@@ -29,11 +30,28 @@ export interface LivenessMetrics {
 }
 
 /**
+ * Extracts Left and Right 6-point eye landmark arrays from standard 68-point face landmarks.
+ * 68-point model landmark indices:
+ * Left Eye:  36..41 (outer corner: 36, top: 37, 38, inner corner: 39, bottom: 40, 41)
+ * Right Eye: 42..47 (inner corner: 42, top: 43, 44, outer corner: 45, bottom: 46, 47)
+ */
+export function extractEyeLandmarksFrom68(landmarks: Point2D[]): {
+  leftEye: Point2D[];
+  rightEye: Point2D[];
+} | null {
+  if (!landmarks || landmarks.length < 68) return null;
+  return {
+    leftEye: landmarks.slice(36, 42),
+    rightEye: landmarks.slice(42, 48),
+  };
+}
+
+/**
  * Calculates Eye Aspect Ratio (EAR) from 6 landmark points.
  * Standard formula based on Soukupová & Čech (2016):
  * EAR = (||p1 - p5|| + ||p2 - p4||) / (2 * ||p0 - p3||)
  *
- * Normal open human eye: 0.22 - 0.40
+ * Normal open human eye: 0.20 - 0.45
  * Closed / Blinking eye: < 0.18
  */
 export function calculateEyeAspectRatio(eye: Point2D[]): number {
@@ -76,11 +94,22 @@ export function calculateSpatialVariance(points: Point2D[]): number {
 export function evaluateLiveness(params: {
   leftEye?: Point2D[];
   rightEye?: Point2D[];
+  landmarks68?: Point2D[];
   centroidHistory?: Point2D[];
   blinkObserved?: boolean;
 }): LivenessMetrics {
-  const { leftEye, rightEye, centroidHistory = [], blinkObserved = false } = params;
+  let { leftEye, rightEye } = params;
+  const { landmarks68, centroidHistory = [], blinkObserved = false } = params;
   const flags: string[] = [];
+
+  // Extract eye points from 68-point landmarks if provided
+  if ((!leftEye || !rightEye) && landmarks68 && landmarks68.length >= 68) {
+    const extracted = extractEyeLandmarksFrom68(landmarks68);
+    if (extracted) {
+      leftEye = leftEye || extracted.leftEye;
+      rightEye = rightEye || extracted.rightEye;
+    }
+  }
 
   let earLeft = 0;
   let earRight = 0;
@@ -103,7 +132,7 @@ export function evaluateLiveness(params: {
 
   // 1. Biological eye geometry sanity check
   if (hasEyes) {
-    if (avgEar >= 0.18 && avgEar <= 0.45) {
+    if (avgEar >= 0.18 && avgEar <= 0.55) {
       score += 0.25; // Plausible open human eye ratio
     } else if (avgEar < 0.18) {
       score += 0.20; // Natural blink event
@@ -115,7 +144,7 @@ export function evaluateLiveness(params: {
 
     // Eye symmetry check
     const asymmetry = Math.abs(earLeft - earRight);
-    if (asymmetry > 0.15) {
+    if (asymmetry > 0.18) {
       flags.push('eye_asymmetry_detected');
       score -= 0.1;
     }
@@ -125,17 +154,17 @@ export function evaluateLiveness(params: {
   let isMotionNatural = true;
   if (centroidHistory.length >= 3) {
     if (motionVariance < 0.05) {
-      // Completely static image (photo on a stand or cardboard cutout)
+      // Completely static image (photo on a stand or screen spoof)
       isMotionNatural = false;
       score -= 0.35;
       flags.push('zero_motion_spoof_suspect');
     } else if (motionVariance > 75) {
-      // Rapid jitter / erratic camera motion
+      // Rapid jitter / excessive erratic motion
       isMotionNatural = false;
       score -= 0.2;
       flags.push('excessive_motion');
     } else {
-      // Natural human micro-tremor (breathing, posture adjustments: 0.1px - 35px)
+      // Natural human micro-tremor (breathing, posture micro-adjustments: 0.1px - 35px)
       score += 0.25;
       flags.push('natural_micro_motion');
     }

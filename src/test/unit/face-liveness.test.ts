@@ -3,6 +3,7 @@ import {
   calculateEyeAspectRatio,
   calculateSpatialVariance,
   evaluateLiveness,
+  extractEyeLandmarksFrom68,
   type Point2D,
 } from '@/lib/face-attendance/liveness';
 import { ConsensusTracker } from '@/lib/face-attendance/consensus-tracker';
@@ -50,6 +51,58 @@ describe('Biometric Liveness & Anti-Spoofing Detection', () => {
   it('returns 0 for empty or malformed eye landmarks', () => {
     expect(calculateEyeAspectRatio([])).toBe(0);
     expect(calculateEyeAspectRatio([{ x: 0, y: 0 }])).toBe(0);
+  });
+
+  it('extracts left (36..41) and right (42..47) eye landmarks from 68-point face landmarks', () => {
+    const landmarks68: Point2D[] = new Array(68).fill(null).map((_, i) => ({ x: i, y: i * 2 }));
+    const eyes = extractEyeLandmarksFrom68(landmarks68);
+
+    expect(eyes).not.toBeNull();
+    expect(eyes!.leftEye.length).toBe(6);
+    expect(eyes!.rightEye.length).toBe(6);
+    expect(eyes!.leftEye[0]).toEqual({ x: 36, y: 72 });
+    expect(eyes!.leftEye[5]).toEqual({ x: 41, y: 82 });
+    expect(eyes!.rightEye[0]).toEqual({ x: 42, y: 84 });
+    expect(eyes!.rightEye[5]).toEqual({ x: 47, y: 94 });
+
+    // Under-sized array returns null safely
+    expect(extractEyeLandmarksFrom68(landmarks68.slice(0, 60))).toBeNull();
+  });
+
+  it('evaluates liveness seamlessly when passing full 68-point landmarks array', () => {
+    const landmarks68: Point2D[] = new Array(68).fill({ x: 0, y: 0 });
+    // Inject openEye at 36..41 and 42..47
+    for (let i = 0; i < 6; i++) {
+      landmarks68[36 + i] = openEye[i];
+      landmarks68[42 + i] = openEye[i];
+    }
+
+    const result = evaluateLiveness({
+      landmarks68,
+      centroidHistory: [
+        { x: 100.0, y: 100.0 },
+        { x: 100.5, y: 100.2 },
+        { x: 100.9, y: 99.8 },
+      ],
+    });
+
+    expect(result.earLeft).toBeCloseTo(0.5, 2);
+    expect(result.earRight).toBeCloseTo(0.5, 2);
+    expect(result.avgEar).toBeCloseTo(0.5, 2);
+    expect(result.isBlinking).toBe(false);
+    expect(result.isLive).toBe(true);
+  });
+
+  it('detects blink event when 68-point eye collapses below 0.18', () => {
+    const landmarks68: Point2D[] = new Array(68).fill({ x: 0, y: 0 });
+    for (let i = 0; i < 6; i++) {
+      landmarks68[36 + i] = closedEye[i];
+      landmarks68[42 + i] = closedEye[i];
+    }
+
+    const result = evaluateLiveness({ landmarks68 });
+    expect(result.isBlinking).toBe(true);
+    expect(result.flags).toContain('eye_blink_captured');
   });
 
   it('measures spatial variance across frame centroid history', () => {

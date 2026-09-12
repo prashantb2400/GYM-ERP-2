@@ -37,10 +37,6 @@ export function squaredEuclideanDistance(a: ArrayLike<number>, b: ArrayLike<numb
 /**
  * Calculates Cosine Similarity between two face embedding vectors.
  * Returns a value in range [-1.0, 1.0]. Higher is better.
- * Typically:
- * >= 0.75: Same person (High confidence / Tier 1)
- * 0.62 - 0.75: Same person (Standard match / Tier 2)
- * < 0.50: Different person
  */
 export function cosineSimilarity(a: ArrayLike<number>, b: ArrayLike<number>): number {
   if (a.length !== b.length) {
@@ -82,7 +78,7 @@ export function normalizeDescriptor(descriptor: ArrayLike<number>): number[] {
  * Converts a Euclidean distance into a normalized confidence percentage [0.0 - 1.0].
  * Threshold is treated as ~50% confidence.
  */
-export function distanceToConfidence(distance: number, threshold = 0.54): number {
+export function distanceToConfidence(distance: number, threshold = 0.52): number {
   if (distance <= 0) return 1.0;
   if (distance >= 1.0) return 0.0;
   const confidence = Math.max(0, 1 - (distance / (threshold * 1.4)));
@@ -104,7 +100,7 @@ export function similarityToConfidence(similarity: number, threshold = 0.62): nu
 }
 
 /**
- * Averages multiple descriptors of any dimension into one representative vector.
+ * Averages multiple descriptors into one representative vector.
  * Optionally rejects outlier frames (e.g. motion blur, sudden head turn).
  * Normalizes the resulting vector (L2 norm = 1).
  */
@@ -164,34 +160,30 @@ export function averageDescriptors(
 /**
  * Scans an in-memory roster of enrolled members and finds the best match.
  *
- * Automatically detects vector dimension:
- * - High-dimensional vectors (>= 512-d, e.g. Human FaceRes 1024 or InsightFace 512):
- *   Uses Cosine Similarity (higher is better, threshold default: 0.62, high confidence: 0.74).
- * - Legacy 128-d vectors (face-api.js):
- *   Uses Euclidean Distance (lower is better, threshold default: 0.54, high confidence: 0.42).
+ * Primary Mode: 128-D Metric Space (ResNet-34 / face-api / dlib)
+ * Uses squared Euclidean distance (d^2) for instant sub-millisecond evaluation.
+ * Calibrated thresholds:
+ * - Default threshold: 0.52 (matches under natural gym lighting)
+ * - High confidence tier: 0.40 (requires 2-frame consensus)
  *
- * Supports Multi-Template Gallery:
- * Evaluates all distinct pose vectors in candidate.descriptors and takes the optimal match.
+ * Multi-Template Gallery:
+ * Evaluates all 5 enrolled poses in candidate.descriptors to ensure high-angle recall.
  */
 export function findBestMatch(
   queryDescriptor: ArrayLike<number>,
   roster: FaceDescriptorRecord[],
-  threshold = 0.54,
-  highConfidenceThreshold = 0.42
+  threshold = 0.52,
+  highConfidenceThreshold = 0.40
 ): MatchResult | null {
   if (!roster || roster.length === 0 || !queryDescriptor) return null;
 
   const isHighDim = queryDescriptor.length >= 512;
-  // For high-dim (cosine similarity): default threshold is 0.62, high confidence is 0.74
-  const similarityThreshold = isHighDim
-    ? (threshold !== 0.54 && threshold >= 0.55 ? threshold : 0.62)
-    : 0.62;
-  const highConfidenceSimilarity = isHighDim
-    ? (highConfidenceThreshold !== 0.42 && highConfidenceThreshold >= 0.65 ? highConfidenceThreshold : 0.74)
-    : 0.74;
 
   if (isHighDim) {
-    // High-dimensional Cosine Similarity search
+    // High-dimensional Cosine Similarity search (legacy backward compatibility)
+    const similarityThreshold = threshold !== 0.52 && threshold >= 0.55 ? threshold : 0.62;
+    const highConfidenceSimilarity = highConfidenceThreshold !== 0.40 && highConfidenceThreshold >= 0.65 ? highConfidenceThreshold : 0.74;
+
     let bestSimilarity = -Infinity;
     let bestMatch: FaceDescriptorRecord | null = null;
 
@@ -244,7 +236,7 @@ export function findBestMatch(
     return null;
   }
 
-  // Legacy Euclidean distance search for 128-d vectors
+  // Production ResNet-34 128-D Euclidean Distance Search
   const maxSqDistance = threshold * threshold;
   let bestSqDistance = Infinity;
   let bestMatch: FaceDescriptorRecord | null = null;

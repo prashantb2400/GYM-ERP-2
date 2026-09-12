@@ -19,6 +19,7 @@ interface CandidateState {
 export interface LivenessObservation {
   leftEye?: Point2D[];
   rightEye?: Point2D[];
+  landmarks68?: Point2D[];
   centroid?: Point2D;
 }
 
@@ -106,6 +107,7 @@ export class ConsensusTracker {
       livenessMetrics = evaluateLiveness({
         leftEye: observation.leftEye,
         rightEye: observation.rightEye,
+        landmarks68: observation.landmarks68,
         centroidHistory: state.centroids,
         blinkObserved: state.blinkDetected,
       });

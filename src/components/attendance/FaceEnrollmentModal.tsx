@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Camera, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { getHumanInstance } from '@/lib/face-attendance/models';
+import { loadFaceApiModels } from '@/lib/face-attendance/models';
 import { averageDescriptors, normalizeDescriptor } from '@/lib/face-attendance/matcher';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 
@@ -29,7 +29,6 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [capturedFrames, setCapturedFrames] = useState<number[][]>([]);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('Position face inside the oval frame');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -38,7 +37,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const humanRef = useRef<any>(null);
+  const faceApiRef = useRef<any>(null);
 
   // Stop camera helper
   const stopCamera = useCallback(() => {
@@ -62,7 +61,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
         await videoRef.current.play();
       }
       setIsCameraActive(true);
-    } catch (err) {
+    } catch {
       setErrorMessage('Camera access denied or unavailable.');
     }
   }, []);
@@ -72,7 +71,6 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
     if (!isOpen) {
       stopCamera();
       setProgress(0);
-      setCapturedFrames([]);
       setConsentGiven(false);
       setErrorMessage(null);
       return;
@@ -82,9 +80,9 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
     (async () => {
       try {
         setIsLoadingModels(true);
-        const human = await getHumanInstance();
+        const faceapi = await loadFaceApiModels('/models/face');
         if (isMounted) {
-          humanRef.current = human;
+          faceApiRef.current = faceapi;
           setIsLoadingModels(false);
           await startCamera();
         }
@@ -110,24 +108,25 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
       return;
     }
 
-    if (!videoRef.current || !humanRef.current) return;
+    if (!videoRef.current || !faceApiRef.current) return;
 
     setIsCapturing(true);
     setErrorMessage(null);
-    setCapturedFrames([]);
     setProgress(0);
 
-    const human = humanRef.current;
+    const faceapi = faceApiRef.current;
     const descriptors: number[][] = [];
     const TOTAL_FRAMES = 5;
 
     const POSE_INSTRUCTIONS = [
       'Pose 1/5: Look straight into the camera',
       'Pose 2/5: Hold steady, neutral expression',
-      'Pose 3/5: Turn face slightly left (~10°)',
-      'Pose 4/5: Turn face slightly right (~10°)',
-      'Pose 5/5: Look straight again (natural expression)',
+      'Pose 3/5: Turn face slightly left (~12°)',
+      'Pose 4/5: Turn face slightly right (~12°)',
+      'Pose 5/5: Tilt chin slightly up, look ahead',
     ];
+
+    const detectorOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
 
     for (let i = 0; i < TOTAL_FRAMES; i++) {
       setStatusMessage(POSE_INSTRUCTIONS[i]);
@@ -135,45 +134,50 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
 
       if (!videoRef.current) break;
 
-      const result = await human.detect(videoRef.current);
+      try {
+        const detection = await faceapi
+          .detectSingleFace(videoRef.current, detectorOptions)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
 
-      if (!result || !result.face || result.face.length === 0) {
-        setStatusMessage('No face detected. Please position within the oval.');
-        i--; // Retry this pose
-        await new Promise(r => setTimeout(r, 400));
-        continue;
-      }
+        if (!detection) {
+          setStatusMessage('No face detected. Please position within the oval.');
+          i--; // Retry this pose
+          await new Promise(r => setTimeout(r, 400));
+          continue;
+        }
 
-      // Pick most prominent face in viewport
-      const face = result.face.reduce((prev: any, curr: any) =>
-        (curr.box[2] * curr.box[3] > prev.box[2] * prev.box[3] ? curr : prev)
-      );
+        const { box, score } = detection.detection;
 
-      const [x, y, width, height] = face.box;
-      // Quality Gate: Ensure face is close enough and sharp
-      if (width < 75 || height < 75) {
-        setStatusMessage('Move a bit closer to the camera...');
+        // Quality Gate: Ensure face is sufficiently sized and sharp
+        if (box.width < 70 || box.height < 70) {
+          setStatusMessage('Move a bit closer to the camera...');
+          i--;
+          await new Promise(r => setTimeout(r, 400));
+          continue;
+        }
+
+        if (score < 0.45) {
+          setStatusMessage('Adjust lighting and hold steady...');
+          i--;
+          await new Promise(r => setTimeout(r, 400));
+          continue;
+        }
+
+        if (!detection.descriptor || detection.descriptor.length !== 128) {
+          setStatusMessage('Extracting biometric features, hold steady...');
+          i--;
+          await new Promise(r => setTimeout(r, 400));
+          continue;
+        }
+
+        descriptors.push(normalizeDescriptor(Array.from(detection.descriptor)));
+        setProgress(Math.round(((i + 1) / TOTAL_FRAMES) * 100));
+      } catch (err) {
+        console.warn('Pose capture frame error:', err);
         i--;
-        await new Promise(r => setTimeout(r, 400));
-        continue;
+        await new Promise(r => setTimeout(r, 300));
       }
-
-      if ((face.score ?? 0) < 0.45 && (face.boxScore ?? 0) < 0.45) {
-        setStatusMessage('Adjust lighting and hold steady...');
-        i--;
-        await new Promise(r => setTimeout(r, 400));
-        continue;
-      }
-
-      if (!face.embedding || face.embedding.length < 512) {
-        setStatusMessage('Extracting biometric features, hold steady...');
-        i--;
-        await new Promise(r => setTimeout(r, 400));
-        continue;
-      }
-
-      descriptors.push(normalizeDescriptor(Array.from(face.embedding)));
-      setProgress(Math.round(((i + 1) / TOTAL_FRAMES) * 100));
     }
 
     setIsCapturing(false);
@@ -192,8 +196,8 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
             descriptor: averagedVector,
             descriptors: descriptors, // 5-pose gallery
             consentGiven: true,
-            dimension: averagedVector.length,
-            model: averagedVector.length === 1024 ? 'human-1024' : 'insightface-512',
+            dimension: 128,
+            model: 'face-api-128',
           }),
         });
 
@@ -243,7 +247,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
             Face ID Enrollment — {member.name}
           </DialogTitle>
           <DialogDescription className="text-zinc-400 text-xs">
-            Capture 5 rapid frames to compute a high-precision deep biometric mathematical descriptor (1024-D).
+            Capture 5 rapid frames to compute a high-precision deep biometric mathematical descriptor (ResNet-34 128-D).
             No raw photographs are stored or transmitted.
           </DialogDescription>
         </DialogHeader>
@@ -269,7 +273,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
           {isLoadingModels && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-sm gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-xs text-zinc-400 font-medium">Loading neural models (WebGL / Human AI)...</p>
+              <p className="text-xs text-zinc-400 font-medium">Loading neural models (WebGL / Face-API ResNet-34)...</p>
             </div>
           )}
 

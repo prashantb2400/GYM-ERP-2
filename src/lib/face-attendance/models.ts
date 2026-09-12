@@ -1,137 +1,51 @@
 /**
  * Biometric Face Analysis & Recognition Engine
- * Provides dual support for:
- * 1. @vladmandic/human (3D FaceMesh, FaceRes 1024-d / InsightFace embeddings, Anti-spoofing)
- * 2. @vladmandic/face-api (Legacy 128-d fallback)
+ * Production ResNet-34 (128-D) + 68-Landmark Net + TinyFaceDetector
+ * Powered by @vladmandic/face-api
  */
 
+import type * as FaceApiType from '@vladmandic/face-api';
+
+let faceApiInstance: typeof FaceApiType | null = null;
+let loadPromise: Promise<typeof FaceApiType> | null = null;
 let modelsLoaded = false;
-let loadPromise: Promise<any> | null = null;
-let humanInstance: any = null;
-let humanLoadingPromise: Promise<any> | null = null;
 
 /**
- * Initializes and warms up the Human AI engine in browser client environments.
+ * Initializes and warms up the Face-API neural models (WebGL / WASM).
  * Safe for Next.js SSR (guards against server execution).
  */
-export async function getHumanInstance(modelBasePath = '/models/human/'): Promise<any> {
+export async function loadFaceApiModels(modelsUri = '/models/face'): Promise<typeof FaceApiType> {
   if (typeof window === 'undefined') {
-    throw new Error('Human can only be initialized in browser client environments');
+    throw new Error('Face-api models can only be initialized in browser client environments');
   }
 
-  if (humanInstance) {
-    return humanInstance;
-  }
-
-  if (humanLoadingPromise) {
-    return humanLoadingPromise;
-  }
-
-  humanLoadingPromise = (async () => {
-    try {
-      const { Human } = await import('@vladmandic/human');
-
-      // Ensure modelBasePath ends with slash
-      const normalizedPath = modelBasePath.endsWith('/') ? modelBasePath : `${modelBasePath}/`;
-
-      const config = {
-        modelBasePath: normalizedPath,
-        backend: 'webgl' as const,
-        async: true,
-        warmup: 'none', // 'none' avoids synthetic warmup stalls; WebGL kernels compile cleanly on first real frame
-        cacheSensitivity: 0.7,
-        filter: {
-          enabled: true,
-          equalization: false,
-          width: 0,
-          height: 0,
-          flip: false,
-        },
-        face: {
-          enabled: true,
-          detector: {
-            modelPath: 'blazeface.json',
-            rotation: true,
-            maxDetected: 4,
-            minConfidence: 0.45,
-            iouThreshold: 0.2,
-            return: true,
-          },
-          mesh: {
-            enabled: true,
-            modelPath: 'facemesh.json',
-          },
-          iris: {
-            enabled: true,
-            modelPath: 'iris.json',
-          },
-          description: {
-            enabled: true,
-            modelPath: 'faceres.json',
-          },
-          emotion: {
-            enabled: false,
-          },
-          antispoof: {
-            enabled: true,
-            modelPath: 'antispoof.json',
-          },
-          liveness: {
-            enabled: true,
-            modelPath: 'liveness.json',
-          },
-        },
-        body: { enabled: false },
-        hand: { enabled: false },
-        object: { enabled: false },
-        gesture: { enabled: false },
-        segmentation: { enabled: false },
-      };
-
-      const human = new Human(config as any);
-      await human.load();
-      await human.warmup();
-
-      humanInstance = human;
-      return human;
-    } catch (err) {
-      humanLoadingPromise = null;
-      throw new Error(`Failed to initialize Human AI engine: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  })();
-
-  return humanLoadingPromise;
-}
-
-/**
- * Legacy face-api model loader for backward compatibility
- */
-export async function loadFaceApiModels(modelsUri = '/models/face'): Promise<typeof import('@vladmandic/face-api')> {
-  const faceapi = await import('@vladmandic/face-api');
-
-  if (modelsLoaded) {
-    return faceapi;
+  if (faceApiInstance && modelsLoaded) {
+    return faceApiInstance;
   }
 
   if (loadPromise) {
-    await loadPromise;
-    return faceapi;
+    return loadPromise;
   }
 
   loadPromise = (async () => {
     try {
-      await faceapi.nets.tinyFaceDetector.loadFromUri(modelsUri);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(modelsUri);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(modelsUri);
+      const faceapi = await import('@vladmandic/face-api');
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(modelsUri),
+        faceapi.nets.faceLandmark68Net.loadFromUri(modelsUri),
+        faceapi.nets.faceRecognitionNet.loadFromUri(modelsUri),
+      ]);
       modelsLoaded = true;
+      faceApiInstance = faceapi;
+      return faceapi;
     } catch (err) {
       loadPromise = null;
+      modelsLoaded = false;
       throw new Error(`Failed to load face recognition models: ${err instanceof Error ? err.message : String(err)}`);
     }
   })();
 
-  await loadPromise;
-  return faceapi;
+  return loadPromise;
 }
 
 export function areModelsLoaded(): boolean {

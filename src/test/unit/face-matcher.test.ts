@@ -151,6 +151,36 @@ describe('Face Descriptor Vector Matcher', () => {
     expect(oldStrictMatch).toBeNull();
   });
 
+  it('correctly matches a member across 5 enrolled gallery poses (Front, Left, Right, Tilt, Neutral)', () => {
+    const p1Front = new Array(128).fill(0.10);
+    const p2Neutral = new Array(128).fill(0.105);
+    const p3Left = new Array(128).fill(0.12);
+    const p4Right = new Array(128).fill(0.135);
+    const p5Tilt = new Array(128).fill(0.14);
+
+    const averagedPrimary = averageDescriptors([p1Front, p2Neutral, p3Left, p4Right, p5Tilt], false);
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_5pose',
+        name: 'Gallery Member',
+        memberCode: 'MEM-505',
+        descriptor: averagedPrimary,
+        descriptors: [p1Front, p2Neutral, p3Left, p4Right, p5Tilt],
+        dimension: 128,
+      },
+    ];
+
+    // Query matching pose 4 (Right turn)
+    const liveQueryRight = new Array(128).fill(0.136);
+    const match = findBestMatch(liveQueryRight, roster);
+
+    expect(match).not.toBeNull();
+    expect(match!.memberId).toBe('mem_5pose');
+    expect(match!.tier).toBe('high');
+    expect(match!.distance).toBeLessThan(0.40);
+  });
+
   it('returns null when no candidate meets the threshold', () => {
     const targetDescriptor = new Array(128).fill(0.1);
     const farDescriptor = new Array(128).fill(0.9);
