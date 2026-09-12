@@ -8,6 +8,7 @@ import {
   averageDescriptors,
   findBestMatch,
   normalizeDescriptor,
+  detectLegacyDimensionMembers,
 } from '@/lib/face-attendance/matcher';
 import { ConsensusTracker } from '@/lib/face-attendance/consensus-tracker';
 import type { FaceDescriptorRecord, MatchResult } from '@/lib/face-attendance/types';
@@ -395,5 +396,124 @@ describe('ConsensusTracker Multi-Frame Temporal Verification', () => {
     const v2 = tracker.evaluate(match, now + 800);
     expect(v2.isConfirmed).toBe(false);
     expect(v2.framesObserved).toBe(1); // Fresh window
+  });
+});
+
+describe('Nearest-Neighbor Ambiguity Filter & Collision Prevention', () => {
+  it('rejects ambiguous matches when two distinct members have virtually equal distances in medium tier', () => {
+    // Target face vector
+    const query = new Array(128).fill(0.1);
+    // Member A is at distance sqrt(128 * (0.040)^2) ≈ 0.452
+    const memberA = new Array(128).fill(0.140);
+    // Member B is at distance sqrt(128 * (0.042)^2) ≈ 0.475
+    // Margin is ~0.023, which is < ambiguityMargin (0.04)
+    const memberB = new Array(128).fill(0.142);
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_a',
+        name: 'Member Alpha',
+        memberCode: 'MEM-A',
+        descriptor: memberA,
+      },
+      {
+        memberId: 'mem_b',
+        name: 'Member Beta',
+        memberCode: 'MEM-B',
+        descriptor: memberB,
+      },
+    ];
+
+    // Should reject because distance is in medium tier (>0.38) and difference is < 0.04
+    const match = findBestMatch(query, roster, 0.52, 0.38, 0.04);
+    expect(match).toBeNull();
+  });
+
+  it('accepts match when difference between best and second best exceeds margin', () => {
+    const query = new Array(128).fill(0.1);
+    // Member A is at distance sqrt(128 * (0.038)^2) ≈ 0.430
+    const memberA = new Array(128).fill(0.138);
+    // Member B is at distance sqrt(128 * (0.045)^2) ≈ 0.509
+    // Margin is ~0.079, which is >= ambiguityMargin (0.04)
+    const memberB = new Array(128).fill(0.145);
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_a',
+        name: 'Member Alpha',
+        memberCode: 'MEM-A',
+        descriptor: memberA,
+      },
+      {
+        memberId: 'mem_b',
+        name: 'Member Beta',
+        memberCode: 'MEM-B',
+        descriptor: memberB,
+      },
+    ];
+
+    const match = findBestMatch(query, roster, 0.52, 0.38, 0.04);
+    expect(match).not.toBeNull();
+    expect(match!.memberId).toBe('mem_a');
+    expect(match!.name).toBe('Member Alpha');
+  });
+
+  it('accepts decisive high-confidence match even if another member has a close template', () => {
+    const query = new Array(128).fill(0.1);
+    // Member A is extremely close: distance sqrt(128 * (0.02)^2) ≈ 0.226 (<= 0.38 high confidence)
+    const memberA = new Array(128).fill(0.12);
+    // Member B is also close: distance sqrt(128 * (0.022)^2) ≈ 0.249
+    const memberB = new Array(128).fill(0.122);
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_a',
+        name: 'Member Alpha',
+        memberCode: 'MEM-A',
+        descriptor: memberA,
+      },
+      {
+        memberId: 'mem_b',
+        name: 'Member Beta',
+        memberCode: 'MEM-B',
+        descriptor: memberB,
+      },
+    ];
+
+    const match = findBestMatch(query, roster, 0.52, 0.38, 0.04);
+    expect(match).not.toBeNull();
+    expect(match!.memberId).toBe('mem_a');
+    expect(match!.tier).toBe('high');
+  });
+
+  it('detects legacy dimension members requiring re-enrollment', () => {
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'm1',
+        name: 'Modern Member 1',
+        memberCode: 'MOD-1',
+        dimension: 128,
+        descriptor: new Array(128).fill(0.1),
+      },
+      {
+        memberId: 'm2',
+        name: 'Legacy Member 2',
+        memberCode: 'LEG-2',
+        dimension: 1024,
+        descriptor: new Array(1024).fill(0.05),
+      },
+      {
+        memberId: 'm3',
+        name: 'Modern Member 3',
+        memberCode: 'MOD-3',
+        dimension: 128,
+        descriptor: new Array(128).fill(0.1),
+      },
+    ];
+
+    const result = detectLegacyDimensionMembers(roster, 128);
+    expect(result.count).toBe(1);
+    expect(result.incompatibleMembers[0].name).toBe('Legacy Member 2');
+    expect(result.incompatibleMembers[0].dimension).toBe(1024);
   });
 });

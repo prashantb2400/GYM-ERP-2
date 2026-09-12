@@ -168,12 +168,17 @@ export function averageDescriptors(
  *
  * Multi-Template Gallery:
  * Evaluates all 5 enrolled poses in candidate.descriptors to ensure high-angle recall.
+ *
+ * Ambiguity Rejection (Nearest-Neighbor Margin Filter):
+ * Rejects candidates in the medium-confidence zone if a second member is within
+ * ambiguityMargin (default 0.04) distance to eliminate false-positive cross-member mismatches.
  */
 export function findBestMatch(
   queryDescriptor: ArrayLike<number>,
   roster: FaceDescriptorRecord[],
   threshold = 0.52,
-  highConfidenceThreshold = 0.40
+  highConfidenceThreshold = 0.38,
+  ambiguityMargin = 0.04
 ): MatchResult | null {
   if (!roster || roster.length === 0 || !queryDescriptor) return null;
 
@@ -182,10 +187,12 @@ export function findBestMatch(
   if (isHighDim) {
     // High-dimensional Cosine Similarity search (legacy backward compatibility)
     const similarityThreshold = threshold !== 0.52 && threshold >= 0.55 ? threshold : 0.62;
-    const highConfidenceSimilarity = highConfidenceThreshold !== 0.40 && highConfidenceThreshold >= 0.65 ? highConfidenceThreshold : 0.74;
+    const highConfidenceSimilarity = highConfidenceThreshold !== 0.38 && highConfidenceThreshold >= 0.65 ? highConfidenceThreshold : 0.74;
 
     let bestSimilarity = -Infinity;
+    let secondBestSimilarity = -Infinity;
     let bestMatch: FaceDescriptorRecord | null = null;
+    let secondBestMatch: FaceDescriptorRecord | null = null;
 
     for (let i = 0; i < roster.length; i++) {
       const candidate = roster[i];
@@ -213,12 +220,28 @@ export function findBestMatch(
       }
 
       if (candidateMaxSimilarity > bestSimilarity) {
+        secondBestSimilarity = bestSimilarity;
+        secondBestMatch = bestMatch;
         bestSimilarity = candidateMaxSimilarity;
         bestMatch = candidate;
+      } else if (candidateMaxSimilarity > secondBestSimilarity) {
+        secondBestSimilarity = candidateMaxSimilarity;
+        secondBestMatch = candidate;
       }
     }
 
     if (bestMatch && bestSimilarity >= similarityThreshold) {
+      // Ambiguity filter for high-dim cosine space
+      if (
+        secondBestMatch &&
+        secondBestMatch.memberId !== bestMatch.memberId &&
+        bestSimilarity < highConfidenceSimilarity &&
+        bestSimilarity - secondBestSimilarity < 0.03
+      ) {
+        // Ambiguous candidate
+        return null;
+      }
+
       const tier: 'high' | 'medium' = bestSimilarity >= highConfidenceSimilarity ? 'high' : 'medium';
       return {
         memberId: bestMatch.memberId,
@@ -239,7 +262,9 @@ export function findBestMatch(
   // Production ResNet-34 128-D Euclidean Distance Search
   const maxSqDistance = threshold * threshold;
   let bestSqDistance = Infinity;
+  let secondBestSqDistance = Infinity;
   let bestMatch: FaceDescriptorRecord | null = null;
+  let secondBestMatch: FaceDescriptorRecord | null = null;
 
   for (let i = 0; i < roster.length; i++) {
     const candidate = roster[i];
@@ -267,13 +292,32 @@ export function findBestMatch(
     }
 
     if (candidateMinSqDist < bestSqDistance) {
+      secondBestSqDistance = bestSqDistance;
+      secondBestMatch = bestMatch;
       bestSqDistance = candidateMinSqDist;
       bestMatch = candidate;
+    } else if (candidateMinSqDist < secondBestSqDistance) {
+      secondBestSqDistance = candidateMinSqDist;
+      secondBestMatch = candidate;
     }
   }
 
   if (bestMatch && bestSqDistance <= maxSqDistance) {
     const bestDistance = Math.sqrt(bestSqDistance);
+    const secondBestDistance = Math.sqrt(secondBestSqDistance);
+
+    // Ambiguity filter: If in the medium tier and runner-up from a different member
+    // is within ambiguityMargin, reject ambiguous match to prevent cross-member misidentification
+    if (
+      secondBestMatch &&
+      secondBestMatch.memberId !== bestMatch.memberId &&
+      bestDistance > highConfidenceThreshold &&
+      secondBestDistance - bestDistance < ambiguityMargin
+    ) {
+      // Ambiguous: two members are virtually equidistant to this face query
+      return null;
+    }
+
     const tier: 'high' | 'medium' = bestDistance <= highConfidenceThreshold ? 'high' : 'medium';
 
     return {
@@ -289,4 +333,34 @@ export function findBestMatch(
   }
 
   return null;
+}
+
+/**
+ * Detects members in the roster whose enrolled descriptors have incompatible dimensions.
+ */
+export function detectLegacyDimensionMembers(
+  roster: FaceDescriptorRecord[],
+  targetDimension = 128
+): {
+  count: number;
+  incompatibleMembers: Array<{ memberId: string; name: string; dimension: number }>;
+} {
+  const incompatible: Array<{ memberId: string; name: string; dimension: number }> = [];
+  if (!roster) return { count: 0, incompatibleMembers: [] };
+
+  for (const member of roster) {
+    const dim = member.dimension || member.descriptor?.length || 0;
+    if (dim > 0 && dim !== targetDimension) {
+      incompatible.push({
+        memberId: member.memberId,
+        name: member.name,
+        dimension: dim,
+      });
+    }
+  }
+
+  return {
+    count: incompatible.length,
+    incompatibleMembers: incompatible,
+  };
 }

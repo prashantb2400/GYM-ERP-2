@@ -170,7 +170,29 @@ export default function FingerprintKioskPage() {
     detectHardware();
     loadRoster();
     fetchTodayCount();
-  }, [detectHardware, loadRoster, fetchTodayCount]);
+
+    if (gymId) {
+      const channel = supabase
+        .channel('kiosk-fingerprint-attendance')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'attendance',
+            filter: `gym_id=eq.${gymId}`,
+          },
+          () => {
+            fetchTodayCount();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [detectHardware, loadRoster, fetchTodayCount, gymId, supabase]);
 
   // Process live scan from sensor
   const handleScanTouch = async (finger: FingerType = 'left_thumb') => {
@@ -360,9 +382,14 @@ export default function FingerprintKioskPage() {
               <Fingerprint className="h-5 w-5 text-purple-400 animate-pulse" />
             </div>
             <div>
-              <h1 className="font-black text-sm sm:text-base tracking-tight text-zinc-100">
-                Fingerprint Station
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="font-black text-sm sm:text-base tracking-tight text-zinc-100">
+                  Fingerprint Station
+                </h1>
+                <Badge className="bg-purple-600/10 text-purple-300 border-purple-500/30 font-semibold text-[10px] px-1.5 py-0 hidden sm:inline-flex">
+                  Hardware Biometrics
+                </Badge>
+              </div>
               <p className="text-[10px] text-zinc-400 font-mono">
                 {roster.length} Enrolled Members Active
               </p>

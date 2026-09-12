@@ -38,6 +38,7 @@ import {
   recordAttendanceEvent,
   flushAttendanceQueue,
   ConsensusTracker,
+  detectLegacyDimensionMembers,
   type FaceDescriptorRecord,
   type AttendanceEvent,
 } from '@/lib/face-attendance';
@@ -84,6 +85,7 @@ export default function FaceKioskPage() {
 
   // Face Recognition State
   const [roster, setRoster] = useState<FaceDescriptorRecord[]>([]);
+  const [legacyMemberCount, setLegacyMemberCount] = useState(0);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -245,6 +247,8 @@ export default function FaceKioskPage() {
         detectFpHardware(),
       ]);
       setRoster(loadedRoster);
+      const legacy = detectLegacyDimensionMembers(loadedRoster, 128);
+      setLegacyMemberCount(legacy.count);
       setIsOnline(!isOffline);
       toast.success('Rosters & biometric hardware refreshed');
     } catch (err) {
@@ -273,6 +277,8 @@ export default function FaceKioskPage() {
           const { roster: loadedRoster, isOffline } = await syncRoster(gymId, user?.branchId || undefined);
           if (mounted) {
             setRoster(loadedRoster);
+            const legacy = detectLegacyDimensionMembers(loadedRoster, 128);
+            setLegacyMemberCount(legacy.count);
             setIsOnline(!isOffline);
           }
         }
@@ -293,7 +299,11 @@ export default function FaceKioskPage() {
     const handleOnline = () => {
       setIsOnline(true);
       if (gymId) {
-        syncRoster(gymId, user?.branchId || undefined).then(({ roster: r }) => setRoster(r));
+        syncRoster(gymId, user?.branchId || undefined).then(({ roster: r }) => {
+          setRoster(r);
+          const legacy = detectLegacyDimensionMembers(r, 128);
+          setLegacyMemberCount(legacy.count);
+        });
         flushAttendanceQueue().then(({ remainingCount }) => setPendingQueueCount(remainingCount));
       }
     };
@@ -340,7 +350,7 @@ export default function FaceKioskPage() {
         const video = videoRef.current;
 
         try {
-          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
+          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.38 });
           const detections = await faceapi
             .detectAllFaces(video, options)
             .withFaceLandmarks()
@@ -366,15 +376,15 @@ export default function FaceKioskPage() {
 
           for (const det of detections) {
             const { box } = det.detection;
-            if (box.width < 65 || box.height < 65) continue;
+            if (box.width < 32 || box.height < 32) continue;
 
             const fx = box.x;
             const fy = box.y;
             const fw = box.width;
             const fh = box.height;
 
-            // Instant 1:N Euclidean search in 128-D ResNet metric space
-            const match = findBestMatch(det.descriptor, roster, 0.52, 0.40);
+            // Instant 1:N Euclidean search in 128-D ResNet metric space with Ambiguity Margin Filter
+            const match = findBestMatch(det.descriptor, roster, 0.48, 0.38, 0.04);
 
             // Extract true 68-landmark eye coordinates for Soukupová & Čech EAR calculation
             const positions = det.landmarks.positions;
@@ -587,8 +597,6 @@ export default function FaceKioskPage() {
                   bannerTimeoutRef.current = setTimeout(() => {
                     setRecognitionBanner({ state: 'idle' });
                   }, 3000);
-
-                  break;
                 }
               }
             } else if (canvasCtx) {
@@ -802,7 +810,7 @@ export default function FaceKioskPage() {
                   AI Face Kiosk
                 </span>
                 <Badge className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-zinc-200 border-cyan-500/30 text-[10px] px-1.5 py-0 font-semibold hidden sm:inline-flex">
-                  Face + Fingerprint
+                  Face & Biometrics
                 </Badge>
               </div>
             </div>
@@ -879,6 +887,18 @@ export default function FaceKioskPage() {
 
         {/* Status Indicators & Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Legacy Dimension Warning */}
+          {legacyMemberCount > 0 && (
+            <Badge
+              variant="outline"
+              className="gap-1 text-xs font-semibold text-amber-400 border-amber-500/30 bg-amber-500/10 hidden xl:flex"
+              title={`${legacyMemberCount} member(s) enrolled with older 1024-D models need 1-click re-enrollment in Members section.`}
+            >
+              <AlertCircle className="h-3 w-3 text-amber-400" />
+              <span>{legacyMemberCount} Legacy (Re-enroll)</span>
+            </Badge>
+          )}
+
           {/* Face ID Status */}
           <Badge
             variant="outline"

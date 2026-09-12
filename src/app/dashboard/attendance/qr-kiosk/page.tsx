@@ -57,23 +57,48 @@ export default function QrKioskPage() {
 
   const supabase = createClient();
 
-  // Fetch today's count
+  // Fetch today's count & subscribe to realtime updates
   useEffect(() => {
     if (!gymId) return;
     const today = new Date().toISOString().split('T')[0];
-    let query = supabase
-      .from('attendance')
-      .select('id', { count: 'exact', head: true })
-      .eq('gym_id', gymId)
-      .eq('date', today);
 
-    if (effectiveBranchId) {
-      query = query.eq('branch_id', effectiveBranchId);
-    }
+    const loadCount = () => {
+      let query = supabase
+        .from('attendance')
+        .select('id', { count: 'exact', head: true })
+        .eq('gym_id', gymId)
+        .eq('date', today);
 
-    query.then(({ count }) => {
-      setTodayCount(count || 0);
-    });
+      if (effectiveBranchId) {
+        query = query.eq('branch_id', effectiveBranchId);
+      }
+
+      query.then(({ count }) => {
+        setTodayCount(count || 0);
+      });
+    };
+
+    loadCount();
+
+    const channel = supabase
+      .channel('kiosk-qr-attendance')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'attendance',
+          filter: `gym_id=eq.${gymId}`,
+        },
+        () => {
+          loadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [gymId, effectiveBranchId, supabase]);
 
   // Audio feedback with Web Audio API
@@ -197,7 +222,7 @@ export default function QrKioskPage() {
     }
   }, [isProcessing, gymId, effectiveBranchId, playBeep]);
 
-  // Start html5-qrcode camera scanner
+  // Start html5-qrcode camera scanner with auto-fallback
   const startScanner = useCallback(async () => {
     try {
       setCameraError(null);
@@ -205,18 +230,37 @@ export default function QrKioskPage() {
       const scanner = new Html5Qrcode(SCANNER_CONTAINER_ID);
       scannerRef.current = scanner;
 
-      await scanner.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-        },
-        (decodedText) => {
-          processQrCode(decodedText);
-        },
-        () => {}
-      );
+      const qrConfig = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+      };
+
+      let started = false;
+
+      // 1. Try environment (back) camera first (ideal for tablets / mobile kiosks)
+      try {
+        await scanner.start(
+          { facingMode: 'environment' },
+          qrConfig,
+          (decodedText) => processQrCode(decodedText),
+          () => {}
+        );
+        started = true;
+      } catch (backErr) {
+        console.warn('Environment camera unavailable, attempting front/user camera:', backErr);
+      }
+
+      // 2. Fallback to user (front) camera (for desktop / laptop webcams)
+      if (!started) {
+        await scanner.start(
+          { facingMode: 'user' },
+          qrConfig,
+          (decodedText) => processQrCode(decodedText),
+          () => {}
+        );
+      }
+
       setCameraActive(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Camera failed to start';
@@ -268,9 +312,14 @@ export default function QrKioskPage() {
               <QrCode className="h-5 w-5 text-blue-400 animate-pulse" />
             </div>
             <div>
-              <h1 className="font-black text-sm sm:text-base tracking-tight text-zinc-100">
-                QR Code Kiosk
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="font-black text-sm sm:text-base tracking-tight text-zinc-100">
+                  QR Code Kiosk
+                </h1>
+                <Badge className="bg-blue-600/10 text-blue-300 border-blue-500/30 font-semibold text-[10px] px-1.5 py-0 hidden sm:inline-flex">
+                  Digital Pass Scanner
+                </Badge>
+              </div>
               <p className="text-[10px] text-zinc-400 font-mono">
                 Camera Pass Scanner Active
               </p>
