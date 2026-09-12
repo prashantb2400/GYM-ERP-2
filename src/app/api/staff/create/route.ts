@@ -26,6 +26,8 @@ export async function POST(request: Request) {
         .from('gyms')
         .select('id')
         .eq('owner_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (ownedGym) {
@@ -153,13 +155,18 @@ export async function POST(request: Request) {
     if (dbError) {
       // Clean up orphaned auth user on database failure
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id).catch(() => null);
-      throw dbError;
+      console.error('Failed to insert staff user into DB:', dbError);
+      return NextResponse.json(
+        { error: dbError.message || 'Database error creating staff user' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true, user: newDbUser });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+    const msg =
+      (err as any)?.message || (err instanceof Error ? err.message : 'Internal server error creating staff account');
     console.error('Error creating staff account:', err);
-    return NextResponse.json({ error: msg || 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

@@ -19,7 +19,8 @@ import { Badge } from '@/components/ui/badge';
 import { QuickAddMember } from '@/components/shared/QuickAddMember';
 import { toast } from 'sonner';
 import { formatPhone, formatDate } from '@/lib/utils/format';
-import { Trash2, UserPlus, Phone, Calendar, ArrowRight, Target, Edit2, Zap } from 'lucide-react';
+import { Trash2, UserPlus, Phone, Calendar, ArrowRight, Target, Edit2, Zap, Copy, Check } from 'lucide-react';
+import { fetchWithAuth } from '@/lib/utils/api-client';
 
 interface Lead {
   id: string;
@@ -57,6 +58,24 @@ export default function LeadsPage() {
   });
 
   const [convertLead, setConvertLead] = useState<Lead | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  const calculateStats = (data: Lead[]) => {
+    const today = new Date().toISOString().split('T')[0];
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    
+    let hot = 0;
+    let conv = 0;
+    data?.forEach(l => {
+      if (l.status !== 'converted' && l.status !== 'lost' && l.follow_up_date && l.follow_up_date <= today) {
+        hot++;
+      }
+      if (l.status === 'converted' && l.created_at >= startOfMonth) {
+        conv++;
+      }
+    });
+    setStats({ total: data?.length || 0, hot, converted: conv });
+  };
 
   const fetchLeads = async () => {
     if (!user?.gymId) {
@@ -67,6 +86,27 @@ export default function LeadsPage() {
     try {
       setLoading(true);
       setSqlError(false);
+
+      // 1. Primary: Server-side API route
+      const res = await fetchWithAuth('/api/leads');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.tableMissing) {
+          setSqlError(true);
+          setLeads([]);
+          setLoading(false);
+          return;
+        }
+
+        if (json.success && Array.isArray(json.leads)) {
+          setLeads(json.leads);
+          calculateStats(json.leads);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 2. Fallback: Direct Supabase client query
       const { data, error } = await supabase
         .from('leads')
         .select('*')
@@ -74,34 +114,29 @@ export default function LeadsPage() {
         .order('follow_up_date', { ascending: true, nullsFirst: false });
         
       if (error) {
-        if (error.code === '42P01') {
+        const code = (error as any)?.code;
+        const msg = (error as any)?.message || '';
+        if (
+          code === '42P01' ||
+          code === 'PGRST205' ||
+          msg.includes('does not exist') ||
+          msg.includes('schema cache')
+        ) {
           setSqlError(true);
-        } else {
-          toast.error(error.message);
+          setLeads([]);
+          return;
         }
+        toast.error(msg || 'Failed to load leads');
         return;
       }
       
       setLeads(data || []);
-      
-      const today = new Date().toISOString().split('T')[0];
-      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-      
-      let hot = 0;
-      let conv = 0;
-      data?.forEach(l => {
-        if (l.status !== 'converted' && l.status !== 'lost' && l.follow_up_date && l.follow_up_date <= today) {
-          hot++;
-        }
-        if (l.status === 'converted' && l.created_at >= startOfMonth) {
-          conv++;
-        }
-      });
-      setStats({ total: data?.length || 0, hot, converted: conv });
-      
+      calculateStats(data || []);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
-      toast.error('Failed to load leads');
+      const msg =
+        (err as any)?.message || (err instanceof Error ? err.message : 'Failed to load leads');
+      console.warn('fetchLeads warning:', err);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -116,14 +151,42 @@ export default function LeadsPage() {
     if (!user?.gymId) return;
     
     try {
-      const { error } = await supabase.from('leads').insert([{
-        gym_id: user.gymId,
+      const payload = {
         name: formData.name,
         phone: formData.phone.replace(/\D/g, ''),
         interest: formData.interest,
         source: formData.source,
         follow_up_date: formData.follow_up_date || null,
         notes: formData.notes,
+        branchId: user?.branchId || undefined,
+      };
+
+      // 1. Primary: Server API route
+      const res = await fetchWithAuth('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast.success('Lead added successfully');
+        setIsAddSheetOpen(false);
+        setFormData({
+          name: '',
+          phone: '',
+          interest: 'membership',
+          source: 'walk_in',
+          follow_up_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          notes: '',
+        });
+        fetchLeads();
+        return;
+      }
+
+      // 2. Fallback: Direct insert
+      const { error } = await supabase.from('leads').insert([{
+        gym_id: user.gymId,
+        ...payload,
         status: 'new'
       }]);
       
@@ -141,19 +204,35 @@ export default function LeadsPage() {
       });
       fetchLeads();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      const msg =
+        (err as any)?.message || (err instanceof Error ? err.message : 'Failed to add lead');
       toast.error(msg);
     }
   };
 
   const updateStatus = async (id: string, newStatus: string) => {
     try {
+      // 1. Primary: Server API route
+      const res = await fetchWithAuth('/api/leads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+
+      if (res.ok) {
+        toast.success('Status updated');
+        fetchLeads();
+        return;
+      }
+
+      // 2. Fallback: Direct update
       const { error } = await supabase.from('leads').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
       toast.success('Status updated');
       fetchLeads();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      const msg =
+        (err as any)?.message || (err instanceof Error ? err.message : 'Failed to update status');
       toast.error(msg);
     }
   };
@@ -161,12 +240,26 @@ export default function LeadsPage() {
   const deleteLead = async (id: string) => {
     if (!confirm('Are you sure you want to delete this lead?')) return;
     try {
+      // 1. Primary: Server API route
+      const res = await fetchWithAuth(`/api/leads?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        toast.success('Lead deleted');
+        fetchLeads();
+        return;
+      }
+
+      // 2. Fallback: Direct delete
       const { error } = await supabase.from('leads').delete().eq('id', id);
       if (error) throw error;
       toast.success('Lead deleted');
       fetchLeads();
     } catch (err: unknown) {
-      toast.error('Failed to delete lead');
+      const msg =
+        (err as any)?.message || (err instanceof Error ? err.message : 'Failed to delete lead');
+      toast.error(msg);
     }
   };
 
@@ -273,31 +366,81 @@ export default function LeadsPage() {
 
       {sqlError ? (
         <Card className="border-red-900/50 bg-zinc-900/40">
-          <CardHeader>
-            <CardTitle className="text-red-400">Database Setup Required</CardTitle>
-            <CardDescription className="text-zinc-400">Run this SQL in your Supabase SQL Editor to enable Leads management:</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <pre className="bg-zinc-950 p-4 rounded-lg text-zinc-300 text-sm overflow-x-auto border border-zinc-800">
-{`CREATE TABLE IF NOT EXISTS leads (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-red-400">Database Setup Required</CardTitle>
+              <CardDescription className="text-zinc-400">
+                Run this migration in your Supabase SQL Editor to enable Leads management with branch isolation and security policies:
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 gap-1.5"
+              onClick={() => {
+                const sqlText = `CREATE TABLE IF NOT EXISTS public.leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID NOT NULL REFERENCES public.gyms(id) ON DELETE CASCADE,
+  branch_id UUID REFERENCES public.branches(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
   email TEXT,
-  interest TEXT DEFAULT 'membership',
-  source TEXT DEFAULT 'walk_in',
-  status TEXT DEFAULT 'new',
+  interest TEXT DEFAULT 'membership' CHECK (interest IN ('membership', 'personal_training', 'group_class', 'other')),
+  source TEXT DEFAULT 'walk_in' CHECK (source IN ('walk_in', 'referral', 'instagram', 'google', 'other')),
+  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'interested', 'converted', 'lost')),
   notes TEXT,
   follow_up_date DATE,
-  converted_member_id UUID REFERENCES members(id),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  converted_member_id UUID REFERENCES public.members(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_leads_gym_id ON leads(gym_id);
-CREATE INDEX IF NOT EXISTS idx_leads_follow_up ON leads(follow_up_date);`}
+CREATE INDEX IF NOT EXISTS idx_leads_gym_id ON public.leads(gym_id);
+CREATE INDEX IF NOT EXISTS idx_leads_branch_id ON public.leads(branch_id);
+CREATE INDEX IF NOT EXISTS idx_leads_follow_up ON public.leads(follow_up_date);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON public.leads(status);
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
+CREATE POLICY leads_select ON public.leads FOR SELECT USING (gym_id IN (SELECT gym_id FROM public.users WHERE auth_id = auth.uid()) OR gym_id IN (SELECT id FROM public.gyms WHERE owner_id = auth.uid()));
+CREATE POLICY leads_manage ON public.leads FOR ALL USING (gym_id IN (SELECT gym_id FROM public.users WHERE auth_id = auth.uid()) OR gym_id IN (SELECT id FROM public.gyms WHERE owner_id = auth.uid()));`;
+                navigator.clipboard.writeText(sqlText);
+                setCopiedSql(true);
+                toast.success('SQL copied to clipboard!');
+                setTimeout(() => setCopiedSql(false), 2000);
+              }}
+            >
+              {copiedSql ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4 text-zinc-400" />}
+              {copiedSql ? 'Copied' : 'Copy SQL'}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <pre className="bg-zinc-950 p-4 rounded-lg text-zinc-300 text-xs font-mono overflow-x-auto border border-zinc-800">
+{`CREATE TABLE IF NOT EXISTS public.leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID NOT NULL REFERENCES public.gyms(id) ON DELETE CASCADE,
+  branch_id UUID REFERENCES public.branches(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  email TEXT,
+  interest TEXT DEFAULT 'membership' CHECK (interest IN ('membership', 'personal_training', 'group_class', 'other')),
+  source TEXT DEFAULT 'walk_in' CHECK (source IN ('walk_in', 'referral', 'instagram', 'google', 'other')),
+  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'interested', 'converted', 'lost')),
+  notes TEXT,
+  follow_up_date DATE,
+  converted_member_id UUID REFERENCES public.members(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_leads_gym_id ON public.leads(gym_id);
+CREATE INDEX IF NOT EXISTS idx_leads_branch_id ON public.leads(branch_id);
+CREATE INDEX IF NOT EXISTS idx_leads_follow_up ON public.leads(follow_up_date);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON public.leads(status);
+
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
+CREATE POLICY leads_select ON public.leads FOR SELECT USING (gym_id IN (SELECT gym_id FROM public.users WHERE auth_id = auth.uid()) OR gym_id IN (SELECT id FROM public.gyms WHERE owner_id = auth.uid()));
+CREATE POLICY leads_manage ON public.leads FOR ALL USING (gym_id IN (SELECT gym_id FROM public.users WHERE auth_id = auth.uid()) OR gym_id IN (SELECT id FROM public.gyms WHERE owner_id = auth.uid()));`}
             </pre>
-            <Button onClick={fetchLeads} className="mt-4 bg-zinc-800 hover:bg-zinc-700 text-white">
-              I have run the SQL, try again
+            <Button onClick={fetchLeads} className="mt-4 bg-purple-600 hover:bg-purple-700 text-white">
+              🔄 Check Database Again
             </Button>
           </CardContent>
         </Card>

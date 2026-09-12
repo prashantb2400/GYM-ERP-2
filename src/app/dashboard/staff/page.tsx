@@ -109,15 +109,37 @@ export default function StaffCRUDPage() {
     try {
       setLoading(true);
       setError(null);
+
+      // 1. Primary: Server-side API route (immune to client-side RLS recursion)
       const res = await fetchWithAuth('/api/staff');
-      if (!res.ok) {
-        const result = await res.json().catch(() => ({}));
-        throw new Error(result.error || 'Failed to load staff list');
+      if (res.ok) {
+        const result = await res.json();
+        if (result.staff) {
+          setStaffList(result.staff);
+          setLoading(false);
+          return;
+        }
       }
-      const result = await res.json();
-      setStaffList(result.staff || []);
+
+      // 2. Fallback: Direct Supabase client query
+      const { data, error: clientErr } = await supabase
+        .from('users')
+        .select('*')
+        .eq('gym_id', user.gymId)
+        .order('role', { ascending: true });
+
+      if (clientErr) {
+        const errorMsg = (clientErr as any)?.message || 'Failed to load staff list';
+        console.warn('Direct Supabase staff query warning:', clientErr);
+        setError(errorMsg);
+        toast.error(errorMsg);
+        return;
+      }
+
+      setStaffList(data || []);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      const msg =
+        (err as any)?.message || (err instanceof Error ? err.message : 'Failed to load staff list');
       setError(msg);
       toast.error(msg);
     } finally {
@@ -191,7 +213,8 @@ export default function StaffCRUDPage() {
       setOpenAddModal(false);
       fetchStaff();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      const msg =
+        (err as any)?.message || (err instanceof Error ? err.message : 'Failed to create staff account');
       toast.error(msg);
     } finally {
       setAdding(false);
@@ -240,7 +263,8 @@ export default function StaffCRUDPage() {
       setOpenPermsModal(false);
       fetchStaff();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      const msg =
+        (err as any)?.message || (err instanceof Error ? err.message : 'Failed to save staff permissions');
       toast.error(msg);
     } finally {
       setSavingPerms(false);
@@ -272,7 +296,8 @@ export default function StaffCRUDPage() {
       setStaffList(prev => prev.map(s => s.id === statusTarget.id ? { ...s, is_active: !statusTarget.currentVal } : s));
       setStatusTarget(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      const msg =
+        (err as any)?.message || (err instanceof Error ? err.message : 'Failed to update staff status');
       toast.error(msg);
     } finally {
       setStatusLoading(false);

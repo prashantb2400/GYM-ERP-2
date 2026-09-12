@@ -3,6 +3,36 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAuthUser } from '@/lib/server/auth-helper';
 
 /**
+ * Helper to safely resolve the caller's gym_id and user record.
+ * Uses order('created_at', { ascending: false }).limit(1) to avoid PGRST116 multi-row errors.
+ */
+async function resolveCallerGym(authUserId: string) {
+  const { data: callerUser } = await supabaseAdmin
+    .from('users')
+    .select('id, gym_id, role, permissions')
+    .eq('auth_id', authUserId)
+    .maybeSingle();
+
+  let resolvedGymId = callerUser?.gym_id;
+
+  if (!resolvedGymId) {
+    const { data: ownedGym } = await supabaseAdmin
+      .from('gyms')
+      .select('id')
+      .eq('owner_id', authUserId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (ownedGym) {
+      resolvedGymId = ownedGym.id;
+    }
+  }
+
+  return { callerUser, resolvedGymId };
+}
+
+/**
  * GET /api/staff
  * Lists all staff and owner profiles for the caller's gym.
  * Protected by server-side authorization and immune to client-side RLS recursion.
@@ -14,34 +44,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
     }
 
-    // 1. Resolve caller's user record and gym_id
-    const { data: callerUser } = await supabaseAdmin
-      .from('users')
-      .select('id, gym_id, role, permissions')
-      .eq('auth_id', user.id)
-      .maybeSingle();
-
-    let resolvedGymId = callerUser?.gym_id;
-
-    // Fallback: Check if caller is gym owner via gyms table
-    if (!resolvedGymId) {
-      const { data: ownedGym } = await supabaseAdmin
-        .from('gyms')
-        .select('id')
-        .eq('owner_id', user.id)
-        .maybeSingle();
-      if (ownedGym) {
-        resolvedGymId = ownedGym.id;
-      }
-    }
+    const { callerUser, resolvedGymId } = await resolveCallerGym(user.id);
 
     if (!resolvedGymId) {
       return NextResponse.json({ error: 'No gym workspace associated with this user' }, { status: 403 });
     }
 
-    // Verify permission: owner or staff.view
+    // Verify permission: owner or staff.view or staff.manage or wildcard
     const isOwner = callerUser?.role === 'owner' || (!callerUser && Boolean(resolvedGymId));
-    const hasViewPerm = callerUser?.permissions?.includes('staff.view');
+    const hasViewPerm =
+      callerUser?.permissions?.includes('staff.view') ||
+      callerUser?.permissions?.includes('staff.manage') ||
+      callerUser?.permissions?.includes('*');
+
     if (!isOwner && !hasViewPerm) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions to view staff' }, { status: 403 });
     }
@@ -53,7 +68,13 @@ export async function GET(request: Request) {
       .eq('gym_id', resolvedGymId)
       .order('role', { ascending: true });
 
-    if (staffError) throw staffError;
+    if (staffError) {
+      console.error('Failed to fetch staff from database:', staffError);
+      return NextResponse.json(
+        { error: staffError.message || 'Database error fetching staff' },
+        { status: 500 }
+      );
+    }
 
     // 3. Fetch branches to safely merge branch names without PostgREST embed bugs
     const { data: branches } = await supabaseAdmin
@@ -74,7 +95,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, staff: enrichedStaff });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+    const msg =
+      (err as any)?.message || (err instanceof Error ? err.message : 'Internal server error fetching staff list');
     console.error('Failed to fetch staff list:', err);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -91,29 +113,18 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: callerUser } = await supabaseAdmin
-      .from('users')
-      .select('id, gym_id, role, permissions')
-      .eq('auth_id', user.id)
-      .maybeSingle();
-
-    let resolvedGymId = callerUser?.gym_id;
-    if (!resolvedGymId) {
-      const { data: ownedGym } = await supabaseAdmin
-        .from('gyms')
-        .select('id')
-        .eq('owner_id', user.id)
-        .maybeSingle();
-      if (ownedGym) resolvedGymId = ownedGym.id;
-    }
+    const { callerUser, resolvedGymId } = await resolveCallerGym(user.id);
 
     if (!resolvedGymId) {
       return NextResponse.json({ error: 'No gym workspace associated with this user' }, { status: 403 });
     }
 
-    // Verify permission: owner or staff.manage
+    // Verify permission: owner or staff.manage or wildcard
     const isOwner = callerUser?.role === 'owner' || (!callerUser && Boolean(resolvedGymId));
-    const hasManagePerm = callerUser?.permissions?.includes('staff.manage');
+    const hasManagePerm =
+      callerUser?.permissions?.includes('staff.manage') ||
+      callerUser?.permissions?.includes('*');
+
     if (!isOwner && !hasManagePerm) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions to manage staff' }, { status: 403 });
     }
@@ -126,14 +137,14 @@ export async function PATCH(request: Request) {
     }
 
     // Ensure target staff belongs to the same gym
-    const { data: targetStaff } = await supabaseAdmin
+    const { data: targetStaff, error: targetError } = await supabaseAdmin
       .from('users')
       .select('id, gym_id, role')
       .eq('id', id)
       .eq('gym_id', resolvedGymId)
-      .single();
+      .maybeSingle();
 
-    if (!targetStaff) {
+    if (targetError || !targetStaff) {
       return NextResponse.json({ error: 'Staff account not found' }, { status: 404 });
     }
 
@@ -158,11 +169,18 @@ export async function PATCH(request: Request) {
       .select('*')
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('Failed to update staff in DB:', updateError);
+      return NextResponse.json(
+        { error: updateError.message || 'Database error updating staff' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true, user: updatedUser });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+    const msg =
+      (err as any)?.message || (err instanceof Error ? err.message : 'Internal server error updating staff');
     console.error('Failed to update staff account:', err);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -179,21 +197,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: callerUser } = await supabaseAdmin
-      .from('users')
-      .select('id, gym_id, role')
-      .eq('auth_id', user.id)
-      .maybeSingle();
-
-    let resolvedGymId = callerUser?.gym_id;
-    if (!resolvedGymId) {
-      const { data: ownedGym } = await supabaseAdmin
-        .from('gyms')
-        .select('id')
-        .eq('owner_id', user.id)
-        .maybeSingle();
-      if (ownedGym) resolvedGymId = ownedGym.id;
-    }
+    const { callerUser, resolvedGymId } = await resolveCallerGym(user.id);
 
     if (!resolvedGymId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -211,14 +215,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Missing staff id parameter' }, { status: 400 });
     }
 
-    const { data: targetStaff } = await supabaseAdmin
+    const { data: targetStaff, error: targetError } = await supabaseAdmin
       .from('users')
       .select('id, auth_id, role')
       .eq('id', staffId)
       .eq('gym_id', resolvedGymId)
-      .single();
+      .maybeSingle();
 
-    if (!targetStaff) {
+    if (targetError || !targetStaff) {
       return NextResponse.json({ error: 'Staff account not found' }, { status: 404 });
     }
 
@@ -227,7 +231,10 @@ export async function DELETE(request: Request) {
     }
 
     // Delete database user record
-    await supabaseAdmin.from('users').delete().eq('id', staffId);
+    const { error: delError } = await supabaseAdmin.from('users').delete().eq('id', staffId);
+    if (delError) {
+      return NextResponse.json({ error: delError.message || 'Failed to delete staff record' }, { status: 500 });
+    }
 
     // Delete auth user if auth_id exists
     if (targetStaff.auth_id) {
@@ -236,7 +243,8 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true, message: 'Staff account deleted' });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+    const msg =
+      (err as any)?.message || (err instanceof Error ? err.message : 'Internal server error deleting staff account');
     console.error('Failed to delete staff account:', err);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
