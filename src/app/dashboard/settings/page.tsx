@@ -19,6 +19,9 @@ import {
   Fingerprint,
   Trash2,
   Building2,
+  FileSpreadsheet,
+  Download,
+  UploadCloud,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -35,6 +38,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { MemberImportModal } from '@/components/members/MemberImportModal';
+import { downloadMemberImportTemplate } from '@/lib/members/template-generator';
 
 export default function SettingsPage() {
   const supabase = createClient();
@@ -44,6 +49,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [gym, setGym] = useState<any>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   // Form states
   const [gymName, setGymName] = useState('');
@@ -106,14 +113,22 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('gyms')
-        .select('*')
-        .eq('id', user.gymId)
-        .single();
+      const [{ data, error }, { data: plansData }] = await Promise.all([
+        supabase
+          .from('gyms')
+          .select('*')
+          .eq('id', user.gymId)
+          .single(),
+        supabase
+          .from('plans')
+          .select('id, name')
+          .eq('gym_id', user.gymId)
+          .eq('is_active', true),
+      ]);
 
       if (error) throw error;
       setGym(data);
+      if (plansData) setPlans(plansData);
 
       if (data) {
         setGymName(data.name || '');
@@ -415,6 +430,53 @@ export default function SettingsPage() {
         </div>
       </form>
 
+      {/* Data Migration & Bulk Member Import Card */}
+      <Card className="border-zinc-800 bg-zinc-900/30">
+        <CardHeader className="pb-3 border-b border-zinc-800/40">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-purple-950/60 border border-purple-800/60 flex items-center justify-center text-purple-400">
+                <FileSpreadsheet className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold text-zinc-100">Data Migration & Member Import</CardTitle>
+                <CardDescription className="text-xs text-zinc-400 mt-0.5">
+                  Import historical member records in bulk from an Excel spreadsheet (.xlsx, .xls) or CSV file.
+                </CardDescription>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => downloadMemberImportTemplate(plans.map(p => p.name))}
+              className="border-zinc-800 text-zinc-300 hover:text-white text-xs gap-1.5 self-start sm:self-auto"
+            >
+              <Download className="h-3.5 w-3.5 text-purple-400" />
+              Download Excel Template
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-xs text-zinc-300 font-medium">
+              Easily bring your existing member data from any old software or manual register into GymERP.
+            </p>
+            <p className="text-[11px] text-zinc-500">
+              Includes automated column matching, phone number duplicate checking, membership plan assignment, and sequential member code generation.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => setImportModalOpen(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs h-9 px-4 gap-2 shrink-0 shadow-sm"
+          >
+            <UploadCloud className="h-4 w-4" />
+            Import Members from Excel
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Danger Zone */}
       <div className="rounded-xl border border-red-900/40 bg-red-950/10 p-6 mt-10">
         <h3 className="text-sm font-semibold text-red-400 mb-1">Danger Zone</h3>
@@ -464,6 +526,13 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Member Import Modal */}
+      <MemberImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        existingPlans={plans}
+      />
     </div>
   );
 }
