@@ -27,8 +27,6 @@ export const SIDEBAR_ITEMS = [
 export const MEMBER_SIDEBAR_ITEMS = [
   { label: 'Dashboard', href: '/member/dashboard', icon: 'LayoutDashboard' },
   { label: 'My Plan', href: '/member/plan', icon: 'CreditCard' },
-  { label: 'Attendance', href: '/member/attendance', icon: 'CalendarCheck' },
-  { label: 'Invoices', href: '/member/invoices', icon: 'Receipt' },
   { label: 'Diet Chart', href: '/member/diet', icon: 'Apple' },
   { label: 'Exercise Plan', href: '/member/exercise', icon: 'Dumbbell' },
 ] as const;

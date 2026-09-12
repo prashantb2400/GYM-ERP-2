@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
  */
 export async function fetchWithAuth(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const supabase = createClient();
-  let headers = new Headers(init?.headers || {});
+  const headers = new Headers(init?.headers || {});
 
   try {
     const { data: { session } } = await supabase.auth.getSession();

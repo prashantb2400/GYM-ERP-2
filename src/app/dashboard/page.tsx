@@ -23,8 +23,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils/format';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const AttendanceOverviewChart = dynamic(
+  () => import('@/components/dashboard/AttendanceOverviewChart'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex items-center justify-center text-xs text-zinc-500">
+        <Loader2 className="h-5 w-5 animate-spin text-zinc-600 mr-2" />
+        Loading analytics...
+      </div>
+    ),
+  }
+);
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { SpotlightCard } from '@/components/magicui/spotlight-card';
 import { BorderBeam } from '@/components/magicui/border-beam';
@@ -55,7 +68,7 @@ export default function DashboardHome() {
   const [demoSeeded, setDemoSeeded] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const hasLoadedRef = React.useRef(false);
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -100,7 +113,7 @@ export default function DashboardHome() {
 
     const fetchDashboardData = async () => {
       try {
-        if (!hasLoadedRef.current) {
+        if (!hasInitiallyLoaded) {
           setLoading(true);
         }
 
@@ -216,7 +229,7 @@ export default function DashboardHome() {
       } catch (err) {
         console.error('Error fetching dashboard stats:', err);
       } finally {
-        hasLoadedRef.current = true;
+        setHasInitiallyLoaded(true);
         setLoading(false);
       }
     };
@@ -247,7 +260,7 @@ export default function DashboardHome() {
     };
   }, [user?.gymId]);
 
-  if (loading && !hasLoadedRef.current) {
+  if (loading && !hasInitiallyLoaded) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
@@ -468,18 +481,7 @@ export default function DashboardHome() {
                 <p className="text-xs mt-1">Members will appear here once they check in</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                  <XAxis dataKey="name" stroke="#71717a" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#71717a" fontSize={11} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
-                    labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
-                  />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45} />
-                </BarChart>
-              </ResponsiveContainer>
+              <AttendanceOverviewChart chartData={chartData} />
             )}
           </CardContent>
         </Card>

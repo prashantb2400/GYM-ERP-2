@@ -57,7 +57,7 @@ export function useAuth() {
 
       try {
         // 1. Check current Supabase session
-        let { data: sessionData } = await supabase.auth.getSession();
+        const { data: sessionData } = await supabase.auth.getSession();
         let accessToken = sessionData?.session?.access_token;
         const expiresAt = sessionData?.session?.expires_at ? sessionData.session.expires_at * 1000 : 0;
         const isExpiringSoon = expiresAt > 0 && expiresAt - Date.now() < 60000;

@@ -140,6 +140,7 @@ export function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
       <div className="p-2 border-t border-zinc-800 flex flex-col gap-1">
         <button
           onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? 'Expand navigation sidebar' : 'Collapse navigation sidebar'}
           className="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-500 hover:bg-zinc-800/40 hover:text-zinc-300 transition-colors"
         >
           {collapsed ? (
@@ -154,6 +155,7 @@ export function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
 
         <button
           onClick={signOut}
+          aria-label="Sign out of system"
           className="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-400/80 hover:bg-red-500/5 hover:text-red-400 transition-colors"
         >
           {collapsed ? (

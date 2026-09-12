@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils/format';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 const INVENTORY_CATEGORIES = ['Supplements', 'Merchandise', 'Drinks', 'Accessories'];
 
@@ -47,6 +48,10 @@ export default function InventoryManagementPage() {
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 8;
+
+  // Confirmation State
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Stock Adjustment Dialog States
   const [openAdjustModal, setOpenAdjustModal] = useState(false);
@@ -254,21 +259,22 @@ export default function InventoryManagementPage() {
     }
   };
 
-  const handleDeleteItem = async (id: string, itemName: string) => {
-    if (!confirm(`Are you sure you want to permanently delete inventory product: "${itemName}"?`)) return;
+  const confirmDeleteItem = async () => {
+    if (!deleteTarget) return;
 
     try {
-      setLoading(true);
-      const { error } = await supabase.from('inventory').delete().eq('id', id);
+      setDeleteLoading(true);
+      const { error } = await supabase.from('inventory').delete().eq('id', deleteTarget.id);
       if (error) throw error;
 
       toast.success('Product deleted from inventory');
+      setDeleteTarget(null);
       fetchInventory();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       toast.error(msg);
     } finally {
-      setLoading(false);
+      setDeleteLoading(false);
     }
   };
 
@@ -381,6 +387,7 @@ export default function InventoryManagementPage() {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
+                              aria-label={`Restock or log sale for ${item.name}`}
                               variant="ghost"
                               size="icon"
                               onClick={() => handleOpenAdjust(item)}
@@ -390,9 +397,10 @@ export default function InventoryManagementPage() {
                               <RotateCw className="h-4 w-4" />
                             </Button>
                             <Button
+                              aria-label={`Delete product ${item.name}`}
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleDeleteItem(item.id, item.name)}
+                              onClick={() => setDeleteTarget({ id: item.id, name: item.name })}
                               className="h-8 w-8 text-zinc-400 hover:text-red-400"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -599,6 +607,18 @@ export default function InventoryManagementPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Non-blocking Inventory Deletion Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Inventory Product"
+        description={`Are you sure you want to permanently delete inventory product: "${deleteTarget?.name}"?`}
+        confirmLabel="Delete Product"
+        variant="destructive"
+        loading={deleteLoading}
+        onConfirm={confirmDeleteItem}
+      />
     </div>
   );
 }

@@ -47,6 +47,7 @@ import { exportToExcel, exportToCSV } from '@/lib/export/excel-export';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { QuickAddMember } from '@/components/shared/QuickAddMember';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useSearchParams } from 'next/navigation';
 
 export default function MembersListPage() {
@@ -65,6 +66,9 @@ export default function MembersListPage() {
   const searchParams = useSearchParams();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSending, setBulkSending] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
   useEffect(() => {
     const filterParam = searchParams.get('filter');
@@ -176,21 +180,22 @@ export default function MembersListPage() {
     }
   };
 
-  const handleDeleteMember = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to permanently delete member: ${name}?`)) return;
+  const confirmDeleteMember = async () => {
+    if (!deleteTarget) return;
 
     try {
-      setLoading(true);
-      const { error } = await supabase.from('members').delete().eq('id', id);
+      setDeleteLoading(true);
+      const { error } = await supabase.from('members').delete().eq('id', deleteTarget.id);
       if (error) throw error;
       
       toast.success('Member profile deleted');
-      setMembers(prev => prev.filter(m => m.id !== id));
+      setMembers(prev => prev.filter(m => m.id !== deleteTarget.id));
+      setDeleteTarget(null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       toast.error(msg);
     } finally {
-      setLoading(false);
+      setDeleteLoading(false);
     }
   };
 
@@ -315,15 +320,10 @@ export default function MembersListPage() {
     }
   };
 
-  const handleBulkWhatsApp = async () => {
+  const executeBulkWhatsApp = async () => {
     if (!user?.gymId || selectedIds.size === 0) return;
 
     const selectedMembers = members.filter(m => selectedIds.has(m.id));
-    const confirm = window.confirm(
-      `Send WhatsApp message to ${selectedMembers.length} selected members?`
-    );
-    if (!confirm) return;
-
     setBulkSending(true);
     let sent = 0;
     let failed = 0;
@@ -480,7 +480,7 @@ export default function MembersListPage() {
           </Button>
           <Button
             size="sm"
-            onClick={handleBulkWhatsApp}
+            onClick={() => setBulkConfirmOpen(true)}
             disabled={bulkSending}
             className="bg-green-700 hover:bg-green-600 text-white h-8"
           >
@@ -591,22 +591,33 @@ export default function MembersListPage() {
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <Link href={`/dashboard/members/${member.id}`} passHref legacyBehavior>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white">
+                        <Button
+                          aria-label={`View ${member.name}`}
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-zinc-400 hover:text-white"
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                       </Link>
                       {can('members.edit') && (
                         <Link href={`/dashboard/members/edit/${member.id}`} passHref legacyBehavior>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white">
+                          <Button
+                            aria-label={`Edit ${member.name}`}
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-zinc-400 hover:text-white"
+                          >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                         </Link>
                       )}
                       {can('members.delete') && (
                         <Button
+                          aria-label={`Delete ${member.name}`}
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDeleteMember(member.id, member.name)}
+                          onClick={() => setDeleteTarget({ id: member.id, name: member.name })}
                           className="h-8 w-8 text-zinc-400 hover:text-red-400"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -651,6 +662,32 @@ export default function MembersListPage() {
           </div>
         )}
       </Card>
+
+      {/* Non-blocking Confirmation Dialogs */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Member Profile"
+        description={`Are you sure you want to permanently delete member: ${deleteTarget?.name}? This action cannot be undone.`}
+        confirmLabel="Delete Member"
+        variant="destructive"
+        loading={deleteLoading}
+        onConfirm={confirmDeleteMember}
+      />
+
+      <ConfirmDialog
+        open={bulkConfirmOpen}
+        onOpenChange={setBulkConfirmOpen}
+        title="Send WhatsApp Reminders"
+        description={`Send renewal reminder WhatsApp messages to ${selectedIds.size} selected member${selectedIds.size > 1 ? 's' : ''}?`}
+        confirmLabel="Send Messages"
+        variant="default"
+        loading={bulkSending}
+        onConfirm={async () => {
+          setBulkConfirmOpen(false);
+          await executeBulkWhatsApp();
+        }}
+      />
     </div>
   );
 }

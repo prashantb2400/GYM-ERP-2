@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranch } from '@/hooks/useBranch';
@@ -45,7 +44,7 @@ export default function QrKioskPage() {
   const gymId = user?.gymId;
   const effectiveBranchId = !isOwner ? user?.branchId : selectedBranchId;
 
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<any>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult>({ state: 'idle' });
@@ -202,6 +201,7 @@ export default function QrKioskPage() {
   const startScanner = useCallback(async () => {
     try {
       setCameraError(null);
+      const { Html5Qrcode } = await import('html5-qrcode');
       const scanner = new Html5Qrcode(SCANNER_CONTAINER_ID);
       scannerRef.current = scanner;
 

@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils/format';
 import { toast } from 'sonner';
 import { SpotlightCard, GlowingBadge, GradientText, BorderBeam } from '@/components/magicui';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 export default function PlansCRUDPage() {
   const supabase = createClient();
@@ -37,6 +38,8 @@ export default function PlansCRUDPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Modal form states
   const [planId, setPlanId] = useState<string | null>(null); // null = Add, non-null = Edit
@@ -182,23 +185,27 @@ export default function PlansCRUDPage() {
     }
   };
 
-  const handleDeletePlan = async (id: string, name: string) => {
+  const confirmDeletePlan = async () => {
+    if (!deleteTarget) return;
     if (!can('plans.manage')) {
       toast.error('You do not have permission to delete plans');
       return;
     }
-    if (!confirm(`Are you sure you want to delete plan: ${name}?`)) return;
 
     try {
-      const res = await fetch(`/api/plans?id=${id}`, { method: 'DELETE' });
+      setDeleteLoading(true);
+      const res = await fetch(`/api/plans?id=${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete plan');
 
       toast.success('Plan deleted');
-      setPlans(prev => prev.filter(p => p.id !== id));
+      setPlans(prev => prev.filter(p => p.id !== deleteTarget.id));
+      setDeleteTarget(null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       toast.error(msg);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -336,6 +343,7 @@ export default function PlansCRUDPage() {
 
                     <div className="flex gap-1">
                       <Button
+                        aria-label={`Edit ${plan.name} plan`}
                         variant="ghost"
                         size="icon"
                         onClick={() => handleOpenEditModal(plan)}
@@ -344,9 +352,10 @@ export default function PlansCRUDPage() {
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
+                        aria-label={`Delete ${plan.name} plan`}
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDeletePlan(plan.id, plan.name)}
+                        onClick={() => setDeleteTarget({ id: plan.id, name: plan.name })}
                         className="h-8 w-8 text-zinc-400 hover:text-red-400"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -460,6 +469,18 @@ export default function PlansCRUDPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Non-blocking Plan Deletion Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Membership Plan"
+        description={`Are you sure you want to permanently delete plan: "${deleteTarget?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete Plan"
+        variant="destructive"
+        loading={deleteLoading}
+        onConfirm={confirmDeletePlan}
+      />
     </div>
   );
 }

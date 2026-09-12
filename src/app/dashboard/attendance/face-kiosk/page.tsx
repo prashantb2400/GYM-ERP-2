@@ -74,6 +74,7 @@ function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
 export default function FaceKioskPage() {
   const { user } = useAuth();
   const gymId = user?.gymId;
+  const userBranchId = user?.branchId;
 
   const [mode, setMode] = useState<KioskMode>('auto');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -220,7 +221,7 @@ export default function FaceKioskPage() {
     if (!gymId) return;
     setLoadingFpRoster(true);
     try {
-      const branchParam = user?.branchId ? `&branchId=${user.branchId}` : '';
+      const branchParam = userBranchId ? `&branchId=${userBranchId}` : '';
       const res = await fetchWithAuth(`/api/attendance/fingerprint-roster?gymId=${gymId}${branchParam}`);
       const data = await res.json();
       if (res.ok && data.roster) {
@@ -231,7 +232,7 @@ export default function FaceKioskPage() {
     } finally {
       setLoadingFpRoster(false);
     }
-  }, [gymId, user?.branchId]);
+  }, [gymId, userBranchId]);
 
   // Unified Roster & Hardware Refresh
   const handleRefreshRoster = async () => {

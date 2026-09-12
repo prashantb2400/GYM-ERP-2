@@ -30,6 +30,7 @@ import { getInitials } from '@/lib/utils/format';
 import { toast } from 'sonner';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 import { Permission, DEFAULT_PERMISSIONS } from '@/types/auth';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 const AVAILABLE_PERMISSIONS: { value: Permission; label: string; group: string }[] = [
   { value: 'members.view', label: 'View Members', group: 'Members' },
@@ -96,6 +97,8 @@ export default function StaffCRUDPage() {
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [selectedStaffName, setSelectedStaffName] = useState('');
   const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>([]);
+  const [statusTarget, setStatusTarget] = useState<{ id: string; name: string; currentVal: boolean } | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
 
   const fetchStaff = async () => {
     if (!user?.gymId) {
@@ -244,31 +247,35 @@ export default function StaffCRUDPage() {
     }
   };
 
-  const handleToggleStaffStatus = async (id: string, name: string, currentVal: boolean) => {
+  const confirmToggleStaffStatus = async () => {
+    if (!statusTarget) return;
     if (!can('staff.manage')) {
       toast.error('You do not have permission to manage staff');
       return;
     }
-    if (!confirm(`Are you sure you want to ${currentVal ? 'deactivate' : 'activate'} staff user: ${name}?`)) return;
 
     try {
+      setStatusLoading(true);
       const res = await fetchWithAuth('/api/staff', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id,
-          is_active: !currentVal,
+          id: statusTarget.id,
+          is_active: !statusTarget.currentVal,
         }),
       });
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Failed to update staff status');
 
-      toast.success(currentVal ? 'Staff deactivated' : 'Staff activated');
-      setStaffList(prev => prev.map(s => s.id === id ? { ...s, is_active: !currentVal } : s));
+      toast.success(statusTarget.currentVal ? 'Staff deactivated' : 'Staff activated');
+      setStaffList(prev => prev.map(s => s.id === statusTarget.id ? { ...s, is_active: !statusTarget.currentVal } : s));
+      setStatusTarget(null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       toast.error(msg);
+    } finally {
+      setStatusLoading(false);
     }
   };
 
@@ -379,7 +386,8 @@ export default function StaffCRUDPage() {
 
                     <Button
                       variant="ghost"
-                      onClick={() => handleToggleStaffStatus(staff.id, staff.name, staff.is_active)}
+                      aria-label={`${staff.is_active ? 'Deactivate' : 'Activate'} staff user ${staff.name}`}
+                      onClick={() => setStatusTarget({ id: staff.id, name: staff.name, currentVal: staff.is_active })}
                       className={`text-xs px-2.5 h-8 gap-1.5 font-medium ${
                         staff.is_active 
                           ? 'text-red-400 hover:text-red-300 hover:bg-red-950/10' 
@@ -574,6 +582,18 @@ export default function StaffCRUDPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Non-blocking Staff Status Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!statusTarget}
+        onOpenChange={(open) => !open && setStatusTarget(null)}
+        title={statusTarget?.currentVal ? "Deactivate Staff User" : "Activate Staff User"}
+        description={`Are you sure you want to ${statusTarget?.currentVal ? 'deactivate' : 'activate'} staff user: "${statusTarget?.name}"?`}
+        confirmLabel={statusTarget?.currentVal ? "Deactivate Staff" : "Activate Staff"}
+        variant={statusTarget?.currentVal ? "destructive" : "default"}
+        loading={statusLoading}
+        onConfirm={confirmToggleStaffStatus}
+      />
     </div>
   );
 }

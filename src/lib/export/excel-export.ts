@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx';
-
 export interface ColumnDef {
   header: string;
   key: string;
@@ -57,7 +55,8 @@ function calculateColumnWidths(data: Record<string, any>[], columns?: ColumnDef[
  * auto-calculated column widths, and proper formatting.
  * Uses in-memory array buffer + Blob for 100% reliable browser downloads across all devices.
  */
-export function exportToExcel(options: ExcelExportOptions): void {
+export async function exportToExcel(options: ExcelExportOptions): Promise<void> {
+  const XLSX = await import('xlsx');
   const { filename, sheets } = options;
   const workbook = XLSX.utils.book_new();
 

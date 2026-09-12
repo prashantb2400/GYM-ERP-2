@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 
 const EXPENSE_CATEGORIES = ['Rent', 'Salaries', 'Electricity', 'Equipment', 'Marketing', 'Other'];
 
@@ -45,6 +46,10 @@ export default function ExpenseTrackerPage() {
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 8;
+
+  // Confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // New Expense Dialog states
   const [openAddModal, setOpenAddModal] = useState(false);
@@ -182,21 +187,22 @@ export default function ExpenseTrackerPage() {
     }
   };
 
-  const handleDeleteExpense = async (id: string, itemTitle: string) => {
-    if (!confirm(`Are you sure you want to delete expense record: "${itemTitle}"?`)) return;
+  const confirmDeleteExpense = async () => {
+    if (!deleteTarget) return;
 
     try {
-      setLoading(true);
-      const { error } = await supabase.from('expenses').delete().eq('id', id);
+      setDeleteLoading(true);
+      const { error } = await supabase.from('expenses').delete().eq('id', deleteTarget.id);
       if (error) throw error;
 
       toast.success('Expense record deleted');
+      setDeleteTarget(null);
       fetchExpenses();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       toast.error(msg);
     } finally {
-      setLoading(false);
+      setDeleteLoading(false);
     }
   };
 
@@ -290,9 +296,10 @@ export default function ExpenseTrackerPage() {
                     {can('expenses.manage') && (
                       <TableCell className="text-right">
                         <Button
+                          aria-label={`Delete expense record ${exp.title}`}
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDeleteExpense(exp.id, exp.title)}
+                          onClick={() => setDeleteTarget({ id: exp.id, title: exp.title })}
                           className="h-8 w-8 text-zinc-400 hover:text-red-400"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -422,6 +429,18 @@ export default function ExpenseTrackerPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Non-blocking Expense Deletion Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Expense Record"
+        description={`Are you sure you want to delete expense record: "${deleteTarget?.title}"? This cannot be recovered.`}
+        confirmLabel="Delete Expense"
+        variant="destructive"
+        loading={deleteLoading}
+        onConfirm={confirmDeleteExpense}
+      />
     </div>
   );
 }

@@ -51,6 +51,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
       const { data: kycDocs } = await supabase
         .from('kyc_documents')
         .select('id, member_id, document_type, uploaded_at, members(name)')
+        .eq('gym_id', user.gymId)
         .eq('status', 'pending')
         .limit(3);
 
@@ -71,6 +72,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
       const { data: failedWa } = await supabase
         .from('whatsapp_logs')
         .select('id, recipient_name, template_name, sent_at')
+        .eq('gym_id', user.gymId)
         .eq('status', 'failed')
         .limit(3);
 
@@ -99,17 +101,17 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
 
     if (!user?.gymId) return;
 
-    // Supabase Real-time channel to listen for KYC uploads
+    // Supabase Real-time channel to listen for KYC uploads (scoped to current gym)
     const channel = supabase
-      .channel('notifications-changes')
+      .channel(`notifications-${user.gymId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'kyc_documents' },
+        { event: '*', schema: 'public', table: 'kyc_documents', filter: `gym_id=eq.${user.gymId}` },
         () => fetchNotifications()
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'whatsapp_logs' },
+        { event: '*', schema: 'public', table: 'whatsapp_logs', filter: `gym_id=eq.${user.gymId}` },
         () => fetchNotifications()
       )
       .subscribe();
@@ -128,7 +130,13 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
       {/* Left side info */}
       <div className="flex items-center gap-4">
         {onMenuClick && (
-          <Button variant="ghost" size="icon" onClick={onMenuClick} className="lg:hidden text-muted-foreground hover:text-foreground">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onMenuClick}
+            aria-label="Open navigation menu"
+            className="lg:hidden text-muted-foreground hover:text-foreground"
+          >
             <Menu className="h-5 w-5" />
           </Button>
         )}
@@ -174,6 +182,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
       {/* Center global search shortcut bar (clickable) */}
       <button
         onClick={() => setCmdOpen(true)}
+        aria-label="Search dashboard"
         className="hidden md:flex items-center gap-2.5 bg-secondary/40 hover:bg-secondary/70 border border-border/80 px-3 py-1.5 rounded-lg text-xs text-muted-foreground w-64 text-left transition-colors cursor-pointer"
       >
         <Search className="h-3.5 w-3.5 shrink-0" />
@@ -190,6 +199,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           variant="ghost"
           size="icon"
           onClick={() => setCmdOpen(true)}
+          aria-label="Open search dialog"
           className="md:hidden text-muted-foreground hover:text-foreground"
         >
           <Search className="h-5 w-5" />
@@ -200,6 +210,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           variant="ghost"
           size="icon"
           onClick={toggleTheme}
+          aria-label="Toggle color theme"
           className="text-muted-foreground hover:text-foreground"
           title="Toggle Theme"
         >
@@ -219,7 +230,12 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
         {/* Notifications Popover */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="View notifications"
+              className="text-muted-foreground hover:text-foreground relative"
+            >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-purple-500 rounded-full animate-pulse" />
