@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dialog';
 import { MemberImportModal } from '@/components/members/MemberImportModal';
 import { downloadMemberImportTemplate } from '@/lib/members/template-generator';
+import { fetchWithAuth } from '@/lib/utils/api-client';
 
 export default function SettingsPage() {
   const supabase = createClient();
@@ -105,6 +106,32 @@ export default function SettingsPage() {
     }
   };
 
+  const applyGymData = (data: any) => {
+    setGym(data);
+    setGymName(data.name || '');
+    setBusinessName(data.business_name || '');
+    setPhone(data.phone || '');
+    setEmail(data.email || '');
+    setGstin(data.gstin || '');
+    setPan(data.pan || '');
+    setTagline(data.tagline || '');
+
+    // Address
+    setStreet(data.address?.street || '');
+    setCity(data.address?.city || '');
+    setStateVal(data.address?.state || '');
+    setPin(data.address?.pin || '');
+
+    // Working hours
+    setOpenTime(data.working_hours?.open || '06:00');
+    setCloseTime(data.working_hours?.close || '22:00');
+
+    // Integrations
+    setCctvEnabled(data.settings?.cctv_enabled || false);
+    setWhatsappEnabled(data.settings?.whatsapp_enabled ?? true);
+    setBiometricEnabled(data.settings?.biometric_enabled || false);
+  };
+
   const fetchGymSettings = async () => {
     if (!user?.gymId) {
       setLoading(false);
@@ -113,12 +140,27 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
+
+      // 1. Primary: Server-side API endpoint (immune to client-side RLS recursion & policy drift)
+      const res = await fetchWithAuth('/api/settings');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.gym) {
+          applyGymData(json.gym);
+        }
+        if (json.plans) {
+          setPlans(json.plans);
+        }
+        return;
+      }
+
+      // 2. Fallback: Direct Supabase client query with maybeSingle (no PGRST116 throw)
       const [{ data, error }, { data: plansData }] = await Promise.all([
         supabase
           .from('gyms')
           .select('*')
           .eq('id', user.gymId)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('plans')
           .select('id, name')
@@ -126,36 +168,23 @@ export default function SettingsPage() {
           .eq('is_active', true),
       ]);
 
-      if (error) throw error;
-      setGym(data);
-      if (plansData) setPlans(plansData);
+      if (error) {
+        console.warn('Direct Supabase settings fetch warning:', error);
+      } else if (data) {
+        applyGymData(data);
+      }
 
-      if (data) {
-        setGymName(data.name || '');
-        setBusinessName(data.business_name || '');
-        setPhone(data.phone || '');
-        setEmail(data.email || '');
-        setGstin(data.gstin || '');
-        setPan(data.pan || '');
-        setTagline(data.tagline || '');
-        
-        // Address
-        setStreet(data.address?.street || '');
-        setCity(data.address?.city || '');
-        setStateVal(data.address?.state || '');
-        setPin(data.address?.pin || '');
-
-        // Working hours
-        setOpenTime(data.working_hours?.open || '06:00');
-        setCloseTime(data.working_hours?.close || '22:00');
-
-        // Integrations
-        setCctvEnabled(data.settings?.cctv_enabled || false);
-        setWhatsappEnabled(data.settings?.whatsapp_enabled || true);
-        setBiometricEnabled(data.settings?.biometric_enabled || false);
+      if (plansData) {
+        setPlans(plansData);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err && 'message' in err
+            ? String((err as any).message)
+            : 'Unable to load gym settings';
+      console.error('Settings fetch error:', err);
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -185,27 +214,52 @@ export default function SettingsPage() {
         biometric_enabled: biometricEnabled,
       };
 
+      const payload = {
+        name: gymName.trim(),
+        business_name: businessName.trim() || null,
+        phone: phone.trim() || null,
+        email: email.trim() || null,
+        gstin: gstin.trim() || null,
+        pan: pan.trim() || null,
+        tagline: tagline.trim() || null,
+        address: addressPayload,
+        working_hours: hoursPayload,
+        settings: settingsPayload,
+      };
+
+      // 1. Primary: Update via server-side /api/settings endpoint
+      const res = await fetchWithAuth('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.gym) {
+          applyGymData(json.gym);
+        }
+        toast.success('Gym settings updated successfully!');
+        return;
+      }
+
+      // 2. Fallback: Direct Supabase client update
       const { error } = await supabase
         .from('gyms')
-        .update({
-          name: gymName.trim(),
-          business_name: businessName.trim() || null,
-          phone: phone.trim() || null,
-          email: email.trim() || null,
-          gstin: gstin.trim() || null,
-          pan: pan.trim() || null,
-          tagline: tagline.trim() || null,
-          address: addressPayload,
-          working_hours: hoursPayload,
-          settings: settingsPayload,
-        })
+        .update(payload)
         .eq('id', user?.gymId);
 
       if (error) throw error;
       toast.success('Gym settings updated successfully!');
       fetchGymSettings();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err && 'message' in err
+            ? String((err as any).message)
+            : 'Unable to update gym settings';
+      console.error('Settings update error:', err);
       toast.error(msg);
     } finally {
       setSaving(false);

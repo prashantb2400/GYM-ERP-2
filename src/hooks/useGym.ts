@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Gym } from '@/types/database';
 import { useAuth } from './useAuth';
+import { fetchWithAuth } from '@/lib/utils/api-client';
 
 export function useGym() {
   const supabase = createClient();
@@ -28,18 +29,39 @@ export function useGym() {
     const fetchGymDetails = async () => {
       try {
         if (!gym) setLoading(true);
+
+        // 1. Primary: Server-side API route (bypasses RLS recursion)
+        const res = await fetchWithAuth('/api/settings');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.gym) {
+            setGym(json.gym);
+            fetchedGymIdRef.current = gymId;
+            return;
+          }
+        }
+
+        // 2. Fallback: Direct Supabase query with maybeSingle
         const { data, error: fetchError } = await supabase
           .from('gyms')
           .select('*')
           .eq('id', gymId)
-          .single();
+          .maybeSingle();
 
-        if (fetchError) throw fetchError;
-        setGym(data);
-        fetchedGymIdRef.current = gymId;
+        if (fetchError) {
+          console.warn('Direct Supabase gym fetch warning:', fetchError);
+        } else if (data) {
+          setGym(data);
+          fetchedGymIdRef.current = gymId;
+        }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'An unknown error occurred';
-        setError(msg || 'Error fetching gym details');
+        const msg =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'object' && err && 'message' in err
+              ? String((err as any).message)
+              : 'Error fetching gym details';
+        setError(msg);
       } finally {
         setLoading(false);
       }
@@ -53,6 +75,23 @@ export function useGym() {
 
     try {
       setLoading(true);
+
+      // 1. Primary: Server-side API route
+      const res = await fetchWithAuth('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.gym) {
+          setGym(json.gym);
+          return { data: json.gym, error: null };
+        }
+      }
+
+      // 2. Fallback: Direct Supabase client update
       const { data, error: updateError } = await supabase
         .from('gyms')
         .update(updates)
@@ -64,8 +103,13 @@ export function useGym() {
       setGym(data);
       return { data, error: null };
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
-      return { data: null, error: msg || 'Error updating gym details' };
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err && 'message' in err
+            ? String((err as any).message)
+            : 'Error updating gym details';
+      return { data: null, error: msg };
     } finally {
       setLoading(false);
     }
