@@ -145,21 +145,28 @@ export default function PlatformInvoicesPage() {
   };
 
   const exportCSV = () => {
-    const headers = ['Invoice Number', 'Gym Name', 'Plan', 'Amount (₹)', 'Status', 'Date'];
-    const rows = invoices.map(inv => [
-      inv.invoice_number,
-      inv.gym_name || inv.gyms?.name || '',
-      inv.plan_name,
-      inv.amount / 100,
-      inv.status,
-      new Date(inv.created_at).toLocaleDateString(),
-    ]);
+    try {
+      const headers = ['Invoice Number', 'Gym Name', 'Plan', 'Amount (₹)', 'Status', 'Date'];
+      const rows = invoices.map(inv => [
+        inv.invoice_number,
+        inv.gym_name || inv.gyms?.name || '',
+        inv.plan_name,
+        inv.amount / 100,
+        inv.status,
+        new Date(inv.created_at).toLocaleDateString(),
+      ]);
 
-    exportToCSV({
-      filename: 'platform_invoices.csv',
-      headers,
-      rows,
-    });
+      exportToCSV({
+        filename: 'platform_invoices.csv',
+        headers,
+        rows,
+      });
+      toast.success('Invoices exported to CSV');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error('Export CSV error:', err);
+      toast.error('Export failed: ' + msg);
+    }
   };
 
   const getStatusBadgeColor = (status: string) => {

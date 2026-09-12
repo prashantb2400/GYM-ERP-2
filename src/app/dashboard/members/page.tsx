@@ -202,21 +202,30 @@ export default function MembersListPage() {
 
       let query = supabase
         .from('members')
-        .select('member_code, name, phone, email, gender, blood_group, status, plan_end_date, admission_date, total_due, total_paid, attendance_count, last_attendance, face_enrolled, biometric_enrolled, plans(name), branches(name)')
+        .select('*')
         .eq('gym_id', user.gymId);
 
       if (user.role === 'trainer' && user.staffRecordId) {
         query = query.eq('trainer_id', user.staffRecordId);
       }
 
-      const { data, error } = await query.order('name', { ascending: true });
+      // Concurrently fetch members, plans, and branches to avoid fragile foreign key embed joins
+      const [membersRes, plansRes, branchesRes] = await Promise.all([
+        query.order('name', { ascending: true }),
+        supabase.from('plans').select('id, name').eq('gym_id', user.gymId),
+        supabase.from('branches').select('id, name').eq('gym_id', user.gymId),
+      ]);
 
-      if (error) throw error;
-      if (!data || data.length === 0) {
+      if (membersRes.error) throw membersRes.error;
+      const data = membersRes.data || [];
+
+      if (data.length === 0) {
         toast.warning('No members to export');
         return;
       }
 
+      const plansMap = new Map((plansRes.data || []).map((p: any) => [p.id, p.name]));
+      const branchesMap = new Map((branchesRes.data || []).map((b: any) => [b.id, b.name]));
       const today = new Date().toISOString().split('T')[0];
 
       if (format === 'xlsx') {
@@ -224,7 +233,7 @@ export default function MembersListPage() {
         const activeMembers = data.filter(m => m.status === 'active').length;
         const expiredMembers = data.filter(m => m.status === 'expired').length;
         const totalDues = data.reduce((sum, m) => sum + (Number(m.total_due) || 0), 0);
-        const totalPaid = data.reduce((sum, m) => sum + (Number(m.total_paid) || 0), 0);
+        const totalPaid = data.reduce((sum, m) => sum + (Number(m.total_paid_lifetime ?? (m as any).total_paid ?? 0)), 0);
         const faceEnrolled = data.filter(m => m.face_enrolled).length;
         const fingerEnrolled = data.filter(m => m.biometric_enrolled).length;
 
@@ -235,17 +244,17 @@ export default function MembersListPage() {
           'Email': m.email || '',
           'Gender': m.gender ? (m.gender.charAt(0).toUpperCase() + m.gender.slice(1)) : 'Not Specified',
           'Blood Group': m.blood_group || '-',
-          'Plan Name': (m.plans as any)?.name || 'No Plan',
+          'Plan Name': m.current_plan_id ? (plansMap.get(m.current_plan_id) || 'No Plan') : 'No Plan',
           'Status': (m.status || 'active').toUpperCase(),
           'Admission Date': m.admission_date || '-',
           'Plan End Date': m.plan_end_date || '-',
           'Total Dues (₹)': Number(m.total_due) || 0,
-          'Total Paid (₹)': Number(m.total_paid) || 0,
+          'Total Paid (₹)': Number(m.total_paid_lifetime ?? (m as any).total_paid ?? 0),
           'Attendance Count': m.attendance_count || 0,
           'Last Attendance': m.last_attendance ? new Date(m.last_attendance).toLocaleDateString('en-IN') : '-',
           'Face ID': m.face_enrolled ? 'Enrolled' : 'Not Enrolled',
           'Fingerprint': m.biometric_enrolled ? 'Enrolled' : 'Not Enrolled',
-          'Branch': (m.branches as any)?.name || 'Main Branch',
+          'Branch': m.branch_id ? (branchesMap.get(m.branch_id) || 'Main Branch') : 'Main Branch',
         }));
 
         const summaryData = [
@@ -279,16 +288,16 @@ export default function MembersListPage() {
           m.email || '',
           m.gender || '',
           m.blood_group || '',
-          (m.plans as any)?.name || '',
+          m.current_plan_id ? (plansMap.get(m.current_plan_id) || '') : '',
           m.status || '',
           m.admission_date || '',
           m.plan_end_date || '',
-          m.total_due || 0,
-          m.total_paid || 0,
+          Number(m.total_due) || 0,
+          Number(m.total_paid_lifetime ?? (m as any).total_paid ?? 0),
           m.attendance_count || 0,
           m.face_enrolled ? 'Yes' : 'No',
           m.biometric_enrolled ? 'Yes' : 'No',
-          (m.branches as any)?.name || '',
+          m.branch_id ? (branchesMap.get(m.branch_id) || '') : '',
         ]);
 
         exportToCSV({
@@ -301,6 +310,7 @@ export default function MembersListPage() {
       toast.success(`Exported ${data.length} members successfully`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error('Export error:', err);
       toast.error('Export failed: ' + msg);
     }
   };

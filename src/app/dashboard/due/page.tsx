@@ -155,35 +155,41 @@ export default function DueCollectionPage() {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    const totalOutstanding = duesList.reduce((sum, m) => sum + (Number(m.total_due) || 0), 0);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const totalOutstanding = duesList.reduce((sum, m) => sum + (Number(m.total_due) || 0), 0);
 
-    const duesData = duesList.map(m => ({
-      'Member Code': m.member_code || '',
-      'Member Name': m.name || '',
-      'Mobile Number': m.phone || '',
-      'Email': m.email || '',
-      'Plan': (m.plans as any)?.name || 'No Plan',
-      'Plan Expiry': m.plan_end_date || '-',
-      'Outstanding Due (₹)': Number(m.total_due) || 0,
-      'Last Payment Date': m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('en-IN') : '-',
-    }));
+      const duesData = duesList.map(m => ({
+        'Member Code': m.member_code || '',
+        'Member Name': m.name || '',
+        'Mobile Number': m.phone || '',
+        'Email': m.email || '',
+        'Plan': (m.plans as any)?.name || 'No Plan',
+        'Plan Expiry': m.plan_end_date || '-',
+        'Outstanding Due (₹)': Number(m.total_due) || 0,
+        'Last Payment Date': m.last_payment_date ? new Date(m.last_payment_date).toLocaleDateString('en-IN') : '-',
+      }));
 
-    const summaryData = [
-      { 'Metric': 'Members with Dues', 'Value': duesList.length },
-      { 'Metric': 'Total Outstanding Amount', 'Value': `₹${totalOutstanding.toLocaleString('en-IN')}` },
-      { 'Metric': 'Report Generated At', 'Value': new Date().toLocaleString('en-IN') },
-    ];
+      const summaryData = [
+        { 'Metric': 'Members with Dues', 'Value': duesList.length },
+        { 'Metric': 'Total Outstanding Amount', 'Value': `₹${totalOutstanding.toLocaleString('en-IN')}` },
+        { 'Metric': 'Report Generated At', 'Value': new Date().toLocaleString('en-IN') },
+      ];
 
-    exportToExcel({
-      filename: `outstanding_dues_${today}.xlsx`,
-      sheets: [
-        { sheetName: 'Dues Register', data: duesData },
-        { sheetName: 'Dues Summary', data: summaryData },
-      ],
-    });
+      exportToExcel({
+        filename: `outstanding_dues_${today}.xlsx`,
+        sheets: [
+          { sheetName: 'Dues Register', data: duesData },
+          { sheetName: 'Dues Summary', data: summaryData },
+        ],
+      });
 
-    toast.success(`Exported ${duesList.length} due records to Excel`);
+      toast.success(`Exported ${duesList.length} due records to Excel`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error('Export dues error:', err);
+      toast.error('Export failed: ' + msg);
+    }
   };
 
   const handleSingleReminder = async (member: any) => {

@@ -247,35 +247,41 @@ export default function AttendancePage() {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    const logData = todayLogs.map(log => ({
-      'Member Code': log.members?.member_code || '-',
-      'Member Name': log.member_name || log.members?.name || 'Member',
-      'Check-in Time': log.check_in_time ? new Date(log.check_in_time).toLocaleTimeString('en-IN') : '-',
-      'Date': log.date || today,
-      'Method': log.method === 'face_recognition' ? 'Face ID' : log.method === 'fingerprint' ? 'Fingerprint' : log.method === 'qr_scan' ? 'QR Code' : 'Manual',
-      'Branch': branches.find(b => b.id === log.branch_id)?.name || 'Main Branch',
-      'Notes': log.notes || '',
-    }));
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const logData = todayLogs.map(log => ({
+        'Member Code': log.members?.member_code || '-',
+        'Member Name': log.member_name || log.members?.name || 'Member',
+        'Check-in Time': log.check_in_time ? new Date(log.check_in_time).toLocaleTimeString('en-IN') : '-',
+        'Date': log.date || today,
+        'Method': log.method === 'face_recognition' ? 'Face ID' : log.method === 'fingerprint' ? 'Fingerprint' : log.method === 'qr_scan' ? 'QR Code' : 'Manual',
+        'Branch': branches?.find(b => b.id === log.branch_id)?.name || 'Main Branch',
+        'Notes': log.notes || '',
+      }));
 
-    const summaryData = [
-      { 'Metric': 'Total Check-ins Today', 'Value': todayLogs.length },
-      { 'Metric': 'Face ID Check-ins', 'Value': todayLogs.filter(l => l.method === 'face_recognition').length },
-      { 'Metric': 'Fingerprint Check-ins', 'Value': todayLogs.filter(l => l.method === 'fingerprint').length },
-      { 'Metric': 'QR Code Check-ins', 'Value': todayLogs.filter(l => l.method === 'qr_scan').length },
-      { 'Metric': 'Manual Check-ins', 'Value': todayLogs.filter(l => l.method === 'manual').length },
-      { 'Metric': 'Report Date', 'Value': today },
-    ];
+      const summaryData = [
+        { 'Metric': 'Total Check-ins Today', 'Value': todayLogs.length },
+        { 'Metric': 'Face ID Check-ins', 'Value': todayLogs.filter(l => l.method === 'face_recognition').length },
+        { 'Metric': 'Fingerprint Check-ins', 'Value': todayLogs.filter(l => l.method === 'fingerprint').length },
+        { 'Metric': 'QR Code Check-ins', 'Value': todayLogs.filter(l => l.method === 'qr_scan').length },
+        { 'Metric': 'Manual Check-ins', 'Value': todayLogs.filter(l => l.method === 'manual').length },
+        { 'Metric': 'Report Date', 'Value': today },
+      ];
 
-    exportToExcel({
-      filename: `attendance_logs_${today}.xlsx`,
-      sheets: [
-        { sheetName: 'Today Check-ins', data: logData },
-        { sheetName: 'Attendance Summary', data: summaryData },
-      ],
-    });
+      exportToExcel({
+        filename: `attendance_logs_${today}.xlsx`,
+        sheets: [
+          { sheetName: 'Today Check-ins', data: logData },
+          { sheetName: 'Attendance Summary', data: summaryData },
+        ],
+      });
 
-    toast.success(`Exported ${todayLogs.length} attendance records`);
+      toast.success(`Exported ${todayLogs.length} attendance records`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error('Export attendance error:', err);
+      toast.error('Export failed: ' + msg);
+    }
   };
 
   const handleCheckIn = async (member: Member) => {

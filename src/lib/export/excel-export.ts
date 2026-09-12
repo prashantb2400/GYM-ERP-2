@@ -24,27 +24,30 @@ export interface CSVExportOptions {
 }
 
 /**
- * Calculates responsive column widths based on the maximum string length of each column.
+ * Calculates responsive column widths based on maximum string lengths.
+ * Uses a safe iteration loop rather than Math.max(...spread) to prevent RangeError call stack overflow on large datasets.
  */
 function calculateColumnWidths(data: Record<string, any>[], columns?: ColumnDef[]): { wch: number }[] {
   if (!columns || columns.length === 0) {
     if (data.length === 0) return [];
     const keys = Object.keys(data[0]);
     return keys.map(key => {
-      const maxLen = Math.max(
-        key.length,
-        ...data.map(row => String(row[key] ?? '').length)
-      );
+      let maxLen = key.length;
+      for (let i = 0; i < data.length; i++) {
+        const len = String(data[i][key] ?? '').length;
+        if (len > maxLen) maxLen = len;
+      }
       return { wch: Math.min(Math.max(maxLen + 3, 10), 45) };
     });
   }
 
   return columns.map(col => {
     if (col.width) return { wch: col.width };
-    const maxLen = Math.max(
-      col.header.length,
-      ...data.map(row => String(row[col.key] ?? '').length)
-    );
+    let maxLen = col.header.length;
+    for (let i = 0; i < data.length; i++) {
+      const len = String(data[i][col.key] ?? '').length;
+      if (len > maxLen) maxLen = len;
+    }
     return { wch: Math.min(Math.max(maxLen + 3, 12), 45) };
   });
 }
@@ -52,6 +55,7 @@ function calculateColumnWidths(data: Record<string, any>[], columns?: ColumnDef[
 /**
  * Exports data to a genuine Microsoft Excel (.xlsx) workbook with multiple sheets,
  * auto-calculated column widths, and proper formatting.
+ * Uses in-memory array buffer + Blob for 100% reliable browser downloads across all devices.
  */
 export function exportToExcel(options: ExcelExportOptions): void {
   const { filename, sheets } = options;
@@ -83,9 +87,28 @@ export function exportToExcel(options: ExcelExportOptions): void {
     XLSX.utils.book_append_sheet(workbook, worksheet, sanitizedSheetName);
   }
 
-  // Generate file and trigger browser download
   const cleanFilename = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
-  XLSX.writeFile(workbook, cleanFilename);
+
+  // Generate binary array in memory and trigger native browser Blob download
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
+  });
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = cleanFilename;
+  document.body.appendChild(link);
+  link.click();
+
+  // Delay revocation to ensure browser download manager acquires the blob stream
+  setTimeout(() => {
+    if (document.body.contains(link)) {
+      document.body.removeChild(link);
+    }
+    window.URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 /**
@@ -109,12 +132,18 @@ export function exportToCSV(options: CSVExportOptions): void {
   // \uFEFF is the UTF-8 Byte Order Mark (BOM) needed by Excel to recognize UTF-8 encoding
   const csvContent = '\uFEFF' + csvRows.join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
+  const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
   document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+
+  // Delay revocation to ensure browser download manager acquires the blob stream
+  setTimeout(() => {
+    if (document.body.contains(link)) {
+      document.body.removeChild(link);
+    }
+    window.URL.revokeObjectURL(url);
+  }, 1000);
 }
