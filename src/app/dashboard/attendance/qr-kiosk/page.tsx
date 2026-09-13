@@ -21,6 +21,7 @@ import {
   UserCheck,
   ScanFace,
   Fingerprint,
+  SwitchCamera,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,12 @@ export default function QrKioskPage() {
   const scannerRef = useRef<any>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [availableCameras, setAvailableCameras] = useState<Array<{ id: string; label: string }>>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const facingModeRef = useRef<'environment' | 'user'>('environment');
+  const selectedCameraIdRef = useRef<string>('');
+  const processQrCodeRef = useRef<(text: string) => void>(() => {});
   const [scanResult, setScanResult] = useState<ScanResult>({ state: 'idle' });
   const [isProcessing, setIsProcessing] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
@@ -222,11 +229,46 @@ export default function QrKioskPage() {
     }
   }, [isProcessing, gymId, effectiveBranchId, playBeep]);
 
-  // Start html5-qrcode camera scanner with auto-fallback
-  const startScanner = useCallback(async () => {
+  processQrCodeRef.current = processQrCode;
+
+  // Stop html5-qrcode camera scanner safely
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current) {
+      try {
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
+      } catch {
+        // Ignored
+      }
+      try {
+        scannerRef.current.clear();
+      } catch {
+        // Ignored
+      }
+      scannerRef.current = null;
+      setCameraActive(false);
+    }
+  }, []);
+
+  // Start html5-qrcode camera scanner with device selection, auto-fallback, and flip support
+  const startScanner = useCallback(async (preferredCameraId?: string, preferredFacing?: 'environment' | 'user') => {
     try {
       setCameraError(null);
+      await stopScanner();
+
       const { Html5Qrcode } = await import('html5-qrcode');
+
+      // Enumerate cameras if available
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          setAvailableCameras(devices.map((d) => ({ id: d.id, label: d.label || `Camera ${d.id.slice(0, 5)}` })));
+        }
+      } catch (camErr) {
+        console.warn('Could not enumerate cameras via Html5Qrcode:', camErr);
+      }
+
       const scanner = new Html5Qrcode(SCANNER_CONTAINER_ID);
       scannerRef.current = scanner;
 
@@ -236,52 +278,93 @@ export default function QrKioskPage() {
         aspectRatio: 1.0,
       };
 
+      const targetFacing = preferredFacing || facingModeRef.current;
+      const targetId = preferredCameraId || selectedCameraIdRef.current;
+
       let started = false;
 
-      // 1. Try environment (back) camera first (ideal for tablets / mobile kiosks)
-      try {
-        await scanner.start(
-          { facingMode: 'environment' },
-          qrConfig,
-          (decodedText) => processQrCode(decodedText),
-          () => {}
-        );
-        started = true;
-      } catch (backErr) {
-        console.warn('Environment camera unavailable, attempting front/user camera:', backErr);
+      // 1. If explicit camera ID provided, try starting with specific device
+      if (targetId) {
+        try {
+          await scanner.start(
+            targetId,
+            qrConfig,
+            (decodedText) => processQrCodeRef.current(decodedText),
+            () => {}
+          );
+          started = true;
+          setSelectedCameraId(targetId);
+          selectedCameraIdRef.current = targetId;
+        } catch (deviceErr) {
+          console.warn(`Camera ID ${targetId} failed, falling back to facingMode:`, deviceErr);
+        }
       }
 
-      // 2. Fallback to user (front) camera (for desktop / laptop webcams)
+      // 2. Try preferred facingMode
       if (!started) {
+        try {
+          await scanner.start(
+            { facingMode: targetFacing },
+            qrConfig,
+            (decodedText) => processQrCodeRef.current(decodedText),
+            () => {}
+          );
+          started = true;
+          setFacingMode(targetFacing);
+          facingModeRef.current = targetFacing;
+        } catch (facingErr) {
+          console.warn(`FacingMode ${targetFacing} unavailable, falling back:`, facingErr);
+        }
+      }
+
+      // 3. Fallback to alternate facingMode (e.g. front if back unavailable)
+      if (!started) {
+        const fallbackFacing = targetFacing === 'environment' ? 'user' : 'environment';
         await scanner.start(
-          { facingMode: 'user' },
+          { facingMode: fallbackFacing },
           qrConfig,
-          (decodedText) => processQrCode(decodedText),
+          (decodedText) => processQrCodeRef.current(decodedText),
           () => {}
         );
+        setFacingMode(fallbackFacing);
+        facingModeRef.current = fallbackFacing;
       }
 
       setCameraActive(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Camera failed to start';
       console.warn('QR camera start error:', err);
-      setCameraError(msg.includes('NotAllowedError') ? 'Camera permission denied. Please allow camera access.' : 'Failed to access camera.');
+      setCameraError(
+        msg.includes('NotAllowedError')
+          ? 'Camera permission denied. Please allow camera access.'
+          : 'Failed to access camera.'
+      );
       setCameraActive(false);
     }
-  }, [processQrCode]);
+  }, [stopScanner]);
 
-  const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
-      } catch {
-        // Ignored
+  // Flip between cameras (cycles available video devices or toggles environment/user)
+  const flipCamera = useCallback(async () => {
+    try {
+      if (availableCameras.length > 1) {
+        const currentIdx = availableCameras.findIndex((c) => c.id === selectedCameraIdRef.current);
+        const nextIdx = (currentIdx + 1) % availableCameras.length;
+        const nextCam = availableCameras[nextIdx];
+        selectedCameraIdRef.current = nextCam.id;
+        setSelectedCameraId(nextCam.id);
+        await startScanner(nextCam.id);
+      } else {
+        const nextFacing = facingModeRef.current === 'environment' ? 'user' : 'environment';
+        facingModeRef.current = nextFacing;
+        setFacingMode(nextFacing);
+        selectedCameraIdRef.current = '';
+        setSelectedCameraId('');
+        await startScanner(undefined, nextFacing);
       }
-      scannerRef.current = null;
-      setCameraActive(false);
+    } catch (err) {
+      console.warn('Flip camera failed:', err);
     }
-  }, []);
+  }, [availableCameras, startScanner]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -363,6 +446,17 @@ export default function QrKioskPage() {
 
         {/* Status Indicators & Audio */}
         <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={flipCamera}
+            className="h-8 px-2.5 text-xs rounded-lg gap-1.5 bg-zinc-950 border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900"
+            title="Flip Camera (Front / Rear)"
+          >
+            <SwitchCamera className="h-3.5 w-3.5 text-blue-400" />
+            <span className="hidden sm:inline">Flip Camera</span>
+          </Button>
+
           <Badge variant="outline" className={cameraActive ? 'text-green-400 border-green-500/20 bg-green-500/10 font-bold text-xs' : 'text-zinc-500 font-bold text-xs'}>
             {cameraActive ? 'Camera Live' : 'Camera Off'}
           </Badge>
@@ -394,6 +488,17 @@ export default function QrKioskPage() {
               'border-zinc-800'
             )}
           />
+
+          {/* Floating Flip Camera Pill */}
+          <button
+            type="button"
+            onClick={flipCamera}
+            className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 active:scale-95 text-zinc-200 hover:text-white border border-zinc-700/70 backdrop-blur-md text-xs font-medium shadow-xl transition-all cursor-pointer"
+            title="Flip camera between front and rear"
+          >
+            <SwitchCamera className="h-3.5 w-3.5 text-blue-400" />
+            <span>Flip</span>
+          </button>
 
           {cameraError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 rounded-2xl p-6 text-center z-10">

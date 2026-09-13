@@ -21,6 +21,8 @@ import {
   LogIn,
   Fingerprint,
   QrCode,
+  SwitchCamera,
+  FlipHorizontal,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
@@ -93,6 +95,13 @@ export default function FaceKioskPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [isMirrored, setIsMirrored] = useState(true);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const isMirroredRef = useRef(true);
+  const facingModeRef = useRef<'user' | 'environment'>('user');
+  const selectedCameraIdRef = useRef<string>('');
 
   // Fingerprint State
   const [fpRoster, setFpRoster] = useState<RosterMemberFingerprint[]>([]);
@@ -178,29 +187,79 @@ export default function FaceKioskPage() {
     }
   }, [soundEnabled]);
 
-  // Camera start
-  const startCamera = useCallback(async () => {
+  // Enumerate available video inputs
+  const enumerateCameras = useCallback(async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.enumerateDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter(d => d.kind === 'videoinput');
+        setAvailableCameras(videoInputs);
+        return videoInputs;
+      }
+    } catch (e) {
+      console.warn('Failed to enumerate cameras:', e);
+    }
+    return [];
+  }, []);
+
+  // Camera start with support for preferred facing mode, device ID, and mirror override
+  const startCamera = useCallback(async (
+    targetFacing?: 'user' | 'environment',
+    targetDeviceId?: string,
+    targetMirrored?: boolean
+  ) => {
     try {
       setCameraError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-        },
-      });
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+
+      const facing = targetFacing || facingModeRef.current;
+      const deviceId = targetDeviceId || (targetFacing ? undefined : selectedCameraIdRef.current);
+
+      const constraints: MediaStreamConstraints = {
+        video: deviceId
+          ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
+
+      // Check active track settings to update actual device and facingMode
+      const videoTrack = stream.getVideoTracks()[0];
+      const settings = videoTrack?.getSettings?.();
+      if (settings?.deviceId) {
+        setSelectedCameraId(settings.deviceId);
+        selectedCameraIdRef.current = settings.deviceId;
+      }
+      if (settings?.facingMode === 'user' || settings?.facingMode === 'environment') {
+        setFacingMode(settings.facingMode);
+        facingModeRef.current = settings.facingMode;
+      } else if (targetFacing) {
+        setFacingMode(targetFacing);
+        facingModeRef.current = targetFacing;
+      }
+
+      const shouldMirror = targetMirrored !== undefined
+        ? targetMirrored
+        : (facingModeRef.current === 'user');
+      setIsMirrored(shouldMirror);
+      isMirroredRef.current = shouldMirror;
+
       setIsCameraActive(true);
+      enumerateCameras();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Camera access denied';
       setCameraError(msg);
       setIsCameraActive(false);
     }
-  }, []);
+  }, [enumerateCameras]);
 
   // Camera stop
   const stopCamera = useCallback(() => {
@@ -209,6 +268,34 @@ export default function FaceKioskPage() {
       streamRef.current = null;
     }
     setIsCameraActive(false);
+  }, []);
+
+  // Flip / cycle camera
+  const handleFlipCamera = useCallback(async () => {
+    if (availableCameras.length > 1) {
+      const currentIdx = availableCameras.findIndex(c => c.deviceId === selectedCameraIdRef.current);
+      const nextIdx = (currentIdx + 1) % availableCameras.length;
+      const nextCam = availableCameras[nextIdx];
+      const nextDeviceId = nextCam.deviceId;
+      const label = (nextCam.label || '').toLowerCase();
+      const isBack = label.includes('back') || label.includes('rear') || label.includes('environment');
+      const nextFacing: 'user' | 'environment' = isBack ? 'environment' : 'user';
+      const nextMirrored = !isBack;
+      await startCamera(nextFacing, nextDeviceId, nextMirrored);
+    } else {
+      const nextFacing = facingModeRef.current === 'user' ? 'environment' : 'user';
+      const nextMirrored = nextFacing === 'user';
+      await startCamera(nextFacing, undefined, nextMirrored);
+    }
+  }, [availableCameras, startCamera]);
+
+  // Toggle mirror orientation
+  const handleToggleMirror = useCallback(() => {
+    setIsMirrored(prev => {
+      const next = !prev;
+      isMirroredRef.current = next;
+      return next;
+    });
   }, []);
 
   // Detect fingerprint scanner hardware
@@ -398,7 +485,7 @@ export default function FaceKioskPage() {
               for (const sec of (secondaryFaces as any[])) {
                 const box = sec?.detection?.box || sec?.box;
                 if (!box) continue;
-                const sx = canvasWidth - (box.x + box.width);
+                const sx = isMirroredRef.current ? canvasWidth - (box.x + box.width) : box.x;
                 const sy = box.y;
                 const sw = box.width;
                 const sh = box.height;
@@ -422,7 +509,7 @@ export default function FaceKioskPage() {
               const fy = box.y;
               const fw = box.width;
               const fh = box.height;
-              const x = canvasWidth - (fx + fw); // Mirror alignment
+              const x = isMirroredRef.current ? canvasWidth - (fx + fw) : fx; // Mirror alignment
               const y = fy;
               const w = fw;
               const h = fh;
@@ -1033,6 +1120,18 @@ export default function FaceKioskPage() {
             </Select>
           </div>
 
+          {/* Flip Camera Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleFlipCamera}
+            className="h-7 px-2 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white gap-1"
+            title="Flip Camera (Front / Rear / External)"
+          >
+            <SwitchCamera className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="hidden lg:inline">Flip Camera</span>
+          </Button>
+
           {/* Refresh / Sync Button */}
           <Button
             variant="outline"
@@ -1073,7 +1172,7 @@ export default function FaceKioskPage() {
                 ref={videoRef}
                 playsInline
                 muted
-                className="w-full h-full object-cover scale-x-[-1]"
+                className={cn('w-full h-full object-cover transition-transform duration-300', isMirrored && 'scale-x-[-1]')}
               />
 
               {/* Canvas for Face Bounding Boxes & Vigilance HUD */}
@@ -1113,7 +1212,7 @@ export default function FaceKioskPage() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 p-6 text-center">
                   <CameraOff className="h-10 w-10 text-red-400 mb-3" />
                   <p className="text-sm text-zinc-300 mb-4">{cameraError}</p>
-                  <Button onClick={startCamera} className="gap-2">
+                  <Button onClick={() => { startCamera(); }} className="gap-2">
                     <RefreshCw className="h-4 w-4" /> Retry Camera
                   </Button>
                 </div>
@@ -1131,6 +1230,27 @@ export default function FaceKioskPage() {
                   </span>
                 </div>
               )}
+
+              {/* Floating Camera Flip & Mirror Controls */}
+              <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+                <button
+                  type="button"
+                  onClick={handleFlipCamera}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 active:scale-95 text-zinc-200 hover:text-white border border-zinc-700/70 backdrop-blur-md text-xs font-medium shadow-xl transition-all cursor-pointer"
+                  title="Switch between front, back, or external camera"
+                >
+                  <SwitchCamera className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Flip Camera</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggleMirror}
+                  className="p-1.5 rounded-full bg-black/75 hover:bg-black/90 active:scale-95 text-zinc-300 hover:text-white border border-zinc-700/70 backdrop-blur-md shadow-xl transition-all cursor-pointer"
+                  title={isMirrored ? 'Mirror mode ON (click to unmirror)' : 'Mirror mode OFF (click to mirror)'}
+                >
+                  <FlipHorizontal className={cn('h-3.5 w-3.5', isMirrored ? 'text-cyan-400' : 'text-zinc-500')} />
+                </button>
+              </div>
             </div>
           </div>
 
