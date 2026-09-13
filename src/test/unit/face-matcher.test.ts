@@ -140,17 +140,59 @@ describe('Face Descriptor Vector Matcher', () => {
       },
     ];
 
-    // Default threshold is 0.54, so ~0.509 distance should match!
-    const match = findBestMatch(targetDescriptor, roster);
+    // When 0.54 threshold is explicitly passed, ~0.509 distance matches:
+    const match = findBestMatch(targetDescriptor, roster, 0.54);
     expect(match).not.toBeNull();
     expect(match!.memberId).toBe('mem_gym_1');
     expect(match!.tier).toBe('medium');
     expect(match!.distance).toBeCloseTo(0.509, 2);
 
-    // With old strict threshold 0.48, it would have failed (false rejection):
-    const oldStrictMatch = findBestMatch(targetDescriptor, roster, 0.48);
-    expect(oldStrictMatch).toBeNull();
+    // With enterprise calibrated 0.40 threshold, a 0.509 stranger face is safely rejected:
+    const strangerMatch = findBestMatch(targetDescriptor, roster);
+    expect(strangerMatch).toBeNull();
   });
+
+  it('rejects strangers whose distance exceeds the calibrated 0.40 threshold (ZFA defense)', () => {
+    // Distance ~0.44 (typical close stranger / family member): sqrt(128 * (0.0388)^2) ≈ 0.44
+    const strangerQuery = new Array(128).fill(0.1);
+    const enrolledMember = new Array(128).fill(0.1388);
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_genuine',
+        name: 'Genuine Member',
+        memberCode: 'MEM-GEN',
+        descriptor: enrolledMember,
+      },
+    ];
+
+    const match = findBestMatch(strangerQuery, roster);
+    expect(match).toBeNull(); // Must reject stranger!
+  });
+
+  it('rejects candidates when a single rogue gallery pose matches but centroid is distant (Centroid Anchoring)', () => {
+    const query = new Array(128).fill(0.10);
+    // Primary centroid is distant (~0.60 distance): sqrt(128 * 0.053^2) ≈ 0.60
+    const distantCentroid = new Array(128).fill(0.153);
+    // Single stray pose that happens to be closer (~0.38): sqrt(128 * 0.0335^2) ≈ 0.38
+    const roguePose = new Array(128).fill(0.1335);
+
+    const roster: FaceDescriptorRecord[] = [
+      {
+        memberId: 'mem_anchored',
+        name: 'Anchored Member',
+        memberCode: 'MEM-ANC',
+        descriptor: distantCentroid,
+        descriptors: [distantCentroid, roguePose],
+        dimension: 128,
+      },
+    ];
+
+    // Single rogue pose with distant primary centroid must be rejected by centroid anchoring
+    const match = findBestMatch(query, roster);
+    expect(match).toBeNull();
+  });
+
 
   it('correctly matches a member across 5 enrolled gallery poses (Front, Left, Right, Tilt, Neutral)', () => {
     const p1Front = new Array(128).fill(0.10);

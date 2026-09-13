@@ -39,6 +39,8 @@ import {
   recordAttendanceEvent,
   flushAttendanceQueue,
   ConsensusTracker,
+  validateFaceQuality,
+  selectPrimaryFace,
   detectLegacyDimensionMembers,
   type FaceDescriptorRecord,
   type AttendanceEvent,
@@ -111,7 +113,13 @@ export default function FaceKioskPage() {
   const isDetectingRef = useRef(false);
   const cooldownMapRef = useRef<Map<string, number>>(new Map());
   const consensusTrackerRef = useRef<ConsensusTracker>(
-    new ConsensusTracker({ windowMs: 1200, highConfidenceRequiredFrames: 2, mediumConfidenceRequiredFrames: 3 })
+    new ConsensusTracker({
+      windowMs: 1500,
+      highConfidenceRequiredFrames: 4,
+      mediumConfidenceRequiredFrames: 6,
+      minObservationDurationMs: 250,
+      requireLiveness: false,
+    })
   );
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -351,7 +359,7 @@ export default function FaceKioskPage() {
         const video = videoRef.current;
 
         try {
-          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.38 });
+          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.55 });
           const detections = await faceapi
             .detectAllFaces(video, options)
             .withFaceLandmarks()
@@ -375,277 +383,356 @@ export default function FaceKioskPage() {
 
           const currentTime = Date.now();
 
-          for (const det of detections) {
-            const { box } = det.detection;
-            if (box.width < 32 || box.height < 32) continue;
+          if (!detections || detections.length === 0) {
+            consensusTrackerRef.current.reportUnrecognized(currentTime);
+          } else {
+            // 1. Separate primary foreground face from secondary background passers-by
+            const { primaryFace, secondaryFaces } = selectPrimaryFace<any>(
+              detections,
+              video.videoWidth,
+              video.videoHeight
+            );
 
-            const fx = box.x;
-            const fy = box.y;
-            const fw = box.width;
-            const fh = box.height;
-
-            // Instant 1:N Euclidean search in 128-D ResNet metric space with Ambiguity Margin Filter
-            // Unit-normalize live detection vector for parity with enrolled templates
-            const normDescriptor = normalizeDescriptor(det.descriptor);
-            const match = findBestMatch(normDescriptor, roster, 0.52, 0.42, 0.025);
-
-            // Extract true 68-landmark eye coordinates for Soukupová & Čech EAR calculation
-            const positions = det.landmarks.positions;
-            const leftEye = positions.slice(36, 42).map((p: any) => ({ x: p.x, y: p.y }));
-            const rightEye = positions.slice(42, 48).map((p: any) => ({ x: p.x, y: p.y }));
-            const centroid = { x: fx + fw / 2, y: fy + fh / 2 };
-
-            if (match) {
-              const consensus = consensusTrackerRef.current.evaluate(match, currentTime, {
-                leftEye,
-                rightEye,
-                centroid,
-              });
-              const isReadyToLog = consensus.isConfirmed;
-
-              // Draw vigilance biometric square & identity plates on canvas
-              if (canvasCtx) {
-                const x = canvasWidth - (fx + fw); // Mirror alignment
-                const y = fy;
-                const w = fw;
-                const h = fh;
-                const cx = x + w / 2;
-                const cy = y + h / 2;
-
-                const isSpoofSuspect = consensus.liveness?.flags.includes('zero_motion_spoof_suspect');
-
-                const hudColor = isReadyToLog
-                  ? '#10b981' // Verified: Electric Emerald
-                  : isSpoofSuspect
-                  ? '#f59e0b' // Warning: Amber
-                  : consensus.progress >= 0.5
-                  ? '#06b6d4' // Candidate Locked: Cyber Cyan
-                  : '#8b5cf6'; // Initial recognition: Violet
-
-                // 1. Sleek Vigilance Corner Brackets
-                const len = Math.max(18, Math.min(32, w * 0.25));
+            // Draw secondary background faces in dim dashed brackets to indicate background awareness without triggering attendance
+            if (canvasCtx && secondaryFaces && secondaryFaces.length > 0) {
+              for (const sec of (secondaryFaces as any[])) {
+                const box = sec?.detection?.box || sec?.box;
+                if (!box) continue;
+                const sx = canvasWidth - (box.x + box.width);
+                const sy = box.y;
+                const sw = box.width;
+                const sh = box.height;
                 canvasCtx.save();
-                canvasCtx.strokeStyle = hudColor;
-                canvasCtx.lineWidth = 2.5;
-                canvasCtx.lineCap = 'round';
-                canvasCtx.shadowColor = hudColor;
-                canvasCtx.shadowBlur = isReadyToLog ? 14 : 6;
-
-                canvasCtx.beginPath();
-                // Top-Left Corner
-                canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
-                // Top-Right Corner
-                canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
-                // Bottom-Right Corner
-                canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
-                // Bottom-Left Corner
-                canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
-                canvasCtx.stroke();
-
-                // Subtle Center Crosshair Tick
-                canvasCtx.beginPath();
-                canvasCtx.strokeStyle = `${hudColor}60`;
+                canvasCtx.strokeStyle = 'rgba(161, 161, 170, 0.35)';
                 canvasCtx.lineWidth = 1;
-                canvasCtx.moveTo(cx - 6, cy); canvasCtx.lineTo(cx + 6, cy);
-                canvasCtx.moveTo(cx, cy - 6); canvasCtx.lineTo(cx, cy + 6);
-                canvasCtx.stroke();
-                canvasCtx.restore();
-
-                // 2. Identity Header Plate (JUST ABOVE the live square)
-                const nameLabel = match.name.toUpperCase();
-                const codeLabel = match.memberCode ? `#${match.memberCode}` : (isReadyToLog ? 'VERIFIED' : 'ACTIVE');
-
-                canvasCtx.font = 'bold 12px system-ui, -apple-system, sans-serif';
-                const nameWidth = canvasCtx.measureText(nameLabel).width;
-                canvasCtx.font = 'bold 9px monospace';
-                const codeWidth = canvasCtx.measureText(codeLabel).width;
-
-                const plateHeight = 26;
-                const plateWidth = Math.max(130, nameWidth + codeWidth + 36);
-                const plateX = Math.max(4, Math.min(canvasWidth - plateWidth - 4, x + (w - plateWidth) / 2));
-                const plateY = Math.max(6, y - plateHeight - 8);
-
-                canvasCtx.save();
-                canvasCtx.fillStyle = 'rgba(9, 9, 13, 0.92)';
-                canvasCtx.strokeStyle = hudColor;
-                canvasCtx.lineWidth = 1.5;
-                canvasCtx.shadowColor = hudColor;
-                canvasCtx.shadowBlur = 4;
-                canvasCtx.beginPath();
-                drawRoundRect(canvasCtx, plateX, plateY, plateWidth, plateHeight, 6);
-                canvasCtx.fill();
-                canvasCtx.stroke();
-
-                // Left Status Dot
-                canvasCtx.beginPath();
-                canvasCtx.arc(plateX + 12, plateY + plateHeight / 2, 4, 0, Math.PI * 2);
-                canvasCtx.fillStyle = hudColor;
-                canvasCtx.fill();
-
-                // Member Name
-                canvasCtx.fillStyle = '#ffffff';
-                canvasCtx.font = 'bold 12px system-ui, -apple-system, sans-serif';
-                canvasCtx.fillText(nameLabel, plateX + 22, plateY + 17);
-
-                // Member Code / Status Badge
-                const badgeX = plateX + plateWidth - codeWidth - 14;
-                const badgeY = plateY + 4;
-                canvasCtx.fillStyle = `${hudColor}26`;
-                canvasCtx.beginPath();
-                drawRoundRect(canvasCtx, badgeX, badgeY, codeWidth + 8, 18, 4);
-                canvasCtx.fill();
-                canvasCtx.fillStyle = hudColor;
-                canvasCtx.font = 'bold 9px monospace';
-                canvasCtx.fillText(codeLabel, badgeX + 4, badgeY + 12);
-                canvasCtx.restore();
-
-                // 3. Status Footer Banner (JUST BELOW the live square)
-                const bannerHeight = 22;
-                const bannerY = y + h + 8;
-                if (bannerY + bannerHeight < canvasHeight) {
-                  canvasCtx.save();
-                  const bannerWidth = Math.max(120, Math.min(plateWidth, w + 20));
-                  const bannerX = Math.max(4, Math.min(canvasWidth - bannerWidth - 4, x + (w - bannerWidth) / 2));
-
-                  canvasCtx.fillStyle = 'rgba(9, 9, 13, 0.90)';
-                  canvasCtx.strokeStyle = `${hudColor}bb`;
-                  canvasCtx.lineWidth = 1;
-                  canvasCtx.beginPath();
-                  drawRoundRect(canvasCtx, bannerX, bannerY, bannerWidth, bannerHeight, 5);
-                  canvasCtx.fill();
-                  canvasCtx.stroke();
-
-                  if (isReadyToLog) {
-                    canvasCtx.fillStyle = '#10b981';
-                    canvasCtx.font = 'bold 10px system-ui, sans-serif';
-                    canvasCtx.fillText('✓ ATTENDANCE LOGGED', bannerX + 8, bannerY + 15);
-                  } else if (isSpoofSuspect) {
-                    canvasCtx.fillStyle = '#f59e0b';
-                    canvasCtx.font = 'bold 10px system-ui, sans-serif';
-                    canvasCtx.fillText('⚡ BLINK FOR LIVENESS', bannerX + 8, bannerY + 15);
-                  } else {
-                    const pct = Math.round(consensus.progress * 100);
-                    canvasCtx.fillStyle = hudColor;
-                    canvasCtx.font = 'bold 9px system-ui, sans-serif';
-                    canvasCtx.fillText(`IDENTIFYING · ${pct}%`, bannerX + 8, bannerY + 11);
-
-                    const trackX = bannerX + 8;
-                    const trackY = bannerY + 14;
-                    const trackWidth = bannerWidth - 16;
-                    canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-                    canvasCtx.fillRect(trackX, trackY, trackWidth, 3);
-                    canvasCtx.fillStyle = hudColor;
-                    canvasCtx.fillRect(trackX, trackY, trackWidth * consensus.progress, 3);
-                  }
-                  canvasCtx.restore();
-                }
-              }
-
-              if (isReadyToLog) {
-                const lastScanned = cooldownMapRef.current.get(match.memberId) || 0;
-                const elapsedMs = currentTime - lastScanned;
-                const COOLDOWN_MS = 2000; // 2s debounce for network safety
-
-                if (elapsedMs > COOLDOWN_MS) {
-                  cooldownMapRef.current.set(match.memberId, currentTime);
-
-                  const eventPayload: AttendanceEvent = {
-                    gymId: gymId || '',
-                    branchId: user?.branchId || undefined,
-                    memberId: match.memberId,
-                    memberName: match.name,
-                    type: mode === 'out' ? 'out' : mode === 'in' ? 'in' : 'in',
-                    timestamp: new Date().toISOString(),
-                    confidence: match.confidence,
-                    method: 'face_recognition',
-                  };
-
-                  if (bannerTimeoutRef.current) {
-                    clearTimeout(bannerTimeoutRef.current);
-                  }
-
-                  recordAttendanceEvent(eventPayload).then(({ success, isOffline, event: resEvent }) => {
-                    if (success) {
-                      playChime(true, 'success');
-
-                      const anyRes = resEvent as any;
-                      const action = anyRes.action || 'check_in';
-                      const timeStr = anyRes.time || new Date().toLocaleTimeString('en-IN');
-
-                      setRecognitionBanner({
-                        state: 'success',
-                        memberName: match.name,
-                        memberCode: match.memberCode,
-                        memberPhoto: match.photoUrl,
-                        action,
-                        time: timeStr,
-                        method: 'face_recognition',
-                      });
-
-                      if (action === 'check_in') {
-                        setTodayCount(c => c + 1);
-                      }
-
-                      setRecentEvents(prev => [
-                        { name: match.name, time: timeStr, action, photo: match.photoUrl, method: 'face_recognition' },
-                        ...prev.slice(0, 5),
-                      ]);
-
-                      if (isOffline) {
-                        setPendingQueueCount(q => q + 1);
-                      }
-                    }
-                  });
-
-                  bannerTimeoutRef.current = setTimeout(() => {
-                    setRecognitionBanner({ state: 'idle' });
-                  }, 3000);
-                }
-              }
-            } else if (canvasCtx) {
-              // Unrecognized face candidate
-              const x = canvasWidth - (fx + fw);
-              const y = fy;
-              const w = fw;
-              const h = fh;
-              const len = Math.min(18, w * 0.22);
-
-              canvasCtx.save();
-              canvasCtx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
-              canvasCtx.lineWidth = 1.8;
-              canvasCtx.lineCap = 'round';
-              canvasCtx.setLineDash([4, 4]);
-
-              canvasCtx.beginPath();
-              canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
-              canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
-              canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
-              canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
-              canvasCtx.stroke();
-              canvasCtx.restore();
-
-              if (w >= 70) {
-                canvasCtx.save();
-                const plateWidth = 145;
-                const plateHeight = 22;
-                const plateX = Math.max(4, Math.min(canvasWidth - plateWidth - 4, x + (w - plateWidth) / 2));
-                const plateY = Math.max(6, y - plateHeight - 6);
-
-                canvasCtx.fillStyle = 'rgba(15, 15, 20, 0.88)';
-                canvasCtx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
-                canvasCtx.lineWidth = 1;
-                canvasCtx.beginPath();
-                drawRoundRect(canvasCtx, plateX, plateY, plateWidth, plateHeight, 5);
-                canvasCtx.fill();
-                canvasCtx.stroke();
-
-                canvasCtx.fillStyle = '#f59e0b';
-                canvasCtx.font = 'bold 10px system-ui, sans-serif';
-                canvasCtx.fillText('⚠ VISITOR · SCANNING...', plateX + 8, plateY + 15);
+                canvasCtx.setLineDash([3, 3]);
+                canvasCtx.strokeRect(sx, sy, sw, sh);
                 canvasCtx.restore();
               }
             }
+
+            if (primaryFace) {
+              const primaryAny = primaryFace as any;
+              const box = primaryAny?.detection?.box || primaryAny?.box;
+              if (!box) {
+                isDetectingRef.current = false;
+                return;
+              }
+              const fx = box.x;
+              const fy = box.y;
+              const fw = box.width;
+              const fh = box.height;
+              const x = canvasWidth - (fx + fw); // Mirror alignment
+              const y = fy;
+              const w = fw;
+              const h = fh;
+              const cx = x + w / 2;
+              const cy = y + h / 2;
+
+              // 2. Strict Biometric Quality Gate Screening
+              const quality = validateFaceQuality(
+                box,
+                primaryFace.detection.score,
+                primaryFace.landmarks?.positions
+              );
+
+              if (!quality.isValid) {
+                // Face fails quality standards (too small, blurry, tilted, etc.)
+                consensusTrackerRef.current.reportUnrecognized(currentTime);
+
+                if (canvasCtx) {
+                  const len = Math.min(22, w * 0.22);
+                  canvasCtx.save();
+                  canvasCtx.strokeStyle = 'rgba(234, 179, 8, 0.85)'; // Amber/yellow
+                  canvasCtx.lineWidth = 2;
+                  canvasCtx.lineCap = 'round';
+                  canvasCtx.setLineDash([4, 4]);
+
+                  canvasCtx.beginPath();
+                  canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
+                  canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
+                  canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
+                  canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
+                  canvasCtx.stroke();
+                  canvasCtx.restore();
+
+                  const diagText = quality.diagnosticMessage?.toUpperCase() || 'ADJUST POSITION';
+                  canvasCtx.save();
+                  const plateWidth = Math.max(165, diagText.length * 8 + 32);
+                  const plateHeight = 24;
+                  const plateX = Math.max(4, Math.min(canvasWidth - plateWidth - 4, x + (w - plateWidth) / 2));
+                  const plateY = Math.max(6, y - plateHeight - 8);
+
+                  canvasCtx.fillStyle = 'rgba(15, 15, 20, 0.92)';
+                  canvasCtx.strokeStyle = 'rgba(234, 179, 8, 0.7)';
+                  canvasCtx.lineWidth = 1;
+                  canvasCtx.beginPath();
+                  drawRoundRect(canvasCtx, plateX, plateY, plateWidth, plateHeight, 5);
+                  canvasCtx.fill();
+                  canvasCtx.stroke();
+
+                  canvasCtx.fillStyle = '#eab308';
+                  canvasCtx.font = 'bold 10px system-ui, sans-serif';
+                  canvasCtx.fillText(`⚠ ${diagText}`, plateX + 10, plateY + 16);
+                  canvasCtx.restore();
+                }
+              } else {
+                // 3. Quality verified: instant 1:N Euclidean search in 128-D ResNet metric space with Calibrated ZFA Thresholds
+                const normDescriptor = normalizeDescriptor(primaryFace.descriptor);
+                const match = findBestMatch(normDescriptor, roster, 0.40, 0.35, 0.05);
+
+                // Extract true 68-landmark eye coordinates for Soukupová & Čech EAR calculation
+                const positions = primaryFace.landmarks.positions;
+                const leftEye = positions.slice(36, 42).map((p: any) => ({ x: p.x, y: p.y }));
+                const rightEye = positions.slice(42, 48).map((p: any) => ({ x: p.x, y: p.y }));
+                const centroid = { x: fx + fw / 2, y: fy + fh / 2 };
+
+                if (match) {
+                  const consensus = consensusTrackerRef.current.evaluate(match, currentTime, {
+                    leftEye,
+                    rightEye,
+                    centroid,
+                  });
+                  const isReadyToLog = consensus.isConfirmed;
+
+                  // Draw vigilance biometric square & identity plates on canvas
+                  if (canvasCtx) {
+                    const isSpoofSuspect = consensus.liveness?.flags.includes('zero_motion_spoof_suspect');
+
+                    const hudColor = isReadyToLog
+                      ? '#10b981' // Verified: Electric Emerald
+                      : isSpoofSuspect
+                      ? '#f59e0b' // Warning: Amber
+                      : consensus.progress >= 0.5
+                      ? '#06b6d4' // Candidate Locked: Cyber Cyan
+                      : '#8b5cf6'; // Initial recognition: Violet
+
+                    // 1. Sleek Vigilance Corner Brackets
+                    const len = Math.max(18, Math.min(32, w * 0.25));
+                    canvasCtx.save();
+                    canvasCtx.strokeStyle = hudColor;
+                    canvasCtx.lineWidth = 2.5;
+                    canvasCtx.lineCap = 'round';
+                    canvasCtx.shadowColor = hudColor;
+                    canvasCtx.shadowBlur = isReadyToLog ? 14 : 6;
+
+                    canvasCtx.beginPath();
+                    // Top-Left Corner
+                    canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
+                    // Top-Right Corner
+                    canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
+                    // Bottom-Right Corner
+                    canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
+                    // Bottom-Left Corner
+                    canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
+                    canvasCtx.stroke();
+
+                    // Subtle Center Crosshair Tick
+                    canvasCtx.beginPath();
+                    canvasCtx.strokeStyle = `${hudColor}60`;
+                    canvasCtx.lineWidth = 1;
+                    canvasCtx.moveTo(cx - 6, cy); canvasCtx.lineTo(cx + 6, cy);
+                    canvasCtx.moveTo(cx, cy - 6); canvasCtx.lineTo(cx, cy + 6);
+                    canvasCtx.stroke();
+                    canvasCtx.restore();
+
+                    // 2. Identity Header Plate (JUST ABOVE the live square)
+                    const nameLabel = match.name.toUpperCase();
+                    const codeLabel = match.memberCode ? `#${match.memberCode}` : (isReadyToLog ? 'VERIFIED' : 'ACTIVE');
+
+                    canvasCtx.font = 'bold 12px system-ui, -apple-system, sans-serif';
+                    const nameWidth = canvasCtx.measureText(nameLabel).width;
+                    canvasCtx.font = 'bold 9px monospace';
+                    const codeWidth = canvasCtx.measureText(codeLabel).width;
+
+                    const plateHeight = 26;
+                    const plateWidth = Math.max(130, nameWidth + codeWidth + 36);
+                    const plateX = Math.max(4, Math.min(canvasWidth - plateWidth - 4, x + (w - plateWidth) / 2));
+                    const plateY = Math.max(6, y - plateHeight - 8);
+
+                    canvasCtx.save();
+                    canvasCtx.fillStyle = 'rgba(9, 9, 13, 0.92)';
+                    canvasCtx.strokeStyle = hudColor;
+                    canvasCtx.lineWidth = 1.5;
+                    canvasCtx.shadowColor = hudColor;
+                    canvasCtx.shadowBlur = 4;
+                    canvasCtx.beginPath();
+                    drawRoundRect(canvasCtx, plateX, plateY, plateWidth, plateHeight, 6);
+                    canvasCtx.fill();
+                    canvasCtx.stroke();
+
+                    // Left Status Dot
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(plateX + 12, plateY + plateHeight / 2, 4, 0, Math.PI * 2);
+                    canvasCtx.fillStyle = hudColor;
+                    canvasCtx.fill();
+
+                    // Member Name
+                    canvasCtx.fillStyle = '#ffffff';
+                    canvasCtx.font = 'bold 12px system-ui, -apple-system, sans-serif';
+                    canvasCtx.fillText(nameLabel, plateX + 22, plateY + 17);
+
+                    // Member Code / Status Badge
+                    const badgeX = plateX + plateWidth - codeWidth - 14;
+                    const badgeY = plateY + 4;
+                    canvasCtx.fillStyle = `${hudColor}26`;
+                    canvasCtx.beginPath();
+                    drawRoundRect(canvasCtx, badgeX, badgeY, codeWidth + 8, 18, 4);
+                    canvasCtx.fill();
+                    canvasCtx.fillStyle = hudColor;
+                    canvasCtx.font = 'bold 9px monospace';
+                    canvasCtx.fillText(codeLabel, badgeX + 4, badgeY + 12);
+                    canvasCtx.restore();
+
+                    // 3. Status Footer Banner (JUST BELOW the live square)
+                    const bannerHeight = 22;
+                    const bannerY = y + h + 8;
+                    if (bannerY + bannerHeight < canvasHeight) {
+                      canvasCtx.save();
+                      const bannerWidth = Math.max(120, Math.min(plateWidth, w + 20));
+                      const bannerX = Math.max(4, Math.min(canvasWidth - bannerWidth - 4, x + (w - bannerWidth) / 2));
+
+                      canvasCtx.fillStyle = 'rgba(9, 9, 13, 0.90)';
+                      canvasCtx.strokeStyle = `${hudColor}bb`;
+                      canvasCtx.lineWidth = 1;
+                      canvasCtx.beginPath();
+                      drawRoundRect(canvasCtx, bannerX, bannerY, bannerWidth, bannerHeight, 5);
+                      canvasCtx.fill();
+                      canvasCtx.stroke();
+
+                      if (isReadyToLog) {
+                        canvasCtx.fillStyle = '#10b981';
+                        canvasCtx.font = 'bold 10px system-ui, sans-serif';
+                        canvasCtx.fillText('✓ ATTENDANCE LOGGED', bannerX + 8, bannerY + 15);
+                      } else if (isSpoofSuspect) {
+                        canvasCtx.fillStyle = '#f59e0b';
+                        canvasCtx.font = 'bold 10px system-ui, sans-serif';
+                        canvasCtx.fillText('⚡ BLINK FOR LIVENESS', bannerX + 8, bannerY + 15);
+                      } else {
+                        const pct = Math.round(consensus.progress * 100);
+                        canvasCtx.fillStyle = hudColor;
+                        canvasCtx.font = 'bold 9px system-ui, sans-serif';
+                        canvasCtx.fillText(`IDENTIFYING · ${pct}%`, bannerX + 8, bannerY + 11);
+
+                        const trackX = bannerX + 8;
+                        const trackY = bannerY + 14;
+                        const trackWidth = bannerWidth - 16;
+                        canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                        canvasCtx.fillRect(trackX, trackY, trackWidth, 3);
+                        canvasCtx.fillStyle = hudColor;
+                        canvasCtx.fillRect(trackX, trackY, trackWidth * consensus.progress, 3);
+                      }
+                      canvasCtx.restore();
+                    }
+                  }
+
+                  if (isReadyToLog) {
+                    const lastScanned = cooldownMapRef.current.get(match.memberId) || 0;
+                    const elapsedMs = currentTime - lastScanned;
+                    const COOLDOWN_MS = 2000; // 2s debounce for network safety
+
+                    if (elapsedMs > COOLDOWN_MS) {
+                      cooldownMapRef.current.set(match.memberId, currentTime);
+
+                      const eventPayload: AttendanceEvent = {
+                        gymId: gymId || '',
+                        branchId: user?.branchId || undefined,
+                        memberId: match.memberId,
+                        memberName: match.name,
+                        type: mode === 'out' ? 'out' : mode === 'in' ? 'in' : 'in',
+                        timestamp: new Date().toISOString(),
+                        confidence: match.confidence,
+                        method: 'face_recognition',
+                      };
+
+                      if (bannerTimeoutRef.current) {
+                        clearTimeout(bannerTimeoutRef.current);
+                      }
+
+                      recordAttendanceEvent(eventPayload).then(({ success, isOffline, event: resEvent }) => {
+                        if (success) {
+                          playChime(true, 'success');
+
+                          const anyRes = resEvent as any;
+                          const action = anyRes.action || 'check_in';
+                          const timeStr = anyRes.time || new Date().toLocaleTimeString('en-IN');
+
+                          setRecognitionBanner({
+                            state: 'success',
+                            memberName: match.name,
+                            memberCode: match.memberCode,
+                            memberPhoto: match.photoUrl,
+                            action,
+                            time: timeStr,
+                            method: 'face_recognition',
+                          });
+
+                          if (action === 'check_in') {
+                            setTodayCount(c => c + 1);
+                          }
+
+                          setRecentEvents(prev => [
+                            { name: match.name, time: timeStr, action, photo: match.photoUrl, method: 'face_recognition' },
+                            ...prev.slice(0, 5),
+                          ]);
+
+                          if (isOffline) {
+                            setPendingQueueCount(q => q + 1);
+                          }
+                        }
+                      });
+
+                      bannerTimeoutRef.current = setTimeout(() => {
+                        setRecognitionBanner({ state: 'idle' });
+                      }, 3000);
+                    }
+                  }
+                } else {
+                  // Unrecognized face candidate (Visitor / Non-member)
+                  consensusTrackerRef.current.reportUnrecognized(currentTime);
+
+                  if (canvasCtx) {
+                    const len = Math.min(22, w * 0.22);
+                    canvasCtx.save();
+                    canvasCtx.strokeStyle = 'rgba(239, 68, 68, 0.75)'; // Crimson/Rose red
+                    canvasCtx.lineWidth = 1.8;
+                    canvasCtx.lineCap = 'round';
+                    canvasCtx.setLineDash([4, 4]);
+
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(x, y + len); canvasCtx.lineTo(x, y); canvasCtx.lineTo(x + len, y);
+                    canvasCtx.moveTo(x + w - len, y); canvasCtx.lineTo(x + w, y); canvasCtx.lineTo(x + w, y + len);
+                    canvasCtx.moveTo(x + w, y + h - len); canvasCtx.lineTo(x + w, y + h); canvasCtx.lineTo(x + w - len, y + h);
+                    canvasCtx.moveTo(x + len, y + h); canvasCtx.lineTo(x, y + h); canvasCtx.lineTo(x, y + h - len);
+                    canvasCtx.stroke();
+                    canvasCtx.restore();
+
+                    if (w >= 70) {
+                      canvasCtx.save();
+                      const plateWidth = 175;
+                      const plateHeight = 24;
+                      const plateX = Math.max(4, Math.min(canvasWidth - plateWidth - 4, x + (w - plateWidth) / 2));
+                      const plateY = Math.max(6, y - plateHeight - 8);
+
+                      canvasCtx.fillStyle = 'rgba(15, 15, 20, 0.92)';
+                      canvasCtx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+                      canvasCtx.lineWidth = 1;
+                      canvasCtx.beginPath();
+                      drawRoundRect(canvasCtx, plateX, plateY, plateWidth, plateHeight, 5);
+                      canvasCtx.fill();
+                      canvasCtx.stroke();
+
+                      canvasCtx.fillStyle = '#ef4444';
+                      canvasCtx.font = 'bold 10px system-ui, sans-serif';
+                      canvasCtx.fillText('⚠ VISITOR · NOT ENROLLED', plateX + 10, plateY + 16);
+                      canvasCtx.restore();
+                    }
+                  }
+                }
+              }
+            }
           }
+
         } catch {
           // Ignore transient frame detection errors
         } finally {

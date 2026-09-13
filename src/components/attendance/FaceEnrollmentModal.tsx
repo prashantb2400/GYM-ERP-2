@@ -9,7 +9,8 @@ import { Camera, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw, FlipHori
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { loadFaceApiModels } from '@/lib/face-attendance/models';
-import { averageDescriptors, normalizeDescriptor } from '@/lib/face-attendance/matcher';
+import { averageDescriptors, normalizeDescriptor, euclideanDistance } from '@/lib/face-attendance/matcher';
+import { calculateEyeAspectRatio } from '@/lib/face-attendance/liveness';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 
 interface FaceEnrollmentModalProps {
@@ -189,7 +190,8 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
       'Pose 5/5: Tilt chin slightly up, look ahead',
     ];
 
-    const detectorOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
+    const detectorOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.60 });
+    let frontalReference: number[] | null = null;
 
     for (let i = 0; i < TOTAL_FRAMES; i++) {
       setStatusMessage(POSE_INSTRUCTIONS[i]);
@@ -204,7 +206,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
           .withFaceDescriptor();
 
         if (!detection) {
-          setStatusMessage('No face detected. Please position within the oval.');
+          setStatusMessage('No face detected. Please position within the oval frame.');
           i--; // Retry this pose
           await new Promise(r => setTimeout(r, 400));
           continue;
@@ -212,19 +214,35 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
 
         const { box, score } = detection.detection;
 
-        // Quality Gate: Ensure face is sufficiently sized and sharp
-        if (box.width < 70 || box.height < 70) {
+        // Quality Gate 1: Resolution & Size
+        if (box.width < 96 || box.height < 96) {
           setStatusMessage('Move a bit closer to the camera...');
           i--;
           await new Promise(r => setTimeout(r, 400));
           continue;
         }
 
-        if (score < 0.45) {
+        // Quality Gate 2: Detection Confidence
+        if (score < 0.60) {
           setStatusMessage('Adjust lighting and hold steady...');
           i--;
           await new Promise(r => setTimeout(r, 400));
           continue;
+        }
+
+        // Quality Gate 3: Eye State (Check for open eyes)
+        if (detection.landmarks?.positions && detection.landmarks.positions.length >= 48) {
+          const positions = detection.landmarks.positions;
+          const leftEye = positions.slice(36, 42).map((p: any) => ({ x: p.x, y: p.y }));
+          const rightEye = positions.slice(42, 48).map((p: any) => ({ x: p.x, y: p.y }));
+          const earL = calculateEyeAspectRatio(leftEye);
+          const earR = calculateEyeAspectRatio(rightEye);
+          if ((earL + earR) / 2 < 0.18) {
+            setStatusMessage('Please keep eyes open naturally...');
+            i--;
+            await new Promise(r => setTimeout(r, 400));
+            continue;
+          }
         }
 
         if (!detection.descriptor || detection.descriptor.length !== 128) {
@@ -234,7 +252,23 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
           continue;
         }
 
-        descriptors.push(normalizeDescriptor(Array.from(detection.descriptor)));
+        const normalizedDesc = normalizeDescriptor(Array.from(detection.descriptor));
+
+        // Quality Gate 4: Pairwise Consistency with Frontal Reference
+        if (i === 0) {
+          frontalReference = normalizedDesc;
+        } else if (frontalReference) {
+          const pairwiseDist = euclideanDistance(normalizedDesc, frontalReference);
+          // Intra-subject pose variance must remain <= 0.38
+          if (pairwiseDist > 0.38) {
+            setStatusMessage('Movement too sudden. Please hold steady for this pose...');
+            i--;
+            await new Promise(r => setTimeout(r, 400));
+            continue;
+          }
+        }
+
+        descriptors.push(normalizedDesc);
         setProgress(Math.round(((i + 1) / TOTAL_FRAMES) * 100));
       } catch (err) {
         console.warn('Pose capture frame error:', err);
@@ -242,6 +276,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
         await new Promise(r => setTimeout(r, 300));
       }
     }
+
 
     setIsCapturing(false);
 

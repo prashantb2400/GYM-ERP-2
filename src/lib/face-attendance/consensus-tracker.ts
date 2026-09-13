@@ -11,6 +11,7 @@ interface CandidateState {
   lastSeenMs: number;
   bestDistance: number;
   bestConfidence: number;
+  distanceSum: number;
   tier: 'high' | 'medium';
   centroids: Point2D[];
   blinkDetected: boolean;
@@ -37,23 +38,26 @@ export class ConsensusTracker {
   private readonly windowMs: number;
   private readonly highConfidenceRequiredFrames: number;
   private readonly mediumConfidenceRequiredFrames: number;
+  private readonly minObservationDurationMs: number;
   private readonly requireLiveness: boolean;
 
   constructor(options?: {
     windowMs?: number;
     highConfidenceRequiredFrames?: number;
     mediumConfidenceRequiredFrames?: number;
+    minObservationDurationMs?: number;
     requireLiveness?: boolean;
   }) {
-    this.windowMs = options?.windowMs ?? 1200; // 1200ms temporal window for camera frame rate resilience
+    this.windowMs = options?.windowMs ?? 1200; // 1200ms temporal window
     this.highConfidenceRequiredFrames = options?.highConfidenceRequiredFrames ?? 2;
     this.mediumConfidenceRequiredFrames = options?.mediumConfidenceRequiredFrames ?? 3;
+    this.minObservationDurationMs = options?.minObservationDurationMs ?? 0;
     this.requireLiveness = options?.requireLiveness ?? false;
   }
 
   /**
    * Evaluates a candidate match against temporal history.
-   * Returns whether multi-frame consensus has been satisfied.
+   * Enforces multi-frame consensus, temporal window consistency, and liveness.
    */
   public evaluate(
     match: MatchResult,
@@ -77,6 +81,7 @@ export class ConsensusTracker {
         lastSeenMs: nowMs,
         bestDistance: distance,
         bestConfidence: confidence,
+        distanceSum: distance,
         tier,
         centroids: observation?.centroid ? [observation.centroid] : [],
         blinkDetected: false,
@@ -86,6 +91,8 @@ export class ConsensusTracker {
       // Candidate seen again inside the valid temporal window
       state.count += 1;
       state.lastSeenMs = nowMs;
+      state.distanceSum += distance;
+
       if (distance < state.bestDistance) {
         state.bestDistance = distance;
         state.bestConfidence = confidence;
@@ -116,7 +123,14 @@ export class ConsensusTracker {
       }
     }
 
-    let isConfirmed = state.count >= targetFrames;
+    // Temporal stability conditions:
+    // 1. Minimum frame count satisfied
+    const framesSatisfied = state.count >= targetFrames;
+    // 2. Minimum real-world time elapsed in camera view
+    const durationSatisfied = (nowMs - state.firstSeenMs) >= this.minObservationDurationMs;
+
+    let isConfirmed = framesSatisfied && durationSatisfied;
+
     if (isConfirmed && this.requireLiveness && livenessMetrics && !livenessMetrics.isLive) {
       // Hold confirmation if liveness threshold is not met
       isConfirmed = false;
@@ -152,6 +166,20 @@ export class ConsensusTracker {
   }
 
   /**
+   * Reports an unrecognized face or poor-quality detection frame.
+   * Actively decays pending candidates to prevent sporadic flickering matches
+   * from accumulating across camera frames.
+   */
+  public reportUnrecognized(nowMs = Date.now()) {
+    for (const [id, state] of this.candidates.entries()) {
+      state.count = Math.max(0, state.count - 1);
+      if (state.count <= 0 || nowMs - state.lastSeenMs > 800) {
+        this.candidates.delete(id);
+      }
+    }
+  }
+
+  /**
    * Resets tracking state for a specific member or all members
    */
   public reset(memberId?: string) {
@@ -175,3 +203,4 @@ export class ConsensusTracker {
     }
   }
 }
+

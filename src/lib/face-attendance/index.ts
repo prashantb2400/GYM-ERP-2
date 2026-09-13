@@ -5,3 +5,4 @@ export * from './offline-db';
 export * from './sync';
 export * from './consensus-tracker';
 export * from './liveness';
+export * from './quality-gate';

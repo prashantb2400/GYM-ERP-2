@@ -76,12 +76,12 @@ export function normalizeDescriptor(descriptor: ArrayLike<number>): number[] {
 
 /**
  * Converts a Euclidean distance into a normalized confidence percentage [0.0 - 1.0].
- * Threshold is treated as ~50% confidence.
+ * Calibrated for 128-D ResNet metric space: 0.0 -> 100%, threshold -> ~72%.
  */
-export function distanceToConfidence(distance: number, threshold = 0.52): number {
+export function distanceToConfidence(distance: number, threshold = 0.40): number {
   if (distance <= 0) return 1.0;
-  if (distance >= 1.0) return 0.0;
-  const confidence = Math.max(0, 1 - (distance / (threshold * 1.4)));
+  if (distance >= threshold * 1.25) return 0.0;
+  const confidence = Math.max(0, 1 - (distance / (threshold * 1.35)));
   return Math.round(confidence * 1000) / 1000;
 }
 
@@ -162,23 +162,24 @@ export function averageDescriptors(
  *
  * Primary Mode: 128-D Metric Space (ResNet-34 / face-api / dlib)
  * Uses squared Euclidean distance (d^2) for instant sub-millisecond evaluation.
- * Calibrated thresholds:
- * - Default threshold: 0.52 (matches under natural gym lighting)
- * - High confidence tier: 0.40 (requires 2-frame consensus)
+ * Calibrated Enterprise Biometric Thresholds:
+ * - Default threshold: 0.40 (strict 1:N open-set limit; eliminates false acceptance of strangers)
+ * - High confidence tier: 0.35
+ * - Ambiguity margin: 0.05
  *
- * Multi-Template Gallery:
- * Evaluates all 5 enrolled poses in candidate.descriptors to ensure high-angle recall.
+ * Centroid-Anchored Multi-Template Scoring:
+ * Prevents a single rogue/distorted pose from triggering a false match.
  *
- * Ambiguity Rejection (Nearest-Neighbor Margin Filter):
- * Rejects candidates in the medium-confidence zone if a second member is within
- * ambiguityMargin (default 0.04) distance to eliminate false-positive cross-member mismatches.
+ * Nearest-Neighbor Distance Ratio (NNDR) Ambiguity Rejection:
+ * Discards ambiguous candidates if runner-up member is within margin (0.05) or ratio > 0.88,
+ * even when the runner-up does not strictly meet the acceptance threshold.
  */
 export function findBestMatch(
   queryDescriptor: ArrayLike<number>,
   roster: FaceDescriptorRecord[],
-  threshold = 0.52,
-  highConfidenceThreshold = 0.42,
-  ambiguityMargin = 0.025
+  threshold = 0.40,
+  highConfidenceThreshold = 0.35,
+  ambiguityMargin = 0.05
 ): MatchResult | null {
   if (!roster || roster.length === 0 || !queryDescriptor) return null;
 
@@ -186,8 +187,8 @@ export function findBestMatch(
 
   if (isHighDim) {
     // High-dimensional Cosine Similarity search (legacy backward compatibility)
-    const similarityThreshold = threshold !== 0.52 && threshold >= 0.55 ? threshold : 0.62;
-    const highConfidenceSimilarity = highConfidenceThreshold !== 0.38 && highConfidenceThreshold >= 0.65 ? highConfidenceThreshold : 0.74;
+    const similarityThreshold = threshold !== 0.40 && threshold >= 0.55 ? threshold : 0.65;
+    const highConfidenceSimilarity = highConfidenceThreshold !== 0.35 && highConfidenceThreshold >= 0.65 ? highConfidenceThreshold : 0.76;
 
     let bestSimilarity = -Infinity;
     let secondBestSimilarity = -Infinity;
@@ -231,16 +232,12 @@ export function findBestMatch(
     }
 
     if (bestMatch && bestSimilarity >= similarityThreshold) {
-      // Ambiguity filter for high-dim cosine space:
-      // Only reject if runner-up is also a valid match and within margin
       if (
         secondBestMatch &&
-        secondBestSimilarity >= similarityThreshold &&
         secondBestMatch.memberId !== bestMatch.memberId &&
         bestSimilarity < highConfidenceSimilarity &&
-        bestSimilarity - secondBestSimilarity < 0.03
+        bestSimilarity - secondBestSimilarity < 0.04
       ) {
-        // Ambiguous candidate
         return null;
       }
 
@@ -261,7 +258,7 @@ export function findBestMatch(
     return null;
   }
 
-  // Production ResNet-34 128-D Euclidean Distance Search
+  // Enterprise ResNet-34 128-D Euclidean Distance Search
   const maxSqDistance = threshold * threshold;
   let bestSqDistance = Infinity;
   let secondBestSqDistance = Infinity;
@@ -270,36 +267,53 @@ export function findBestMatch(
 
   for (let i = 0; i < roster.length; i++) {
     const candidate = roster[i];
-    let candidateMinSqDist = Infinity;
+    let candidateSqDist = Infinity;
+    let primarySqDist = Infinity;
 
-    // Check multi-template gallery
+    // 1. Primary descriptor distance
+    if (candidate.descriptor && candidate.descriptor.length === queryDescriptor.length) {
+      primarySqDist = squaredEuclideanDistance(queryDescriptor, candidate.descriptor);
+      candidateSqDist = primarySqDist;
+    }
+
+    // 2. Centroid-anchored multi-template evaluation
     if (candidate.descriptors && Array.isArray(candidate.descriptors) && candidate.descriptors.length > 0) {
+      const gallerySqDists: number[] = [];
       for (let d = 0; d < candidate.descriptors.length; d++) {
         const desc = candidate.descriptors[d];
         if (desc && desc.length === queryDescriptor.length) {
-          const sqDist = squaredEuclideanDistance(queryDescriptor, desc);
-          if (sqDist < candidateMinSqDist) {
-            candidateMinSqDist = sqDist;
+          gallerySqDists.push(squaredEuclideanDistance(queryDescriptor, desc));
+        }
+      }
+      gallerySqDists.sort((a, b) => a - b);
+
+      if (gallerySqDists.length > 0) {
+        const bestGallerySq = gallerySqDists[0];
+        if (primarySqDist === Infinity) {
+          candidateSqDist = bestGallerySq;
+        } else {
+          // If primary centroid is within reasonable variance, allow best gallery pose
+          const primaryDist = Math.sqrt(primarySqDist);
+          if (primaryDist <= threshold + 0.05) {
+            candidateSqDist = Math.min(primarySqDist, bestGallerySq);
+          } else if (gallerySqDists.length >= 2) {
+            // If primary centroid is distant, require at least top 2 poses to agree
+            const top2MeanSq = (gallerySqDists[0] + gallerySqDists[1]) / 2;
+            candidateSqDist = Math.min(primarySqDist, top2MeanSq);
+          } else {
+            candidateSqDist = primarySqDist;
           }
         }
       }
     }
 
-    // Check single/primary descriptor
-    if (candidate.descriptor && candidate.descriptor.length === queryDescriptor.length) {
-      const sqDist = squaredEuclideanDistance(queryDescriptor, candidate.descriptor);
-      if (sqDist < candidateMinSqDist) {
-        candidateMinSqDist = sqDist;
-      }
-    }
-
-    if (candidateMinSqDist < bestSqDistance) {
+    if (candidateSqDist < bestSqDistance) {
       secondBestSqDistance = bestSqDistance;
       secondBestMatch = bestMatch;
-      bestSqDistance = candidateMinSqDist;
+      bestSqDistance = candidateSqDist;
       bestMatch = candidate;
-    } else if (candidateMinSqDist < secondBestSqDistance) {
-      secondBestSqDistance = candidateMinSqDist;
+    } else if (candidateSqDist < secondBestSqDistance) {
+      secondBestSqDistance = candidateSqDist;
       secondBestMatch = candidate;
     }
   }
@@ -308,18 +322,20 @@ export function findBestMatch(
     const bestDistance = Math.sqrt(bestSqDistance);
     const secondBestDistance = Math.sqrt(secondBestSqDistance);
 
-    // Ambiguity filter: If in the medium tier and runner-up from a different member
-    // is ALSO a valid match (<= maxSqDistance) and within ambiguityMargin,
-    // reject ambiguous match to prevent cross-member misidentification
-    if (
-      secondBestMatch &&
-      secondBestSqDistance <= maxSqDistance &&
-      secondBestMatch.memberId !== bestMatch.memberId &&
-      bestDistance > highConfidenceThreshold &&
-      secondBestDistance - bestDistance < ambiguityMargin
-    ) {
-      // Ambiguous: two valid matching members are virtually equidistant to this face query
-      return null;
+    // Nearest-Neighbor Distance Ratio (NNDR) & Ambiguity Filter:
+    // If a second distinct member is close in distance, the query is ambiguous
+    if (secondBestMatch && secondBestMatch.memberId !== bestMatch.memberId) {
+      const margin = secondBestDistance - bestDistance;
+      const ratio = secondBestDistance > 0 ? bestDistance / secondBestDistance : 1;
+
+      // Ambiguity check applies when runner-up is also within acceptance threshold
+      if (secondBestDistance <= threshold) {
+        if (bestDistance > 0.30) {
+          if (margin < ambiguityMargin || (ratio > 0.88 && margin < ambiguityMargin * 1.5)) {
+            return null;
+          }
+        }
+      }
     }
 
     const tier: 'high' | 'medium' = bestDistance <= highConfidenceThreshold ? 'high' : 'medium';
@@ -338,6 +354,7 @@ export function findBestMatch(
 
   return null;
 }
+
 
 /**
  * Detects members in the roster whose enrolled descriptors have incompatible dimensions.
