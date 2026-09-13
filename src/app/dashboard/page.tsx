@@ -356,9 +356,9 @@ export default function DashboardHome() {
             </Button>
           )}
           {!isTrainer && (
-            <Link href="/dashboard/invoices">
+            <Link href="/dashboard/members/add">
               <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 gap-2">
-                <PlusCircle className="h-4 w-4" /> New Invoice
+                <UserPlus className="h-4 w-4" /> Add New Member
               </Button>
             </Link>
           )}
