@@ -46,34 +46,50 @@ export interface InvoiceData {
   amountInWords: string;
 }
 
+export interface DietFoodItem {
+  name: string;
+  qty?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
+  notes?: string;
+}
+
 export interface Meal {
   name: string; // e.g., Breakfast, Lunch
   time?: string;
-  items: string[];
+  items: (string | DietFoodItem)[];
   calories: number;
   protein: number;
-  carbs: number;
-  fats: number;
+  carbs?: number;
+  fats?: number;
 }
 
 export interface DietChartData {
   gym: GymInfo;
+  planTitle?: string;
+  isTemplate?: boolean;
   member: {
     id: string;
     name: string;
+    memberCode?: string;
     age?: number;
     weight?: number;
     height?: string;
     goal?: string;
+    phone?: string;
   };
   dateIssued: string;
+  targetCalories?: number;
   trainerName?: string;
   trainerNotes?: string;
+  waterIntakeLiters?: number;
   meals: Meal[];
   totalCalories: number;
   totalProtein: number;
-  totalCarbs: number;
-  totalFats: number;
+  totalCarbs?: number;
+  totalFats?: number;
 }
 
 export interface Exercise {
@@ -83,25 +99,35 @@ export interface Exercise {
   rest: string;
   muscleGroups: string[];
   notes?: string;
+  tempo?: string;
 }
 
 export interface WorkoutDay {
   dayName: string; // e.g., Monday, Day 1
   focus?: string;
+  warmup?: string;
   exercises: Exercise[];
+  cooldown?: string;
 }
 
 export interface ExercisePlanData {
   gym: GymInfo;
+  planTitle?: string;
+  isTemplate?: boolean;
   member: {
     id: string;
     name: string;
+    memberCode?: string;
     level?: string;
     goal?: string;
+    phone?: string;
   };
   dateIssued: string;
   trainerName?: string;
   duration?: string; // e.g., 4 weeks
+  daysPerWeek?: number;
+  trainerNotes?: string;
+  cardioProtocol?: string;
   days: WorkoutDay[];
 }
 
