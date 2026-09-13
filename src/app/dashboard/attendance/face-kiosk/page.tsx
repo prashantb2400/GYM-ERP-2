@@ -30,6 +30,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { isMobileDevice, getRecommendedFacingMode, getRecommendedMirrorState } from '@/lib/utils/device';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { triggerHapticFeedback } from '@/lib/utils/gesture';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 import { FingerprintScannerManager } from '@/lib/fingerprint/drivers';
 import { identifyMemberFromRoster } from '@/lib/fingerprint/matcher';
@@ -101,10 +102,12 @@ export default function FaceKioskPage() {
   const [isMirrored, setIsMirrored] = useState(true);
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [isFlippingCamera, setIsFlippingCamera] = useState(false);
   const [showMobileFpDock, setShowMobileFpDock] = useState(false);
   const isMirroredRef = useRef(true);
   const facingModeRef = useRef<'user' | 'environment'>('user');
   const selectedCameraIdRef = useRef<string>('');
+  const isFlippingCameraRef = useRef(false);
 
   // Device-aware initial camera configuration (auto back-camera on mobile, webcam on laptop)
   useEffect(() => {
@@ -312,22 +315,46 @@ export default function FaceKioskPage() {
     setIsCameraActive(false);
   }, []);
 
-  // Flip / cycle camera
+  // Flip / cycle camera with concurrency guard, tracker reset, and haptic feedback
   const handleFlipCamera = useCallback(async () => {
-    if (availableCameras.length > 1) {
-      const currentIdx = availableCameras.findIndex(c => c.deviceId === selectedCameraIdRef.current);
-      const nextIdx = (currentIdx + 1) % availableCameras.length;
-      const nextCam = availableCameras[nextIdx];
-      const nextDeviceId = nextCam.deviceId;
-      const label = (nextCam.label || '').toLowerCase();
-      const isBack = label.includes('back') || label.includes('rear') || label.includes('environment');
-      const nextFacing: 'user' | 'environment' = isBack ? 'environment' : 'user';
-      const nextMirrored = !isBack;
-      await startCamera(nextFacing, nextDeviceId, nextMirrored);
-    } else {
-      const nextFacing = facingModeRef.current === 'user' ? 'environment' : 'user';
-      const nextMirrored = nextFacing === 'user';
-      await startCamera(nextFacing, undefined, nextMirrored);
+    if (isFlippingCameraRef.current) return;
+    isFlippingCameraRef.current = true;
+    setIsFlippingCamera(true);
+
+    triggerHapticFeedback(40);
+
+    // Clean slate for new camera angle: reset consensus tracker & clear canvas
+    consensusTrackerRef.current.reset();
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    }
+
+    try {
+      if (availableCameras.length > 1) {
+        const currentIdx = availableCameras.findIndex(c => c.deviceId === selectedCameraIdRef.current);
+        const nextIdx = (currentIdx + 1) % availableCameras.length;
+        const nextCam = availableCameras[nextIdx];
+        const nextDeviceId = nextCam.deviceId;
+        const label = (nextCam.label || '').toLowerCase();
+        const isBack = label.includes('back') || label.includes('rear') || label.includes('environment');
+        const nextFacing: 'user' | 'environment' = isBack ? 'environment' : 'user';
+        const nextMirrored = !isBack;
+        await startCamera(nextFacing, nextDeviceId, nextMirrored);
+      } else {
+        const nextFacing = facingModeRef.current === 'user' ? 'environment' : 'user';
+        const nextMirrored = nextFacing === 'user';
+        await startCamera(nextFacing, undefined, nextMirrored);
+      }
+    } catch (err) {
+      console.warn('Flip camera error:', err);
+    } finally {
+      setTimeout(() => {
+        isFlippingCameraRef.current = false;
+        setIsFlippingCamera(false);
+      }, 350);
     }
   }, [availableCameras, startCamera]);
 
@@ -1139,16 +1166,16 @@ export default function FaceKioskPage() {
             </Select>
           </div>
 
-          {/* Flip Camera Button */}
+          {/* Small Topbar Camera Flip Button */}
           <Button
             variant="outline"
             size="sm"
             onClick={handleFlipCamera}
-            className="h-7 px-2 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white gap-1"
-            title="Flip Camera (Front / Rear / External)"
+            disabled={isFlippingCamera}
+            className="h-7 w-7 p-0 border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white hover:border-cyan-500/50"
+            title={facingMode === 'environment' ? 'Switch to Webcam' : 'Switch to Rear Camera'}
           >
-            <SwitchCamera className="h-3.5 w-3.5 text-cyan-400" />
-            <span className="hidden sm:inline text-xs">Flip</span>
+            <SwitchCamera className={cn("h-3.5 w-3.5 text-cyan-400 transition-transform duration-500", isFlippingCamera && "animate-spin")} />
           </Button>
 
           {/* Refresh / Sync Button */}
@@ -1269,32 +1296,32 @@ export default function FaceKioskPage() {
                 </div>
               )}
 
-              {/* Floating Camera Flip & Mirror Controls */}
-              <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
-                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 border border-zinc-700/70 text-[10px] font-mono text-zinc-300 backdrop-blur-md select-none">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {/* Floating Camera Flip Button & Indicator */}
+              <div className="absolute bottom-3 right-3 flex items-center gap-2 z-20">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 border border-zinc-700/70 text-[10px] font-mono text-zinc-300 backdrop-blur-md select-none shadow-lg">
+                  <span className={cn('h-1.5 w-1.5 rounded-full', facingMode === 'environment' ? 'bg-emerald-400' : 'bg-cyan-400')} />
                   <span>{facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}</span>
-                  <span className="text-zinc-500">•</span>
-                  <span className="text-zinc-400 text-[9px] flex items-center gap-0.5">
-                    <span>Swipe</span>
-                    <span className="text-cyan-400 font-bold">←</span>
-                    <span>to flip</span>
-                  </span>
                 </div>
+
+                {/* Small Camera Flip Button */}
                 <button
                   type="button"
                   onClick={handleFlipCamera}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 active:scale-95 text-zinc-200 hover:text-white border border-zinc-700/70 backdrop-blur-md text-xs font-medium shadow-xl transition-all cursor-pointer"
-                  title="Switch between front, back, or external camera"
+                  disabled={isFlippingCamera}
+                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-black/75 hover:bg-black/90 active:scale-90 border border-zinc-700/80 hover:border-cyan-500/60 text-zinc-200 hover:text-white backdrop-blur-md shadow-2xl flex items-center justify-center cursor-pointer transition-all disabled:opacity-50"
+                  title={facingMode === 'environment' ? 'Switch to Webcam' : 'Switch to Rear Camera'}
+                  aria-label="Flip Camera"
                 >
-                  <SwitchCamera className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>Flip</span>
+                  <SwitchCamera className={cn('h-4 w-4 text-cyan-400 transition-transform duration-500', isFlippingCamera && 'animate-spin')} />
                 </button>
+
+                {/* Small Mirror Toggle Button */}
                 <button
                   type="button"
                   onClick={handleToggleMirror}
-                  className="p-1.5 rounded-full bg-black/75 hover:bg-black/90 active:scale-95 text-zinc-300 hover:text-white border border-zinc-700/70 backdrop-blur-md shadow-xl transition-all cursor-pointer"
+                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-black/75 hover:bg-black/90 active:scale-90 border border-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white backdrop-blur-md shadow-2xl flex items-center justify-center cursor-pointer transition-all"
                   title={isMirrored ? 'Mirror mode ON (click to unmirror)' : 'Mirror mode OFF (click to mirror)'}
+                  aria-label="Toggle Mirror"
                 >
                   <FlipHorizontal className={cn('h-3.5 w-3.5', isMirrored ? 'text-cyan-400' : 'text-zinc-500')} />
                 </button>
