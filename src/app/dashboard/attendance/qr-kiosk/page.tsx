@@ -28,7 +28,6 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 import { isMobileDevice, getRecommendedFacingMode } from '@/lib/utils/device';
-import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
 const SCANNER_CONTAINER_ID = 'qr-reader';
 
@@ -58,6 +57,7 @@ export default function QrKioskPage() {
   const processQrCodeRef = useRef<(text: string) => void>(() => {});
   const [scanResult, setScanResult] = useState<ScanResult>({ state: 'idle' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isFlipping, setIsFlipping] = useState(false);
   const [todayCount, setTodayCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [recentCheckins, setRecentCheckins] = useState<Array<{ name: string; time: string; photo?: string }>>([]);
@@ -354,6 +354,7 @@ export default function QrKioskPage() {
 
   // Flip between cameras (cycles available video devices or toggles environment/user)
   const flipCamera = useCallback(async () => {
+    setIsFlipping(true);
     try {
       if (availableCameras.length > 1) {
         const currentIdx = availableCameras.findIndex((c) => c.id === selectedCameraIdRef.current);
@@ -372,16 +373,10 @@ export default function QrKioskPage() {
       }
     } catch (err) {
       console.warn('Flip camera failed:', err);
+    } finally {
+      setTimeout(() => setIsFlipping(false), 500);
     }
   }, [availableCameras, startScanner]);
-
-  // Swipe gesture recognition on QR scanner feed (swipe right-to-left to flip camera)
-  const { swipeHandlers, isFlipping, swipeFeedback } = useSwipeGesture({
-    onSwipeLeft: flipCamera,
-    onSwipeRight: flipCamera,
-    cooldownMs: 800,
-    enabled: cameraActive,
-  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -502,10 +497,7 @@ export default function QrKioskPage() {
 
       {/* Main Scanner Viewport */}
       <div className="flex-1 flex flex-col items-center justify-center relative px-3 sm:px-4 py-2">
-        <div
-          {...swipeHandlers}
-          className="relative w-full max-w-[290px] sm:max-w-[340px] aspect-square mx-auto cursor-grab active:cursor-grabbing select-none"
-        >
+        <div className="relative w-full max-w-[290px] sm:max-w-[340px] aspect-square mx-auto select-none">
           <div
             id={SCANNER_CONTAINER_ID}
             className={cn(
@@ -519,41 +511,10 @@ export default function QrKioskPage() {
             )}
           />
 
-          {/* Swipe Feedback HUD Toast */}
-          {swipeFeedback && (
-            <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-              <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-black/85 backdrop-blur-md border border-blue-500/50 text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                <SwitchCamera className="h-5 w-5 text-blue-400 animate-spin" />
-                <span className="text-xs font-semibold tracking-wide">
-                  {facingMode === 'environment' ? 'Switching to Webcam...' : 'Switching to Rear Cam...'}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Floating Flip Camera Pill */}
-          <div className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5">
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/85 border border-zinc-700/80 text-[10px] font-mono text-zinc-300 backdrop-blur-md select-none shadow-lg">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span>{facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}</span>
-              <span className="text-zinc-500">•</span>
-              <span className="text-zinc-400 text-[9px] flex items-center gap-0.5">
-                <span>Swipe</span>
-                <span className="text-blue-400 font-bold">←</span>
-                <span>to flip</span>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={flipCamera}
-              disabled={isFlipping}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/85 hover:bg-zinc-900 active:scale-95 text-zinc-200 hover:text-white border border-zinc-700/80 backdrop-blur-md text-xs font-medium shadow-xl transition-all cursor-pointer disabled:opacity-50"
-              title="Flip camera between front and rear"
-              aria-label="Flip Camera"
-            >
-              <SwitchCamera className={cn("h-3.5 w-3.5 text-blue-400 transition-transform duration-500", isFlipping && "animate-spin")} />
-              <span>Flip</span>
-            </button>
+          {/* Scanner Corner Facing Indicator */}
+          <div className="absolute bottom-3 right-3 z-30 hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/85 border border-zinc-700/80 text-[10px] font-mono text-zinc-300 backdrop-blur-md select-none shadow-lg">
+            <span className={cn('h-1.5 w-1.5 rounded-full', facingMode === 'environment' ? 'bg-emerald-400' : 'bg-blue-400')} />
+            <span>{facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}</span>
           </div>
 
           {cameraError && (
