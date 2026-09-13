@@ -1040,34 +1040,35 @@ export default function FaceKioskPage() {
   return (
     <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden text-zinc-100 select-none">
       {/* Top Navigation Bar */}
-      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
-        <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center justify-between flex-nowrap gap-1.5 sm:gap-2 px-2.5 sm:px-4 h-12 sm:h-14 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <Link href="/dashboard/attendance">
-            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1.5 h-8 px-2 sm:px-3">
+            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1 h-8 w-8 sm:w-auto p-0 sm:px-2.5">
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline text-xs">Exit</span>
             </Button>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-cyan-950/80 border border-cyan-800/60 flex items-center justify-center shadow-xs">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-cyan-950/80 border border-cyan-800/60 flex items-center justify-center shadow-xs">
               <ScanFace className="h-4 w-4 text-cyan-400" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm sm:text-base tracking-tight text-zinc-100">
-                  AI Face Kiosk
+                <span className="font-bold text-xs sm:text-base tracking-tight text-zinc-100 whitespace-nowrap">
+                  <span className="sm:hidden">AI Face</span>
+                  <span className="hidden sm:inline">AI Face Kiosk</span>
                 </span>
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="System Live" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" title="System Live" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Universal Kiosk Switcher & Mode Selector */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Universal Kiosk Switcher */}
-          <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs gap-1">
+          <div className="flex items-center bg-zinc-950 p-0.5 sm:p-1 rounded-xl border border-zinc-800 text-xs gap-0.5 sm:gap-1">
             <Button
               variant="ghost"
               size="sm"
@@ -1133,11 +1134,11 @@ export default function FaceKioskPage() {
         </div>
 
         {/* Status Indicators & Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Active Camera Indicator Badge */}
           <Badge
             variant="outline"
-            className="hidden sm:inline-flex text-[10px] font-mono text-zinc-300 border-zinc-800 bg-zinc-950 px-2 py-0.5"
+            className="hidden md:inline-flex text-[10px] font-mono text-zinc-300 border-zinc-800 bg-zinc-950 px-2 py-0.5"
             title={facingMode === 'environment' ? 'Rear / Back Camera' : 'Front Webcam'}
           >
             {facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}
@@ -1172,7 +1173,7 @@ export default function FaceKioskPage() {
             size="sm"
             onClick={handleFlipCamera}
             disabled={isFlippingCamera}
-            className="h-7 w-7 p-0 border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white hover:border-cyan-500/50"
+            className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white hover:border-cyan-500/50 active:scale-95"
             title={facingMode === 'environment' ? 'Switch to Webcam' : 'Switch to Rear Camera'}
           >
             <SwitchCamera className={cn("h-3.5 w-3.5 text-cyan-400 transition-transform duration-500", isFlippingCamera && "animate-spin")} />
@@ -1184,7 +1185,7 @@ export default function FaceKioskPage() {
             size="sm"
             onClick={handleRefreshRoster}
             disabled={isRefreshing}
-            className="h-7 px-2 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white gap-1"
+            className="hidden sm:inline-flex h-7 px-2 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white gap-1"
             title="Reload Face Descriptors, Fingerprint Templates & Hardware"
           >
             <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
@@ -1201,15 +1202,15 @@ export default function FaceKioskPage() {
           </button>
 
           {/* Today's Tally */}
-          <Badge className="bg-primary/10 text-primary border-primary/20 font-bold text-xs">
-            {todayCount} Today
+          <Badge className="bg-primary/10 text-primary border-primary/20 font-bold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 whitespace-nowrap">
+            {todayCount} <span className="hidden xs:inline sm:inline">Today</span>
           </Badge>
         </div>
       </div>
 
       {/* Main Dual-Biometric Workspace */}
       <div className="flex-1 min-h-0 flex flex-col justify-between p-2 sm:p-4 overflow-y-auto custom-scrollbar">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 max-w-7xl mx-auto w-full my-auto items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 max-w-7xl mx-auto w-full my-0 lg:my-auto items-stretch">
           {/* Video Feed with Real-Time Vigilance Face HUD */}
           <div className={cn('flex flex-col transition-all', showMobileFpDock ? 'lg:col-span-8' : 'col-span-1 lg:col-span-8')}>
             <div
@@ -1230,7 +1231,7 @@ export default function FaceKioskPage() {
 
               {/* Swipe Feedback HUD Toast */}
               {swipeFeedback && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+                <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
                   <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-black/85 backdrop-blur-md border border-cyan-500/50 text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
                     <SwitchCamera className="h-5 w-5 text-cyan-400 animate-spin" />
                     <span className="text-sm font-semibold tracking-wide">
@@ -1254,19 +1255,19 @@ export default function FaceKioskPage() {
                 <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-zinc-500/50 rounded-br" />
               </div>
 
-              <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg">
+              <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg z-20">
                 <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                 <span className="font-mono text-[10px] text-zinc-200 tracking-wider font-semibold">LIVE VIGILANCE FEED</span>
               </div>
 
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg">
+              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md border border-zinc-700/60 pointer-events-none shadow-lg z-20">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
                 <span className="font-mono text-[10px] text-cyan-400 tracking-wider font-semibold">RESNET-34 BIOMETRICS</span>
               </div>
 
               {/* Loading Models State */}
               {isLoadingModels && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-sm gap-2">
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950/85 backdrop-blur-sm gap-2">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="text-sm font-medium text-zinc-300">Initializing Neural Engine (WebGL ResNet-34)...</p>
                 </div>
@@ -1274,18 +1275,29 @@ export default function FaceKioskPage() {
 
               {/* Camera Error State */}
               {cameraError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 p-6 text-center">
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950/95 p-6 text-center">
                   <CameraOff className="h-10 w-10 text-red-400 mb-3" />
-                  <p className="text-sm text-zinc-300 mb-4">{cameraError}</p>
-                  <Button onClick={() => { startCamera(); }} className="gap-2">
-                    <RefreshCw className="h-4 w-4" /> Retry Camera
-                  </Button>
+                  <p className="text-sm text-zinc-300 mb-4 max-w-sm">{cameraError}</p>
+                  <div className="flex items-center gap-2.5">
+                    <Button onClick={() => { startCamera(); }} className="gap-2 bg-cyan-600 hover:bg-cyan-500">
+                      <RefreshCw className="h-4 w-4" /> Retry Camera
+                    </Button>
+                    <Button
+                      onClick={handleFlipCamera}
+                      disabled={isFlippingCamera}
+                      variant="outline"
+                      className="gap-2 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200"
+                    >
+                      <SwitchCamera className={cn("h-4 w-4 text-cyan-400", isFlippingCamera && "animate-spin")} />
+                      Switch Camera
+                    </Button>
+                  </div>
                 </div>
               )}
 
               {/* Empty Face Roster State */}
               {!isLoadingModels && roster.length === 0 && (
-                <div className="absolute top-4 left-4 right-4 bg-amber-950/60 border border-amber-800/60 text-amber-300 px-4 py-2.5 rounded-xl text-xs flex items-center gap-2">
+                <div className="absolute top-4 left-4 right-4 z-20 bg-amber-950/60 border border-amber-800/60 text-amber-300 px-4 py-2.5 rounded-xl text-xs flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>
                     No members enrolled with Face ID yet.{' '}
@@ -1296,34 +1308,75 @@ export default function FaceKioskPage() {
                 </div>
               )}
 
-              {/* Floating Camera Flip Button & Indicator */}
-              <div className="absolute bottom-3 right-3 flex items-center gap-2 z-20">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 border border-zinc-700/70 text-[10px] font-mono text-zinc-300 backdrop-blur-md select-none shadow-lg">
+              {/* Floating Camera Controls (Visible on video corner on desktop/tablet) */}
+              <div className="absolute bottom-3 right-3 flex items-center gap-2 z-30">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/85 border border-zinc-700/80 text-[10px] font-mono text-zinc-300 backdrop-blur-md select-none shadow-lg">
                   <span className={cn('h-1.5 w-1.5 rounded-full', facingMode === 'environment' ? 'bg-emerald-400' : 'bg-cyan-400')} />
                   <span>{facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}</span>
                 </div>
 
-                {/* Small Camera Flip Button */}
+                {/* Floating Camera Flip Button */}
                 <button
                   type="button"
                   onClick={handleFlipCamera}
                   disabled={isFlippingCamera}
-                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-black/75 hover:bg-black/90 active:scale-90 border border-zinc-700/80 hover:border-cyan-500/60 text-zinc-200 hover:text-white backdrop-blur-md shadow-2xl flex items-center justify-center cursor-pointer transition-all disabled:opacity-50"
+                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-black/85 hover:bg-zinc-900 active:scale-90 border border-zinc-700/80 hover:border-cyan-500/80 text-zinc-200 hover:text-white backdrop-blur-md shadow-2xl flex items-center justify-center cursor-pointer transition-all disabled:opacity-50"
                   title={facingMode === 'environment' ? 'Switch to Webcam' : 'Switch to Rear Camera'}
                   aria-label="Flip Camera"
                 >
                   <SwitchCamera className={cn('h-4 w-4 text-cyan-400 transition-transform duration-500', isFlippingCamera && 'animate-spin')} />
                 </button>
 
-                {/* Small Mirror Toggle Button */}
+                {/* Floating Mirror Toggle Button */}
                 <button
                   type="button"
                   onClick={handleToggleMirror}
-                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-black/75 hover:bg-black/90 active:scale-90 border border-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white backdrop-blur-md shadow-2xl flex items-center justify-center cursor-pointer transition-all"
+                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-black/85 hover:bg-zinc-900 active:scale-90 border border-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white backdrop-blur-md shadow-2xl flex items-center justify-center cursor-pointer transition-all"
                   title={isMirrored ? 'Mirror mode ON (click to unmirror)' : 'Mirror mode OFF (click to mirror)'}
                   aria-label="Toggle Mirror"
                 >
                   <FlipHorizontal className={cn('h-3.5 w-3.5', isMirrored ? 'text-cyan-400' : 'text-zinc-500')} />
+                </button>
+              </div>
+            </div>
+
+            {/* Dedicated Mobile Camera Control Strip (Immediately under viewfinder) */}
+            <div className="flex sm:hidden items-center justify-between gap-2 p-2 mt-2.5 bg-zinc-900/90 rounded-2xl border border-zinc-800 shadow-xl w-full">
+              {/* Active Sensor Badge */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[11px] font-mono text-zinc-300">
+                <span className={cn("h-2 w-2 rounded-full", facingMode === 'environment' ? "bg-emerald-400 animate-pulse" : "bg-cyan-400")} />
+                <span>{facingMode === 'environment' ? 'Rear Camera' : 'Webcam'}</span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {/* Prominent Mobile Flip Camera Button */}
+                <button
+                  type="button"
+                  onClick={handleFlipCamera}
+                  disabled={isFlippingCamera}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white font-semibold text-xs shadow-md shadow-cyan-950/50 transition-all cursor-pointer disabled:opacity-50"
+                  title={facingMode === 'environment' ? 'Switch to Webcam' : 'Switch to Rear Camera'}
+                  aria-label="Flip Camera"
+                >
+                  <SwitchCamera className={cn("h-3.5 w-3.5 text-white transition-transform duration-500", isFlippingCamera && "animate-spin")} />
+                  <span>{facingMode === 'environment' ? 'Front Cam' : 'Rear Cam'}</span>
+                </button>
+
+                {/* Mobile Mirror Toggle Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleMirror}
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-medium border transition-all cursor-pointer active:scale-95",
+                    isMirrored
+                      ? "bg-cyan-950/60 border-cyan-800/80 text-cyan-300 shadow-xs"
+                      : "bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                  )}
+                  title={isMirrored ? 'Disable Mirroring' : 'Enable Mirroring'}
+                  aria-label="Toggle Mirror"
+                >
+                  <FlipHorizontal className="h-3.5 w-3.5" />
+                  <span>Mirror</span>
                 </button>
               </div>
             </div>

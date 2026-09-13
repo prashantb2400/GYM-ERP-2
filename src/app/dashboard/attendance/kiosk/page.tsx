@@ -368,32 +368,33 @@ export default function FingerprintKioskPage() {
   return (
     <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden text-zinc-100 select-none">
       {/* Top Navigation Bar */}
-      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
-        <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center justify-between flex-nowrap gap-1.5 sm:gap-2 px-2.5 sm:px-4 h-12 sm:h-14 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <Link href="/dashboard/attendance">
-            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1.5 h-8 px-2 sm:px-3" title="Exit Kiosk">
+            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1 h-8 w-8 sm:w-auto p-0 sm:px-2.5" title="Exit Kiosk">
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline text-xs">Exit</span>
             </Button>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-purple-950/60 border border-purple-800/40 flex items-center justify-center shadow-xs">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-purple-950/60 border border-purple-800/40 flex items-center justify-center shadow-xs">
               <Fingerprint className="h-4 w-4 text-purple-400 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="font-bold text-sm sm:text-base tracking-tight text-zinc-100">
-                  Fingerprint Station
+                <h1 className="font-bold text-xs sm:text-base tracking-tight text-zinc-100 whitespace-nowrap">
+                  <span className="sm:hidden">Fingerprint</span>
+                  <span className="hidden sm:inline">Fingerprint Station</span>
                 </h1>
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Sensor Live" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Sensor Live" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Universal Kiosk Switcher */}
-        <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs gap-1">
+        <div className="flex items-center bg-zinc-950 p-0.5 sm:p-1 rounded-xl border border-zinc-800 text-xs gap-0.5 sm:gap-1 shrink-0">
           <Link href="/dashboard/attendance/face-kiosk">
             <Button
               variant="ghost"
@@ -426,7 +427,7 @@ export default function FingerprintKioskPage() {
           </Link>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Driver Switcher / Status (Desktop) */}
           <div className="hidden md:block">
             <Select
@@ -470,8 +471,8 @@ export default function FingerprintKioskPage() {
             {soundEnabled ? <Volume2 className="h-4 w-4 text-purple-400" /> : <VolumeX className="h-4 w-4" />}
           </button>
 
-          <Badge className="bg-purple-600/10 text-purple-300 border-purple-500/30 font-bold px-2 py-0.5 text-xs">
-            {todayCount} Today
+          <Badge className="bg-purple-600/10 text-purple-300 border-purple-500/30 font-bold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 whitespace-nowrap">
+            {todayCount} <span className="hidden xs:inline sm:inline">Today</span>
           </Badge>
         </div>
       </div>
