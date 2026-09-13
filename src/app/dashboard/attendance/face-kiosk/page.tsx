@@ -1159,17 +1159,6 @@ export default function FaceKioskPage() {
             </Select>
           </div>
 
-          {/* Small Topbar Camera Flip Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleFlipCamera}
-            disabled={isFlippingCamera}
-            className="h-7 w-7 sm:h-8 sm:w-8 p-0 border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white hover:border-cyan-500/50 active:scale-95"
-            title={facingMode === 'environment' ? 'Switch to Webcam' : 'Switch to Rear Camera'}
-          >
-            <SwitchCamera className={cn("h-3.5 w-3.5 text-cyan-400 transition-transform duration-500", isFlippingCamera && "animate-spin")} />
-          </Button>
 
           {/* Refresh / Sync Button */}
           <Button
@@ -1285,29 +1274,50 @@ export default function FaceKioskPage() {
                 </div>
               )}
 
-              {/* Video Corner Indicators & Mirror Toggle */}
+              {/* Video Corner Facing Indicator */}
               <div className="absolute bottom-3 right-3 flex items-center gap-2 z-30">
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/85 border border-zinc-700/80 text-[10px] font-mono text-zinc-300 backdrop-blur-md select-none shadow-lg">
                   <span className={cn('h-1.5 w-1.5 rounded-full', facingMode === 'environment' ? 'bg-emerald-400' : 'bg-cyan-400')} />
                   <span>{facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}</span>
                 </div>
+              </div>
+            </div>
 
-                {/* Floating Mirror Toggle Button */}
+            {/* Camera Switch & Controls Bar (Just below the feed) */}
+            <div className="mt-2 sm:mt-2.5 flex items-center justify-between gap-2 p-2 sm:p-2.5 bg-zinc-900/90 rounded-xl sm:rounded-2xl border border-zinc-800/80 shadow-xl backdrop-blur-md">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[11px] font-mono text-zinc-300">
+                  <span className={cn("h-2 w-2 rounded-full", facingMode === 'environment' ? "bg-emerald-400 animate-pulse" : "bg-cyan-400")} />
+                  <span>{facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}</span>
+                </div>
                 <button
                   type="button"
                   onClick={handleToggleMirror}
-                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-black/85 hover:bg-zinc-900 active:scale-90 border border-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white backdrop-blur-md shadow-2xl flex items-center justify-center cursor-pointer transition-all"
-                  title={isMirrored ? 'Mirror mode ON (click to unmirror)' : 'Mirror mode OFF (click to mirror)'}
-                  aria-label="Toggle Mirror"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                  title={isMirrored ? 'Disable Mirror' : 'Mirror Feed'}
                 >
-                  <FlipHorizontal className={cn('h-3.5 w-3.5', isMirrored ? 'text-cyan-400' : 'text-zinc-500')} />
+                  <FlipHorizontal className={cn("h-3.5 w-3.5", isMirrored ? "text-cyan-400" : "text-zinc-400")} />
+                  <span className="hidden xs:inline">{isMirrored ? 'Mirrored' : 'Mirror'}</span>
                 </button>
               </div>
+
+              {/* Prominent Camera Flip Button */}
+              <button
+                type="button"
+                onClick={handleFlipCamera}
+                disabled={isFlippingCamera}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white font-semibold text-xs shadow-md shadow-cyan-950/50 transition-all cursor-pointer disabled:opacity-50"
+                title={facingMode === 'environment' ? 'Switch to Front Camera / Webcam' : 'Switch to Rear Camera'}
+                aria-label="Switch Camera"
+              >
+                <SwitchCamera className={cn("h-4 w-4 text-white transition-transform duration-500", isFlippingCamera && "animate-spin")} />
+                <span>Switch to {facingMode === 'environment' ? 'Front Cam' : 'Rear Cam'}</span>
+              </button>
             </div>
           </div>
 
-          {/* Right: Biometric Fingerprint Sensor Touch Dock (Always visible, compact on mobile) */}
-          <div className="flex flex-col justify-between bg-zinc-900/60 border border-zinc-800/80 rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-5 shadow-2xl backdrop-blur-md relative overflow-hidden col-span-1 lg:col-span-4 min-h-0 lg:min-h-[280px]">
+          {/* Right: Biometric Fingerprint Sensor Touch Dock (Always visible, compact on mobile, right below thereto) */}
+          <div className="flex flex-col justify-between bg-zinc-900/60 border border-zinc-800/80 rounded-2xl lg:rounded-3xl p-2.5 sm:p-3.5 lg:p-5 shadow-2xl backdrop-blur-md relative overflow-hidden col-span-1 lg:col-span-4 min-h-0 lg:min-h-[280px]">
             {/* Top header of dock */}
             <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2 sm:pb-3">
               <div className="flex items-center gap-2">
@@ -1325,12 +1335,12 @@ export default function FaceKioskPage() {
               </span>
             </div>
 
-            {/* Interactive Circular Scanner Prism (Reduced size on mobile) */}
-            <div className="my-auto py-2 sm:py-3 flex flex-col items-center justify-center">
+            {/* Interactive Circular Scanner Prism (Reduced size on mobile, right below feed and camera controls) */}
+            <div className="my-auto py-1.5 sm:py-2.5 lg:py-3 flex flex-col items-center justify-center">
               <div
                 onClick={() => handleFingerprintScan('left_thumb')}
                 className={cn(
-                  'relative h-24 w-24 sm:h-32 sm:w-32 lg:h-44 lg:w-44 rounded-full border-2 sm:border-3 lg:border-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 group select-none shadow-2xl',
+                  'relative h-20 w-20 sm:h-24 sm:w-24 lg:h-36 lg:w-36 rounded-full border-2 sm:border-3 lg:border-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 group select-none shadow-xl',
                   isFpScanning
                     ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_50px_rgba(168,85,247,0.5)] scale-105'
                     : recognitionBanner.state === 'success' && recognitionBanner.method === 'fingerprint'
@@ -1342,13 +1352,13 @@ export default function FaceKioskPage() {
                 title="Place finger on optical scanner or click to trigger scan"
               >
                 {/* Concentric rotating rings */}
-                <div className="absolute inset-1.5 sm:inset-2 rounded-full border border-dashed border-zinc-800 group-hover:border-purple-500/40 animate-[spin_40s_linear_infinite]" />
-                <div className="absolute inset-4 sm:inset-6 rounded-full border border-zinc-800/70" />
+                <div className="absolute inset-1 sm:inset-1.5 lg:inset-2 rounded-full border border-dashed border-zinc-800 group-hover:border-purple-500/40 animate-[spin_40s_linear_infinite]" />
+                <div className="absolute inset-3 sm:inset-4 lg:inset-6 rounded-full border border-zinc-800/70" />
 
                 {/* Glowing biometric fingerprint icon */}
                 <Fingerprint
                   className={cn(
-                    'h-11 w-11 sm:h-16 sm:w-16 lg:h-20 lg:w-20 transition-all duration-300',
+                    'h-10 w-10 sm:h-12 sm:w-12 lg:h-18 lg:w-18 transition-all duration-300',
                     isFpScanning
                       ? 'text-purple-400 scale-110 animate-pulse'
                       : recognitionBanner.state === 'success' && recognitionBanner.method === 'fingerprint'
@@ -1361,49 +1371,18 @@ export default function FaceKioskPage() {
 
                 {/* Laser scanning beam */}
                 {isFpScanning && (
-                  <div className="absolute inset-x-3 sm:inset-x-6 h-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent shadow-[0_0_15px_#c084fc] animate-bounce" />
+                  <div className="absolute inset-x-2.5 sm:inset-x-4 lg:inset-x-5 h-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent shadow-[0_0_15px_#c084fc] animate-bounce" />
                 )}
 
                 {/* Interactive hint on prism */}
-                <div className="absolute bottom-1.5 sm:bottom-2 lg:bottom-4 text-[8px] sm:text-[9px] lg:text-[10px] font-bold tracking-wider uppercase text-zinc-400 group-hover:text-purple-300 transition-colors">
+                <div className="absolute bottom-1 sm:bottom-1.5 lg:bottom-3 text-[7px] sm:text-[8px] lg:text-[10px] font-bold tracking-wider uppercase text-zinc-400 group-hover:text-purple-300 transition-colors">
                   {isFpScanning ? 'Verifying...' : 'Touch Sensor'}
                 </div>
               </div>
 
-              <p className="text-[10px] sm:text-[11px] text-zinc-400 text-center mt-2 lg:mt-3 font-medium">
+              <p className="text-[9px] sm:text-[10px] lg:text-[11px] text-zinc-400 text-center mt-1.5 lg:mt-2.5 font-medium">
                 Place finger on scanner anytime
               </p>
-
-              {/* Dedicated Mobile Camera Switch Button (Directly Below Finger Biometric Optical Sensor) */}
-              <div className="flex sm:hidden flex-col items-center w-full mt-2.5 pt-2 border-t border-zinc-800/80">
-                <button
-                  type="button"
-                  onClick={handleFlipCamera}
-                  disabled={isFlippingCamera}
-                  className="w-full max-w-xs flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white font-semibold text-xs shadow-lg shadow-cyan-950/50 transition-all cursor-pointer disabled:opacity-50"
-                  title={facingMode === 'environment' ? 'Switch to Webcam' : 'Switch to Rear Camera'}
-                  aria-label="Switch Camera"
-                >
-                  <SwitchCamera className={cn("h-4 w-4 text-white transition-transform duration-500", isFlippingCamera && "animate-spin")} />
-                  <span>
-                    {facingMode === 'environment' ? 'Switch to Front Camera' : 'Switch to Rear Camera'}
-                  </span>
-                </button>
-                <div className="flex items-center gap-2.5 mt-1.5 text-[10px] font-mono text-zinc-400">
-                  <span className="flex items-center gap-1">
-                    <span className={cn("h-1.5 w-1.5 rounded-full", facingMode === 'environment' ? "bg-emerald-400 animate-pulse" : "bg-cyan-400")} />
-                    {facingMode === 'environment' ? 'Rear Camera' : 'Webcam'}
-                  </span>
-                  <span>•</span>
-                  <button
-                    type="button"
-                    onClick={handleToggleMirror}
-                    className="text-zinc-400 hover:text-cyan-300 underline underline-offset-2"
-                  >
-                    {isMirrored ? 'Disable Mirror' : 'Mirror Feed'}
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* Bottom info of dock */}

@@ -463,17 +463,6 @@ export default function QrKioskPage() {
             {facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}
           </Badge>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={flipCamera}
-            disabled={isFlipping}
-            className="h-7 w-7 sm:h-8 sm:w-auto sm:px-2.5 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white gap-1 active:scale-95"
-            title="Flip Camera (Front / Rear)"
-          >
-            <SwitchCamera className={cn("h-3.5 w-3.5 text-blue-400 transition-transform duration-500", isFlipping && "animate-spin")} />
-            <span className="hidden sm:inline text-xs">Flip</span>
-          </Button>
 
           <Badge variant="outline" className={cameraActive ? 'text-green-400 border-green-500/20 bg-green-500/10 font-bold text-[10px] sm:text-xs py-0.5' : 'text-zinc-500 font-bold text-[10px] sm:text-xs py-0.5'}>
             {cameraActive ? 'Live' : 'Off'}
@@ -545,15 +534,15 @@ export default function QrKioskPage() {
           )}
         </div>
 
-        {/* Dedicated Mobile Camera Control Strip (Immediately under QR scan region) */}
-        <div className="flex sm:hidden items-center justify-between gap-2 p-2 mt-3 bg-zinc-900/90 rounded-2xl border border-zinc-800 shadow-xl w-full max-w-[320px]">
+        {/* Camera Control Strip (Immediately under QR scan region) */}
+        <div className="flex items-center justify-between gap-2 p-2 mt-3 bg-zinc-900/90 rounded-xl sm:rounded-2xl border border-zinc-800 shadow-xl w-full max-w-[290px] sm:max-w-[340px]">
           {/* Active Sensor Badge */}
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[11px] font-mono text-zinc-300">
             <span className={cn("h-2 w-2 rounded-full", facingMode === 'environment' ? "bg-emerald-400 animate-pulse" : "bg-blue-400")} />
             <span>{facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}</span>
           </div>
 
-          {/* Prominent Mobile Flip Camera Button */}
+          {/* Prominent Flip Camera Button */}
           <button
             type="button"
             onClick={flipCamera}
