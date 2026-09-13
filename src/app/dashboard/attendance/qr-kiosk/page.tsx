@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 import { isMobileDevice, getRecommendedFacingMode } from '@/lib/utils/device';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
 const SCANNER_CONTAINER_ID = 'qr-reader';
 
@@ -374,6 +375,14 @@ export default function QrKioskPage() {
     }
   }, [availableCameras, startScanner]);
 
+  // Swipe gesture recognition on QR scanner feed (swipe right-to-left to flip camera)
+  const { swipeHandlers, isFlipping, swipeFeedback } = useSwipeGesture({
+    onSwipeLeft: flipCamera,
+    onSwipeRight: flipCamera,
+    cooldownMs: 800,
+    enabled: cameraActive,
+  });
+
   useEffect(() => {
     const timer = setTimeout(() => {
       startScanner();
@@ -491,11 +500,15 @@ export default function QrKioskPage() {
 
       {/* Main Scanner Viewport */}
       <div className="flex-1 flex flex-col items-center justify-center relative px-3 sm:px-4 py-2">
-        <div className="relative w-full max-w-[290px] sm:max-w-[340px] aspect-square mx-auto">
+        <div
+          {...swipeHandlers}
+          className="relative w-full max-w-[290px] sm:max-w-[340px] aspect-square mx-auto cursor-grab active:cursor-grabbing select-none"
+        >
           <div
             id={SCANNER_CONTAINER_ID}
             className={cn(
-              'w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden bg-zinc-900 border-2 transition-colors duration-300 shadow-2xl [&_video]:object-cover [&_video]:rounded-2xl',
+              'w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden bg-zinc-900 border-2 transition-all duration-300 shadow-2xl [&_video]:object-cover [&_video]:rounded-2xl',
+              isFlipping && 'opacity-50 scale-95',
               scanResult.state === 'success' ? 'border-green-500 shadow-green-500/20' :
               scanResult.state === 'already' ? 'border-blue-500 shadow-blue-500/20' :
               scanResult.state === 'expired' ? 'border-red-500 shadow-red-500/20' :
@@ -504,11 +517,29 @@ export default function QrKioskPage() {
             )}
           />
 
+          {/* Swipe Feedback HUD Toast */}
+          {swipeFeedback && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+              <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-black/85 backdrop-blur-md border border-blue-500/50 text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                <SwitchCamera className="h-5 w-5 text-blue-400 animate-spin" />
+                <span className="text-xs font-semibold tracking-wide">
+                  {facingMode === 'environment' ? 'Switching to Webcam...' : 'Switching to Rear Cam...'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Floating Flip Camera Pill */}
           <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5">
-            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/75 border border-zinc-700/70 text-[10px] font-mono text-zinc-300 backdrop-blur-md">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 border border-zinc-700/70 text-[10px] font-mono text-zinc-300 backdrop-blur-md select-none">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {facingMode === 'environment' ? 'Back Camera' : 'Webcam'}
+              <span>{facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}</span>
+              <span className="text-zinc-500">•</span>
+              <span className="text-zinc-400 text-[9px] flex items-center gap-0.5">
+                <span>Swipe</span>
+                <span className="text-blue-400 font-bold">←</span>
+                <span>to flip</span>
+              </span>
             </div>
             <button
               type="button"

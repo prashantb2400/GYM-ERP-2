@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { isMobileDevice, getRecommendedFacingMode, getRecommendedMirrorState } from '@/lib/utils/device';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 import { FingerprintScannerManager } from '@/lib/fingerprint/drivers';
 import { identifyMemberFromRoster } from '@/lib/fingerprint/matcher';
@@ -338,6 +339,14 @@ export default function FaceKioskPage() {
       return next;
     });
   }, []);
+
+  // Swipe gesture recognition on camera feed (swipe right-to-left to flip camera)
+  const { swipeHandlers, isFlipping, swipeFeedback } = useSwipeGesture({
+    onSwipeLeft: handleFlipCamera,
+    onSwipeRight: handleFlipCamera,
+    cooldownMs: 800,
+    enabled: isCameraActive,
+  });
 
   // Detect fingerprint scanner hardware
   const detectFpHardware = useCallback(async () => {
@@ -1176,14 +1185,33 @@ export default function FaceKioskPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 max-w-7xl mx-auto w-full my-auto items-stretch">
           {/* Video Feed with Real-Time Vigilance Face HUD */}
           <div className={cn('flex flex-col transition-all', showMobileFpDock ? 'lg:col-span-8' : 'col-span-1 lg:col-span-8')}>
-            <div className="relative w-full aspect-video max-h-[50vh] sm:max-h-[66vh] bg-zinc-900 rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-zinc-800 shadow-2xl mx-auto">
+            <div
+              {...swipeHandlers}
+              className="relative w-full aspect-video max-h-[50vh] sm:max-h-[66vh] bg-zinc-900 rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-zinc-800 shadow-2xl mx-auto cursor-grab active:cursor-grabbing select-none"
+            >
               {/* Live Camera Stream */}
               <video
                 ref={videoRef}
                 playsInline
                 muted
-                className={cn('w-full h-full object-cover transition-transform duration-300', isMirrored && 'scale-x-[-1]')}
+                className={cn(
+                  'w-full h-full object-cover transition-all duration-300',
+                  isMirrored && 'scale-x-[-1]',
+                  isFlipping && 'opacity-50 scale-95 blur-[2px]'
+                )}
               />
+
+              {/* Swipe Feedback HUD Toast */}
+              {swipeFeedback && (
+                <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-black/85 backdrop-blur-md border border-cyan-500/50 text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                    <SwitchCamera className="h-5 w-5 text-cyan-400 animate-spin" />
+                    <span className="text-sm font-semibold tracking-wide">
+                      {facingMode === 'environment' ? 'Switching to Webcam...' : 'Switching to Rear Cam...'}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Canvas for Face Bounding Boxes & Vigilance HUD */}
               <canvas
@@ -1243,9 +1271,15 @@ export default function FaceKioskPage() {
 
               {/* Floating Camera Flip & Mirror Controls */}
               <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
-                <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/75 border border-zinc-700/70 text-[10px] font-mono text-zinc-300 backdrop-blur-md">
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 border border-zinc-700/70 text-[10px] font-mono text-zinc-300 backdrop-blur-md select-none">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  {facingMode === 'environment' ? 'Back Camera' : 'Webcam'}
+                  <span>{facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}</span>
+                  <span className="text-zinc-500">•</span>
+                  <span className="text-zinc-400 text-[9px] flex items-center gap-0.5">
+                    <span>Swipe</span>
+                    <span className="text-cyan-400 font-bold">←</span>
+                    <span>to flip</span>
+                  </span>
                 </div>
                 <button
                   type="button"
