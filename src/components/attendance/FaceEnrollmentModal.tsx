@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Camera, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw } from 'lucide-react';
+import { Camera, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw, FlipHorizontal } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { loadFaceApiModels } from '@/lib/face-attendance/models';
 import { averageDescriptors, normalizeDescriptor } from '@/lib/face-attendance/matcher';
@@ -35,6 +36,11 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Multi-camera state
+  const [videoDevices, setVideoDevices] = useState<Array<{ deviceId: string; label: string }>>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const faceApiRef = useRef<any>(null);
@@ -48,23 +54,80 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
     setIsCameraActive(false);
   }, []);
 
-  // Start camera helper
-  const startCamera = useCallback(async () => {
+  // Start camera helper supporting explicit deviceId or facingMode
+  const startCamera = useCallback(async (targetDeviceId?: string, targetFacing?: 'user' | 'environment') => {
     try {
       setErrorMessage(null);
+      stopCamera();
+
+      const chosenFacing = targetFacing || facingMode;
+      const videoConstraints: MediaTrackConstraints = {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+      };
+
+      if (targetDeviceId) {
+        videoConstraints.deviceId = { exact: targetDeviceId };
+      } else {
+        videoConstraints.facingMode = chosenFacing;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+        video: videoConstraints,
+        audio: false,
       });
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        await videoRef.current.play().catch(() => {});
       }
       setIsCameraActive(true);
-    } catch {
-      setErrorMessage('Camera access denied or unavailable.');
+
+      // Enumerate devices to populate available cameras
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices
+          .filter(d => d.kind === 'videoinput')
+          .map((d, i) => ({
+            deviceId: d.deviceId,
+            label: d.label || `Camera ${i + 1}`,
+          }));
+        setVideoDevices(videoInputs);
+
+        const currentTrack = stream.getVideoTracks()[0];
+        const settings = currentTrack?.getSettings();
+        if (settings?.deviceId) {
+          setSelectedDeviceId(settings.deviceId);
+        } else if (targetDeviceId) {
+          setSelectedDeviceId(targetDeviceId);
+        }
+      } catch {
+        // Enumerate devices not critical
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Camera access denied or unavailable.';
+      setErrorMessage(msg);
+      setIsCameraActive(false);
     }
-  }, []);
+  }, [facingMode, stopCamera]);
+
+  // Toggle between available cameras or flip facing mode
+  const handleToggleCamera = useCallback(async () => {
+    if (videoDevices.length > 1) {
+      const currentIndex = videoDevices.findIndex(d => d.deviceId === selectedDeviceId);
+      const nextIndex = (currentIndex + 1) % videoDevices.length;
+      const nextDevice = videoDevices[nextIndex];
+      setSelectedDeviceId(nextDevice.deviceId);
+      await startCamera(nextDevice.deviceId);
+      toast.info(`Switched to: ${nextDevice.label}`);
+    } else {
+      const nextFacing = facingMode === 'user' ? 'environment' : 'user';
+      setFacingMode(nextFacing);
+      await startCamera(undefined, nextFacing);
+      toast.info(`Camera switched: ${nextFacing === 'user' ? 'Front' : 'Back'}`);
+    }
+  }, [videoDevices, selectedDeviceId, facingMode, startCamera]);
 
   // Load models on open
   useEffect(() => {
@@ -252,6 +315,49 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
           </DialogDescription>
         </DialogHeader>
 
+        {/* Camera Selector & Switcher Toolbar */}
+        <div className="flex items-center justify-between gap-2 pt-2 pb-1">
+          <span className="text-[11px] text-zinc-400 font-medium flex items-center gap-1.5">
+            <Camera className="h-3.5 w-3.5 text-primary" />
+            {videoDevices.length > 1 ? `${videoDevices.length} Cameras Available` : (facingMode === 'user' ? 'Front Camera' : 'Back Camera')}
+          </span>
+          <div className="flex items-center gap-2">
+            {videoDevices.length > 1 && (
+              <Select
+                value={selectedDeviceId}
+                onValueChange={(val) => {
+                  setSelectedDeviceId(val);
+                  startCamera(val);
+                }}
+                disabled={isCapturing || isLoadingModels}
+              >
+                <SelectTrigger className="h-7 text-[11px] bg-zinc-900 border-zinc-800 text-zinc-300 w-40">
+                  <SelectValue placeholder="Select Camera" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                  {videoDevices.map((dev) => (
+                    <SelectItem key={dev.deviceId} value={dev.deviceId} className="text-xs">
+                      {dev.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleToggleCamera}
+              disabled={isCapturing || isLoadingModels}
+              className="h-7 px-2.5 text-[11px] gap-1.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-800"
+              title="Switch Camera (Front/Back/External)"
+            >
+              <FlipHorizontal className="h-3.5 w-3.5 text-purple-400" />
+              <span>Switch Camera</span>
+            </Button>
+          </div>
+        </div>
+
         {/* Video Viewport with Oval Target Overlay */}
         <div className="relative w-full aspect-video bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 flex items-center justify-center my-3">
           <video
@@ -281,7 +387,7 @@ export function FaceEnrollmentModal({ isOpen, onClose, member, onSuccess }: Face
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 p-4 text-center">
               <AlertCircle className="h-8 w-8 text-red-400 mb-2" />
               <p className="text-sm text-red-300">{errorMessage}</p>
-              <Button size="sm" variant="outline" onClick={startCamera} className="mt-3 gap-1">
+              <Button size="sm" variant="outline" onClick={() => startCamera()} className="mt-3 gap-1">
                 <RefreshCw className="h-3.5 w-3.5" /> Retry Camera
               </Button>
             </div>

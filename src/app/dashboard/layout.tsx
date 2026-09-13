@@ -20,6 +20,7 @@ export default function AdminDashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const isOnboarding = pathname === '/dashboard/onboarding';
+  const isKiosk = pathname?.includes('/attendance/') && pathname?.includes('kiosk');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -46,8 +47,8 @@ export default function AdminDashboardLayout({
     }
   }, [loading, isAuthenticated, router]);
 
-  if (isOnboarding) {
-    return <>{children}</>;
+  if (isOnboarding || isKiosk) {
+    return <ErrorBoundary>{children}</ErrorBoundary>;
   }
 
   // Session verification in progress

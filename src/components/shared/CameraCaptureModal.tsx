@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Camera, RefreshCw, Check, FlipHorizontal, AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CameraCaptureModalProps {
   isOpen: boolean;
@@ -31,6 +32,8 @@ export function CameraCaptureModal({
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [videoDevices, setVideoDevices] = useState<Array<{ deviceId: string; label: string }>>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoadingCamera, setIsLoadingCamera] = useState(false);
 
@@ -41,18 +44,25 @@ export function CameraCaptureModal({
     }
   }, []);
 
-  const startCamera = useCallback(async (facing: 'user' | 'environment') => {
+  const startCamera = useCallback(async (facing: 'user' | 'environment', deviceId?: string) => {
     try {
       setIsLoadingCamera(true);
       setError(null);
       stopCamera();
 
+      const videoConstraints: MediaTrackConstraints = {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+      };
+
+      if (deviceId) {
+        videoConstraints.deviceId = { exact: deviceId };
+      } else {
+        videoConstraints.facingMode = facing;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: facing,
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-        },
+        video: videoConstraints,
         audio: false,
       });
 
@@ -60,6 +70,27 @@ export function CameraCaptureModal({
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
+      }
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices
+          .filter(d => d.kind === 'videoinput')
+          .map((d, i) => ({
+            deviceId: d.deviceId,
+            label: d.label || `Camera ${i + 1}`,
+          }));
+        setVideoDevices(videoInputs);
+
+        const currentTrack = stream.getVideoTracks()[0];
+        const settings = currentTrack?.getSettings();
+        if (settings?.deviceId) {
+          setSelectedDeviceId(settings.deviceId);
+        } else if (deviceId) {
+          setSelectedDeviceId(deviceId);
+        }
+      } catch {
+        // Enumerate not critical
       }
     } catch (err: unknown) {
       console.error('Camera access error:', err);
@@ -166,6 +197,50 @@ export function CameraCaptureModal({
 
         {/* Hidden offscreen canvas for snapshot cropping */}
         <canvas ref={canvasRef} className="hidden" />
+
+        {/* Camera Selector & Switcher Toolbar */}
+        {!capturedUrl && (
+          <div className="flex items-center justify-between gap-2 pt-1 pb-1">
+            <span className="text-[11px] text-zinc-400 font-medium">
+              {videoDevices.length > 1 ? `${videoDevices.length} Cameras Detected` : (facingMode === 'user' ? 'Front Camera' : 'Back Camera')}
+            </span>
+            <div className="flex items-center gap-2">
+              {videoDevices.length > 1 && (
+                <Select
+                  value={selectedDeviceId}
+                  onValueChange={(val) => {
+                    setSelectedDeviceId(val);
+                    startCamera(facingMode, val);
+                  }}
+                  disabled={isLoadingCamera}
+                >
+                  <SelectTrigger className="h-7 text-[11px] bg-zinc-800 border-zinc-700 text-zinc-300 w-36">
+                    <SelectValue placeholder="Select Camera" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700 text-zinc-200">
+                    {videoDevices.map((dev) => (
+                      <SelectItem key={dev.deviceId} value={dev.deviceId} className="text-xs">
+                        {dev.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleToggleFacingMode}
+                disabled={isLoadingCamera}
+                className="h-7 px-2 text-[11px] gap-1 border-zinc-700 bg-zinc-800 text-zinc-300 hover:text-white"
+                title="Flip camera"
+              >
+                <FlipHorizontal className="h-3.5 w-3.5 text-purple-400" />
+                <span className="hidden sm:inline">Flip</span>
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="relative aspect-square w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-black border-2 border-zinc-800 flex items-center justify-center my-2">
           {error ? (

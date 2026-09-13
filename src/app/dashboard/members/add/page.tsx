@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 import {
   User,
   CreditCard,
@@ -28,6 +30,11 @@ import {
   QrCode,
   CheckCircle2,
   Sparkles,
+  Zap,
+  Check,
+  ArrowRight,
+  Activity,
+  Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { INDIAN_STATES, BLOOD_GROUPS, GENDER_OPTIONS, FITNESS_LEVELS, PAYMENT_MODES, KYC_DOC_TYPES } from '@/lib/utils/constants';
@@ -280,6 +287,60 @@ export default function AddMemberPage() {
     setHealthGoals(prev => 
       prev.includes(goal) ? prev.filter(g => g !== goal) : [...prev, goal]
     );
+  };
+
+  // Real-time BMI calculation
+  const heightM = Number(heightCm) ? Number(heightCm) / 100 : 0;
+  const weightNum = Number(weightKg) || 0;
+  const liveBmi = heightM > 0 && weightNum > 0 ? Math.round((weightNum / (heightM * heightM)) * 10) / 10 : null;
+
+  const getBmiCategory = (bmiVal: number) => {
+    if (bmiVal < 18.5) return { label: 'Underweight', color: 'text-sky-400', badgeClass: 'bg-sky-500/10 text-sky-400 border-sky-500/30' };
+    if (bmiVal < 25.0) return { label: 'Normal / Healthy', color: 'text-emerald-400', badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' };
+    if (bmiVal < 30.0) return { label: 'Overweight', color: 'text-amber-400', badgeClass: 'bg-amber-500/10 text-amber-400 border-amber-500/30' };
+    return { label: 'Obese', color: 'text-rose-400', badgeClass: 'bg-rose-500/10 text-rose-400 border-rose-500/30' };
+  };
+
+  const handleStepClick = (targetStep: number) => {
+    if (targetStep === step) return;
+    if (targetStep > step) {
+      if (step === 1 && (!name.trim() || !phone.trim() || phone.length !== 10)) {
+        toast.error('Please enter name and a valid 10-digit phone number first');
+        return;
+      }
+      if (step === 2 && targetStep > 2 && !selectedPlanId) {
+        toast.error('Please select a membership plan first');
+        return;
+      }
+    }
+    setStep(targetStep);
+  };
+
+  const handleFastSkipToReview = () => {
+    if (!name.trim() || !phone.trim() || phone.length !== 10) {
+      toast.error('Please enter name and valid 10-digit phone first');
+      setStep(1);
+      return;
+    }
+    if (!selectedPlanId) {
+      toast.error('Please select a membership plan');
+      setStep(2);
+      return;
+    }
+    setStep(5);
+    toast.info('Skipped optional steps to final review');
+  };
+
+  const handleSetPaymentPreset = (preset: 'full' | 'half' | 'zero') => {
+    if (preset === 'full') {
+      setAmountPaid(String(totalAmount));
+      if (!paymentMode) setPaymentMode('upi');
+    } else if (preset === 'half') {
+      setAmountPaid(String(Math.round(totalAmount / 2)));
+      if (!paymentMode) setPaymentMode('upi');
+    } else if (preset === 'zero') {
+      setAmountPaid('0');
+    }
   };
 
   const handleNext = () => {
@@ -548,40 +609,79 @@ export default function AddMemberPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Add New Member</h2>
-        <p className="text-zinc-500 text-xs mt-1">Complete the 5-step onboarding wizard to register the member, invoice payments, and assign trainers.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Add New Member</h2>
+            <Badge variant="outline" className="bg-purple-950/40 text-purple-300 border-purple-800/50 text-[10px] font-semibold flex items-center gap-1">
+              <Zap className="h-3 w-3 text-purple-400" /> Fast Onboarding
+            </Badge>
+          </div>
+          <p className="text-zinc-400 text-xs mt-1">
+            Frictionless 5-step front-desk enrollment wizard. Click any completed step to jump directly.
+          </p>
+        </div>
+
+        {step < 5 && selectedPlanId && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleFastSkipToReview}
+            className="text-xs h-8 gap-1.5 border-purple-500/40 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40 hover:text-white"
+          >
+            <Zap className="h-3.5 w-3.5 text-purple-400" />
+            <span>Fast Walk-in: Jump to Review</span>
+            <ArrowRight className="h-3 w-3 ml-0.5" />
+          </Button>
+        )}
       </div>
 
-      {/* Progress Indicators */}
-      <div className="grid grid-cols-5 gap-2 border-b border-zinc-800 pb-4">
-        {[
-          { label: 'Personal', icon: User, s: 1 },
-          { label: 'Plan & Payment', icon: CreditCard, s: 2 },
-          { label: 'Extras', icon: UserCheck, s: 3 },
-          { label: 'KYC Docs', icon: FileCheck, s: 4 },
-          { label: 'Confirm', icon: ClipboardList, s: 5 },
-        ].map((x) => {
-          const IconComp = x.icon;
-          const isActive = step === x.s;
-          const isDone = step > x.s;
+      {/* Interactive Progress Indicators */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-5 gap-1 sm:gap-2">
+          {[
+            { label: 'Personal', icon: User, s: 1 },
+            { label: 'Plan & Payment', icon: CreditCard, s: 2 },
+            { label: 'Extras', icon: UserCheck, s: 3 },
+            { label: 'KYC Docs', icon: FileCheck, s: 4 },
+            { label: 'Confirm', icon: ClipboardList, s: 5 },
+          ].map((x) => {
+            const IconComp = x.icon;
+            const isActive = step === x.s;
+            const isDone = step > x.s;
 
-          return (
-            <div
-              key={x.s}
-              className={`flex flex-col items-center justify-center py-2 border-b-2 transition-all ${
-                isActive 
-                  ? 'border-purple-600 text-purple-400' 
-                  : isDone 
-                    ? 'border-zinc-500 text-zinc-300' 
-                    : 'border-transparent text-zinc-600'
-              }`}
-            >
-              <IconComp className="h-5 w-5 mb-1" />
-              <span className="text-[10px] sm:text-xs font-semibold hidden md:inline">{x.label}</span>
-            </div>
-          );
-        })}
+            return (
+              <button
+                key={x.s}
+                type="button"
+                onClick={() => handleStepClick(x.s)}
+                className={cn(
+                  'flex flex-col items-center justify-center py-2.5 px-1 rounded-xl transition-all border text-center select-none relative group',
+                  isActive
+                    ? 'border-purple-500/80 bg-purple-950/30 text-purple-300 shadow-md shadow-purple-950/50 ring-1 ring-purple-500/30'
+                    : isDone
+                    ? 'border-zinc-800 bg-zinc-900/50 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800/60 cursor-pointer'
+                    : 'border-transparent text-zinc-600 hover:text-zinc-400 hover:bg-zinc-900/20'
+                )}
+                title={`Step ${x.s}: ${x.label}`}
+              >
+                <div className="relative mb-1">
+                  <IconComp className={cn('h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:scale-110', isActive ? 'text-purple-400' : isDone ? 'text-green-400' : 'text-zinc-500')} />
+                  {isDone && (
+                    <span className="absolute -top-1 -right-2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-green-500/20 text-green-400 text-[9px] font-bold border border-green-500/40">
+                      ✓
+                    </span>
+                  )}
+                </div>
+                <span className={cn('text-[10px] sm:text-xs font-semibold truncate max-w-full px-0.5', isActive ? 'text-purple-200' : isDone ? 'text-zinc-300' : 'text-zinc-500')}>
+                  {x.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <Progress value={(step / 5) * 100} className="h-1 bg-zinc-900" />
       </div>
 
       {/* Steps Content */}
@@ -831,20 +931,76 @@ export default function AddMemberPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {/* Inputs */}
                 <div className="sm:col-span-2 space-y-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="plan" className="text-zinc-300 text-sm font-semibold">Select Membership Plan *</Label>
-                    <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-                      <SelectTrigger id="plan" className="border-zinc-800 bg-zinc-950 text-zinc-100">
-                        <SelectValue placeholder="Choose a plan" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
-                        {plans.map(p => (
-                          <SelectItem key={p.id} value={p.id} className="focus:bg-zinc-800 focus:text-white">
-                            {p.name} — ₹{p.price} ({p.duration_days} days)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {/* Visual Plan Cards Selection */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="plan" className="text-zinc-200 text-sm font-semibold flex items-center gap-1.5">
+                        <CreditCard className="h-4 w-4 text-purple-400" />
+                        Select Membership Plan *
+                      </Label>
+                      <span className="text-[11px] text-zinc-500 font-mono">
+                        {plans.length} active plans
+                      </span>
+                    </div>
+
+                    {plans.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+                        {plans.map((p) => {
+                          const isSelected = selectedPlanId === p.id;
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => setSelectedPlanId(p.id)}
+                              className={cn(
+                                'group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between select-none',
+                                isSelected
+                                  ? 'border-purple-500 bg-purple-950/30 shadow-lg shadow-purple-950/50 ring-1 ring-purple-500/50'
+                                  : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900/50'
+                              )}
+                            >
+                              <div>
+                                <div className="flex items-center justify-between gap-1 mb-1.5">
+                                  <span className={cn('text-xs font-bold truncate', isSelected ? 'text-purple-200' : 'text-zinc-200')}>
+                                    {p.name}
+                                  </span>
+                                  {isSelected && (
+                                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white text-[10px] font-bold">
+                                      <Check className="h-2.5 w-2.5" />
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-zinc-400 border-zinc-800">
+                                    {p.duration_days} Days
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="mt-3 pt-2 border-t border-zinc-800/60 flex items-baseline justify-between">
+                                <span className="text-[10px] text-zinc-500">Plan Fee</span>
+                                <span className="text-sm font-extrabold text-zinc-100">₹{p.price}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-500 italic py-2">No active plans configured. Please add plans in settings.</p>
+                    )}
+
+                    <div className="pt-1">
+                      <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                        <SelectTrigger id="plan" className="h-8 text-xs border-zinc-800 bg-zinc-950 text-zinc-300">
+                          <SelectValue placeholder="Or select from dropdown list..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                          {plans.map(p => (
+                            <SelectItem key={p.id} value={p.id} className="focus:bg-zinc-800 focus:text-white text-xs">
+                              {p.name} — ₹{p.price} ({p.duration_days} days)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -903,24 +1059,87 @@ export default function AddMemberPage() {
                     </div>
                   </div>
 
+                  {/* Amount Paid with 1-Click Presets */}
                   <div className="grid gap-2">
-                    <Label htmlFor="paid" className="text-zinc-300 text-sm font-semibold">Amount Paid (₹) *</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="paid" className="text-zinc-200 text-sm font-semibold">
+                        Amount Paid (₹) *
+                      </Label>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSetPaymentPreset('full')}
+                          className="h-6 px-2 text-[10px] border-zinc-800 bg-zinc-950 text-purple-300 hover:border-purple-500 hover:text-white"
+                        >
+                          Full: ₹{totalAmount}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSetPaymentPreset('half')}
+                          className="h-6 px-2 text-[10px] border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        >
+                          50%: ₹{Math.round(totalAmount / 2)}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSetPaymentPreset('zero')}
+                          className="h-6 px-2 text-[10px] border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"
+                        >
+                          Full Due (₹0)
+                        </Button>
+                      </div>
+                    </div>
                     <Input
                       id="paid"
                       type="number"
                       min={0}
                       value={amountPaid}
                       onChange={(e) => setAmountPaid(e.target.value)}
-                      className="border-zinc-800 bg-zinc-950 text-zinc-100 font-bold focus:border-purple-600"
+                      className="border-zinc-800 bg-zinc-950 text-zinc-100 font-bold text-base focus:border-purple-600"
                     />
+                  </div>
+
+                  {/* Payment Mode Selector & Chips */}
+                  <div className="space-y-2">
+                    <Label htmlFor="payMode" className="text-zinc-300 text-sm">Payment Mode</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: 'upi', label: '⚡ UPI / QR' },
+                        { id: 'cash', label: '💵 Cash' },
+                        { id: 'card', label: '💳 Card' },
+                        { id: 'bank_transfer', label: '🏦 Net Banking' },
+                      ].map((m) => (
+                        <Button
+                          key={m.id}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPaymentMode(m.id as any)}
+                          className={cn(
+                            'h-7 px-2.5 text-xs transition-colors',
+                            paymentMode === m.id
+                              ? 'border-purple-500 bg-purple-950/40 text-purple-200 font-bold'
+                              : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                          )}
+                        >
+                          {m.label}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="payMode" className="text-zinc-300 text-sm">Payment Mode</Label>
+                      <Label htmlFor="payModeSelect" className="text-zinc-400 text-xs">Or All Modes</Label>
                       <Select value={paymentMode} onValueChange={(v: any) => setPaymentMode(v)}>
-                        <SelectTrigger id="payMode" className="border-zinc-800 bg-zinc-950 text-zinc-100 capitalize">
-                          <SelectValue placeholder="Select" />
+                        <SelectTrigger id="payModeSelect" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-100 capitalize">
+                          <SelectValue placeholder="Select mode" />
                         </SelectTrigger>
                         <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
                           {PAYMENT_MODES.map(pm => (
@@ -933,10 +1152,10 @@ export default function AddMemberPage() {
                       <Label htmlFor="txId" className="text-zinc-300 text-sm">Transaction ID / Ref</Label>
                       <Input
                         id="txId"
-                        placeholder="UPI ref number"
+                        placeholder="UPI ref / receipt #"
                         value={transactionId}
                         onChange={(e) => setTransactionId(e.target.value)}
-                        className="border-zinc-800 bg-zinc-950 text-zinc-100"
+                        className="h-9 border-zinc-800 bg-zinc-950 text-zinc-100"
                       />
                     </div>
                   </div>
@@ -1039,8 +1258,43 @@ export default function AddMemberPage() {
                     </div>
                   </div>
 
+                  {/* Live Interactive BMI Gauge */}
+                  {liveBmi !== null && (
+                    <div className="bg-zinc-950/70 border border-zinc-800 rounded-xl p-3.5 space-y-2.5 shadow-inner">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-purple-400" />
+                          <span className="text-xs font-semibold text-zinc-300">Live BMI Score</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-extrabold text-zinc-100 font-mono">{liveBmi}</span>
+                          <Badge variant="outline" className={cn('text-[10px] font-semibold', getBmiCategory(liveBmi).badgeClass)}>
+                            {getBmiCategory(liveBmi).label}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="h-2 w-full rounded-full bg-zinc-800 flex overflow-hidden">
+                          <div className="h-full w-[25%] bg-sky-500/80" title="Underweight (< 18.5)" />
+                          <div className="h-full w-[35%] bg-emerald-500/90" title="Normal (18.5 - 24.9)" />
+                          <div className="h-full w-[20%] bg-amber-500/90" title="Overweight (25 - 29.9)" />
+                          <div className="h-full w-[20%] bg-rose-500/90" title="Obese (>= 30)" />
+                        </div>
+                        <div className="flex justify-between text-[9px] text-zinc-500 font-mono">
+                          <span>&lt; 18.5 (Under)</span>
+                          <span>18.5 - 24.9 (Normal)</span>
+                          <span>25 - 29.9 (Over)</span>
+                          <span>30+ (Obese)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-2">
-                    <Label htmlFor="slot" className="text-zinc-300 text-sm">Preferred Timing Slot</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="slot" className="text-zinc-300 text-sm">Preferred Timing Slot</Label>
+                      <span className="text-[10px] text-zinc-500">Quick presets</span>
+                    </div>
                     <Input
                       id="slot"
                       placeholder="e.g. 07:00 AM - 09:00 AM"
@@ -1048,6 +1302,23 @@ export default function AddMemberPage() {
                       onChange={(e) => setTimingSlot(e.target.value)}
                       className="border-zinc-800 bg-zinc-950 text-zinc-100 placeholder:text-zinc-700"
                     />
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {['06:00 - 08:00 AM', '08:00 - 10:00 AM', '05:00 - 07:00 PM', '07:00 - 09:00 PM'].map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setTimingSlot(slot)}
+                          className={cn(
+                            'text-[10px] px-2 py-0.5 rounded-md border transition-colors select-none',
+                            timingSlot === slot
+                              ? 'border-purple-500 bg-purple-950/40 text-purple-300 font-medium'
+                              : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                          )}
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="h-[1px] bg-zinc-800/40 my-4" />
@@ -1134,6 +1405,24 @@ export default function AddMemberPage() {
           {/* STEP 4: KYC Uploads */}
           {step === 4 && (
             <div className="space-y-6 max-w-xl mx-auto">
+              <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-3.5 flex items-center justify-between text-xs">
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-zinc-200">Optional Verification</span>
+                  <p className="text-[11px] text-zinc-500">
+                    KYC documents can be uploaded now or collected later from member profile.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFastSkipToReview}
+                  className="h-7 px-2.5 text-xs border-purple-500/30 text-purple-300 hover:bg-purple-950/30 shrink-0 ml-3"
+                >
+                  Skip KYC & Review →
+                </Button>
+              </div>
+
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="kycType" className="text-zinc-300 text-sm">Identity Document Type</Label>
@@ -1184,29 +1473,53 @@ export default function AddMemberPage() {
           {/* STEP 5: Confirm Review */}
           {step === 5 && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                 {/* Profile Card */}
-                <div className="border border-zinc-800 bg-zinc-950/20 p-6 rounded-xl flex items-start gap-4">
-                  <div className="h-16 w-16 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-300 font-bold border border-purple-800/40 text-xl shrink-0 overflow-hidden">
-                    {photoPreview ? (
-                      <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
-                    ) : (
-                      name.slice(0, 2).toUpperCase()
-                    )}
+                <div className="border border-zinc-800 bg-zinc-950/40 p-5 rounded-xl flex flex-col justify-between">
+                  <div className="flex items-start justify-between mb-3 border-b border-zinc-800/60 pb-2">
+                    <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">1. Member Profile</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStep(1)}
+                      className="h-6 px-2 text-[10px] text-purple-400 hover:text-purple-300 hover:bg-purple-950/30 gap-1"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-lg font-bold text-zinc-100">{name}</div>
-                    <div className="text-xs text-zinc-400">Phone: {phone}</div>
-                    <div className="text-xs text-zinc-400">WhatsApp: {whatsappPhone || phone}</div>
-                    {email && <div className="text-xs text-zinc-400">Email: {email}</div>}
-                    {dob && <div className="text-xs text-zinc-400">DOB: {dob}</div>}
-                    <div className="text-xs text-zinc-400 capitalize">Gender: {gender || 'Not specified'}</div>
+                  <div className="flex items-start gap-3.5">
+                    <div className="h-14 w-14 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-300 font-bold border border-purple-800/40 text-lg shrink-0 overflow-hidden">
+                      {photoPreview ? (
+                        <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+                      ) : (
+                        name.slice(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div className="space-y-1 text-xs">
+                      <div className="text-sm font-bold text-zinc-100">{name}</div>
+                      <div className="text-zinc-400">Phone: {phone}</div>
+                      <div className="text-zinc-400">WhatsApp: {whatsappPhone || phone}</div>
+                      {email && <div className="text-zinc-400 truncate max-w-[200px]">Email: {email}</div>}
+                      <div className="text-zinc-400 capitalize">Gender: {gender || 'Not specified'} {bloodGroup ? `• Blood: ${bloodGroup}` : ''}</div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Plan details review */}
-                <div className="border border-zinc-800 bg-zinc-950/20 p-6 rounded-xl space-y-3">
-                  <h4 className="text-sm font-bold text-zinc-200 border-b border-zinc-800/60 pb-1 mb-2">Membership Details</h4>
+                <div className="border border-zinc-800 bg-zinc-950/40 p-5 rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">2. Plan & Billing</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStep(2)}
+                      className="h-6 px-2 text-[10px] text-purple-400 hover:text-purple-300 hover:bg-purple-950/30 gap-1"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Button>
+                  </div>
                   <div className="flex justify-between text-xs text-zinc-400">
                     <span>Plan Choice</span>
                     <span className="font-semibold text-zinc-200">{selectedPlan?.name}</span>
@@ -1217,15 +1530,91 @@ export default function AddMemberPage() {
                   </div>
                   <div className="flex justify-between text-xs text-zinc-400">
                     <span>Total Bill (Incl. GST)</span>
-                    <span className="font-semibold text-purple-400">₹{totalAmount}</span>
+                    <span className="font-bold text-purple-400">₹{totalAmount}</span>
                   </div>
                   <div className="flex justify-between text-xs text-zinc-400">
                     <span>Amount Paid</span>
-                    <span className="font-semibold text-green-400">₹{amountPaid}</span>
+                    <span className="font-bold text-green-400">₹{amountPaid} {paymentMode ? `(${paymentMode})` : ''}</span>
                   </div>
-                  <div className="flex justify-between text-xs text-zinc-400">
+                  <div className="flex justify-between text-xs text-zinc-400 pt-1 border-t border-zinc-800/60">
                     <span>Outstanding Due</span>
-                    <span className="font-semibold text-amber-400">₹{amountDue}</span>
+                    <span className={cn('font-bold', amountDue > 0 ? 'text-amber-400' : 'text-green-400')}>
+                      ₹{amountDue}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Extras & Fitness review */}
+                <div className="border border-zinc-800 bg-zinc-950/40 p-5 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">3. Fitness & Facilities</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStep(3)}
+                      className="h-6 px-2 text-[10px] text-purple-400 hover:text-purple-300 hover:bg-purple-950/30 gap-1"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Button>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Assigned Trainer</span>
+                    <span className="font-medium text-zinc-200">
+                      {trainers.find(t => t.id === trainerId)?.name || 'No Trainer'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Locker</span>
+                    <span className="font-medium text-zinc-200">
+                      {hasLocker ? `Yes (${lockerNumber || 'Unassigned'})` : 'No Locker'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>BMI Score</span>
+                    <span className="font-medium text-zinc-200">
+                      {liveBmi ? `${liveBmi} (${getBmiCategory(liveBmi).label})` : 'Not recorded'}
+                    </span>
+                  </div>
+                  {timingSlot && (
+                    <div className="flex justify-between text-zinc-400">
+                      <span>Timing Slot</span>
+                      <span className="font-medium text-zinc-200">{timingSlot}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* KYC & Branch review */}
+                <div className="border border-zinc-800 bg-zinc-950/40 p-5 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">4. Verification & Branch</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStep(4)}
+                      className="h-6 px-2 text-[10px] text-purple-400 hover:text-purple-300 hover:bg-purple-950/30 gap-1"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Button>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Branch Assigned</span>
+                    <span className="font-medium text-zinc-200">
+                      {branches.find(b => b.id === memberBranchId)?.name || 'Main Branch'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>KYC Document</span>
+                    <span className="font-medium text-zinc-200 capitalize">
+                      {kycType ? `${kycType.replace('_', ' ')} (Uploaded)` : 'Not uploaded (Optional)'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Post-Enrollment</span>
+                    <span className="font-medium text-purple-300">
+                      Face ID & Fingerprint ready
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1233,39 +1622,56 @@ export default function AddMemberPage() {
           )}
         </CardContent>
 
-        <CardFooter className="flex justify-between border-t border-zinc-800/40 pt-6 bg-zinc-900/10">
-          {step > 1 ? (
-            <Button
-              variant="outline"
-              disabled={loading}
-              onClick={handleBack}
-              className="border-zinc-800 text-zinc-300 hover:bg-zinc-800 font-medium"
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" /> Back
-            </Button>
-          ) : (
-            <div />
-          )}
+        <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-zinc-800/40 pt-5 bg-zinc-900/10">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+            {step > 1 ? (
+              <Button
+                variant="outline"
+                disabled={loading}
+                onClick={handleBack}
+                className="border-zinc-800 text-zinc-300 hover:bg-zinc-800 font-medium h-9 text-xs"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+              </Button>
+            ) : (
+              <div />
+            )}
+
+            {step >= 2 && step < 5 && selectedPlanId && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleFastSkipToReview}
+                className="text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-950/30 gap-1 h-9"
+              >
+                <Zap className="h-3.5 w-3.5" /> Skip to Review
+              </Button>
+            )}
+          </div>
 
           {step < 5 ? (
             <Button
               onClick={handleNext}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-lg shadow-purple-600/15"
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-lg shadow-purple-600/15 h-9 text-xs px-4 w-full sm:w-auto"
             >
-              Next Step <ChevronRight className="h-4 w-4 ml-2" />
+              Next Step <ChevronRight className="h-4 w-4 ml-1.5" />
             </Button>
           ) : (
             <Button
               disabled={loading}
               onClick={handleOnboardMember}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-lg shadow-purple-600/20"
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-lg shadow-purple-600/20 h-10 px-5 text-sm w-full sm:w-auto"
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-white mr-2" /> Processing...
+                  <Loader2 className="h-4 w-4 animate-spin text-white mr-2" /> Processing Onboarding...
                 </>
               ) : (
-                'Onboard Member & Issue Invoice'
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-300" />
+                  Onboard Member & Issue Invoice (₹{totalAmount})
+                </>
               )}
             </Button>
           )}
