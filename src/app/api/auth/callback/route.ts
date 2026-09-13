@@ -4,7 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/dashboard';
+  const rawNext = searchParams.get('next') ?? '/dashboard';
+  // Prevent open redirect: ensure next is a relative path and not protocol-relative (//)
+  const isSafeNext = rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\');
+  const next = isSafeNext ? rawNext : '/dashboard';
 
   if (code) {
     const supabase = await createClient();
@@ -31,11 +34,13 @@ export async function GET(request: Request) {
       }
       
       const forwardedHost = request.headers.get('x-forwarded-host');
+      const host = request.headers.get('host');
       const isLocalEnv = process.env.NODE_ENV === 'development';
+      const isTrustedForwardedHost = Boolean(forwardedHost && host && forwardedHost.toLowerCase() === host.toLowerCase());
       
       if (isLocalEnv) {
         return NextResponse.redirect(`${origin}${next}`);
-      } else if (forwardedHost) {
+      } else if (isTrustedForwardedHost) {
         return NextResponse.redirect(`https://${forwardedHost}${next}`);
       } else {
         return NextResponse.redirect(`${origin}${next}`);

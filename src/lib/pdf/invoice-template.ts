@@ -1,9 +1,47 @@
 import { InvoiceData } from './types';
 
+export function escapeHtml(str: unknown): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export function generateInvoiceHTML(data: InvoiceData): string {
   const { gym, member, items, invoiceNo, date, dueDate, subtotal, cgstAmount, sgstAmount, totalAmount, status, amountInWords } = data;
 
-  const upiQrUrl = gym.upiId ? `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=upi://pay?pa=${gym.upiId}&am=${totalAmount}&tn=Invoice${invoiceNo}` : '';
+  const safeGym = {
+    name: escapeHtml(gym.name),
+    address: escapeHtml(gym.address),
+    phone: escapeHtml(gym.phone),
+    email: escapeHtml(gym.email),
+    gstin: escapeHtml(gym.gstin),
+    pan: escapeHtml(gym.pan),
+    upiId: gym.upiId,
+  };
+
+  const safeMember = {
+    id: escapeHtml(member.id),
+    name: escapeHtml(member.name),
+    phone: escapeHtml(member.phone),
+    email: escapeHtml(member.email),
+    address: escapeHtml(member.address),
+  };
+
+  const safeInvoiceNo = escapeHtml(invoiceNo);
+  const safeAmountInWords = escapeHtml(amountInWords);
+  const safeStatus = escapeHtml(status);
+
+  const safeItems = items.map(item => ({
+    description: escapeHtml(item.description),
+    hsnCode: escapeHtml(item.hsnCode),
+    amount: item.amount,
+  }));
+
+  const upiQrUrl = safeGym.upiId ? `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`upi://pay?pa=${safeGym.upiId}&am=${totalAmount}&tn=Invoice${invoiceNo}`)}` : '';
 
   const statusColors = {
     PAID: { bg: '#dcfce7', text: '#166534' },
@@ -21,7 +59,8 @@ export function generateInvoiceHTML(data: InvoiceData): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invoice - ${invoiceNo}</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data: https:;">
+  <title>Invoice - ${safeInvoiceNo}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -324,34 +363,34 @@ export function generateInvoiceHTML(data: InvoiceData): string {
   <div class="container">
     <div class="header">
       <div class="gym-info">
-        <h1>${gym.name}</h1>
+        <h1>${safeGym.name}</h1>
         <div class="gym-details">
-          <p>${gym.address}</p>
-          <p>Phone: ${gym.phone} | Email: ${gym.email}</p>
-          ${gym.gstin ? `<p><strong>GSTIN:</strong> ${gym.gstin}</p>` : ''}
-          ${gym.pan ? `<p><strong>PAN:</strong> ${gym.pan}</p>` : ''}
+          <p>${safeGym.address}</p>
+          <p>Phone: ${safeGym.phone} | Email: ${safeGym.email}</p>
+          ${safeGym.gstin ? `<p><strong>GSTIN:</strong> ${safeGym.gstin}</p>` : ''}
+          ${safeGym.pan ? `<p><strong>PAN:</strong> ${safeGym.pan}</p>` : ''}
         </div>
       </div>
       <div class="invoice-title">
         <h2>TAX INVOICE</h2>
-        <div class="status-badge">${status}</div>
+        <div class="status-badge">${safeStatus}</div>
       </div>
     </div>
 
     <div class="meta-info">
       <div class="bill-to">
         <h3>Bill To:</h3>
-        <p>${member.name}</p>
-        <p class="light-text">Member ID: ${member.id}</p>
-        <p class="light-text">${member.phone}</p>
-        ${member.email ? `<p class="light-text">${member.email}</p>` : ''}
-        ${member.address ? `<p class="light-text">${member.address}</p>` : ''}
+        <p>${safeMember.name}</p>
+        <p class="light-text">Member ID: ${safeMember.id}</p>
+        <p class="light-text">${safeMember.phone}</p>
+        ${safeMember.email ? `<p class="light-text">${safeMember.email}</p>` : ''}
+        ${safeMember.address ? `<p class="light-text">${safeMember.address}</p>` : ''}
       </div>
       <div class="invoice-details">
         <table>
           <tr>
             <td>Invoice No:</td>
-            <td>${invoiceNo}</td>
+            <td>${safeInvoiceNo}</td>
           </tr>
           <tr>
             <td>Date:</td>
@@ -376,7 +415,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         </tr>
       </thead>
       <tbody>
-        ${items.map(item => `
+        ${safeItems.map(item => `
         <tr>
           <td>${item.description}</td>
           <td>${item.hsnCode || '-'}</td>
@@ -389,7 +428,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     <div class="summary-section">
       <div class="payment-info">
         <h4>Amount in Words</h4>
-        <p class="amount-words">${amountInWords}</p>
+        <p class="amount-words">${safeAmountInWords}</p>
         
         ${upiQrUrl && status !== 'PAID' ? `
         <div class="qr-container">

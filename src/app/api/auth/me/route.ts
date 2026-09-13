@@ -151,20 +151,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // 3d. Search for ANY gym in the database (single-tenant or primary installation)
-    if (!ownerGym) {
-      const { data: anyGym } = await supabaseAdmin
-        .from('gyms')
-        .select('id, name')
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (anyGym) {
-        ownerGym = anyGym;
-      }
-    }
-
     if (ownerGym) {
       // Claim/adopt gym for this owner
       await supabaseAdmin

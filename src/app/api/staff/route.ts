@@ -148,9 +148,29 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Staff account not found' }, { status: 404 });
     }
 
-    // Protect owners from being deactivated by staff
+    // Non-owners cannot modify owner accounts
+    if (targetStaff.role === 'owner' && !isOwner) {
+      return NextResponse.json({ error: 'Forbidden: Cannot modify gym owner account' }, { status: 403 });
+    }
+
+    // Protect owners from being deactivated
     if (targetStaff.role === 'owner' && is_active === false) {
       return NextResponse.json({ error: 'Owner accounts cannot be deactivated' }, { status: 400 });
+    }
+
+    // Non-owners cannot edit permissions
+    if (permissions !== undefined && !isOwner) {
+      return NextResponse.json({ error: 'Only gym owners can modify staff permissions' }, { status: 403 });
+    }
+
+    // Non-owners cannot alter roles (e.g. promote to owner or change roles)
+    if (role !== undefined && !isOwner) {
+      return NextResponse.json({ error: 'Only gym owners can alter staff roles' }, { status: 403 });
+    }
+
+    // Prevent non-owner staff from self-tampering
+    if (id === callerUser?.id && !isOwner) {
+      return NextResponse.json({ error: 'Staff members cannot modify their own profile or privileges' }, { status: 403 });
     }
 
     const updateFields: Record<string, any> = {};

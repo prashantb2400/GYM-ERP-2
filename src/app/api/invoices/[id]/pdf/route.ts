@@ -80,6 +80,9 @@ export async function GET(
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Disposition': `inline; filename="invoice-${templateData.invoiceNo}.pdf"`,
+        'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data: https:; sandbox allow-popups;",
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
       },
     });
   } catch (error) {

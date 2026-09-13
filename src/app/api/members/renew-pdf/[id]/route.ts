@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { escapeHtml } from '@/lib/pdf/invoice-template';
 
 export async function GET(
   request: Request,
@@ -57,13 +58,33 @@ export async function GET(
 
     const invoice = invoices?.[0] || null;
 
+    const safeMemberName = escapeHtml(member.name);
+    const safeMemberCode = escapeHtml(member.member_code);
+    const safePlanName = escapeHtml(member.plans?.name || 'Active Package');
+    const safeHeight = escapeHtml(member.height_cm || '-');
+    const safeWeight = escapeHtml(member.weight_kg || '-');
+    const safeBmi = escapeHtml(member.bmi || '-');
+    const safeFitnessLevel = escapeHtml(member.fitness_level || 'Beginner');
+    const safeDietName = escapeHtml(member.diet_charts?.name || 'Standard Plan');
+    const safeExerciseRoutine = escapeHtml(member.exercise_charts?.name || 'General Routine');
+
+    const safeInvoice = invoice ? {
+      invoice_number: escapeHtml(invoice.invoice_number),
+      issued_at: new Date(invoice.issued_at).toLocaleDateString('en-IN'),
+      payment_mode: escapeHtml(invoice.payment_mode || 'Cash'),
+      amount_paid: Number(invoice.amount_paid) || 0,
+      amount_due: Number(invoice.amount_due) || 0,
+      total: Number(invoice.total) || 0,
+    } : null;
+
     // 3. Construct a beautiful unified HTML template for A4 download/print consolidation
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Renewal Pack - ${member.name}</title>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
+        <title>Renewal Pack - ${safeMemberName}</title>
         <style>
           body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1c1917; line-height: 1.5; margin: 0; padding: 40px; background-color: #ffffff; }
           .page-break { page-break-after: always; }
@@ -88,17 +109,17 @@ export async function GET(
 
           <div class="section">
             <h2>1. Renewed Invoice Receipt</h2>
-            ${invoice ? `
+            ${safeInvoice ? `
               <div class="grid">
                 <div>
-                  <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
-                  <p><strong>Issue Date:</strong> ${new Date(invoice.issued_at).toLocaleDateString('en-IN')}</p>
-                  <p><strong>Payment Mode:</strong> <span style="text-transform: capitalize;">${invoice.payment_mode || 'Cash'}</span></p>
+                  <p><strong>Invoice Number:</strong> ${safeInvoice.invoice_number}</p>
+                  <p><strong>Issue Date:</strong> ${safeInvoice.issued_at}</p>
+                  <p><strong>Payment Mode:</strong> <span style="text-transform: capitalize;">${safeInvoice.payment_mode}</span></p>
                 </div>
                 <div style="text-align: right;">
-                  <p><strong>Member Code:</strong> ${member.member_code}</p>
-                  <p><strong>Member Name:</strong> ${member.name}</p>
-                  <p><strong>Plan Details:</strong> ${member.plans?.name || 'Active Package'}</p>
+                  <p><strong>Member Code:</strong> ${safeMemberCode}</p>
+                  <p><strong>Member Name:</strong> ${safeMemberName}</p>
+                  <p><strong>Plan Details:</strong> ${safePlanName}</p>
                 </div>
               </div>
 
@@ -112,14 +133,14 @@ export async function GET(
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Membership Plan Fee - ${member.plans?.name || 'Basic'}</td>
-                    <td style="text-align: right;">₹${invoice.amount_paid}</td>
-                    <td style="text-align: right;">₹${invoice.amount_due}</td>
+                    <td>Membership Plan Fee - ${safePlanName}</td>
+                    <td style="text-align: right;">₹${safeInvoice.amount_paid}</td>
+                    <td style="text-align: right;">₹${safeInvoice.amount_due}</td>
                   </tr>
                   <tr style="font-weight: bold; background-color: #faf5ff;">
                     <td>Total Invoice Value (Incl. SGST/CGST)</td>
-                    <td style="text-align: right; color: #6b21a8;">₹${invoice.total}</td>
-                    <td style="text-align: right;">₹${invoice.amount_due}</td>
+                    <td style="text-align: right; color: #6b21a8;">₹${safeInvoice.total}</td>
+                    <td style="text-align: right;">₹${safeInvoice.amount_due}</td>
                   </tr>
                 </tbody>
               </table>
@@ -131,12 +152,12 @@ export async function GET(
             <div class="bmi-badge">
               <div class="grid">
                 <div>
-                  <p style="margin: 0;"><strong>Current Height:</strong> ${member.height_cm || '-'} cm</p>
-                  <p style="margin: 5px 0 0 0;"><strong>Current Weight:</strong> ${member.weight_kg || '-'} kg</p>
+                  <p style="margin: 0;"><strong>Current Height:</strong> ${safeHeight} cm</p>
+                  <p style="margin: 5px 0 0 0;"><strong>Current Weight:</strong> ${safeWeight} kg</p>
                 </div>
                 <div>
-                  <p style="margin: 0;"><strong>Assessed BMI:</strong> ${member.bmi || '-'}</p>
-                  <p style="margin: 5px 0 0 0;"><strong>Fitness Level:</strong> <span style="text-transform: capitalize;">${member.fitness_level || 'Beginner'}</span></p>
+                  <p style="margin: 0;"><strong>Assessed BMI:</strong> ${safeBmi}</p>
+                  <p style="margin: 5px 0 0 0;"><strong>Fitness Level:</strong> <span style="text-transform: capitalize;">${safeFitnessLevel}</span></p>
                 </div>
               </div>
             </div>
@@ -146,7 +167,7 @@ export async function GET(
         <!-- Page 2: Personalized Nutrition Diet Chart -->
         <div class="page-break">
           <h2>3. Assigned Daily Nutrition Diet</h2>
-          <p style="color: #6b7280; font-size: 12px; margin-top: -10px;">Plan: ${member.diet_charts?.name || 'Standard Plan'}</p>
+          <p style="color: #6b7280; font-size: 12px; margin-top: -10px;">Plan: ${safeDietName}</p>
           ${member.diet_charts?.meals && member.diet_charts.meals.length > 0 ? `
             <table>
               <thead>
@@ -159,12 +180,12 @@ export async function GET(
               <tbody>
                 ${member.diet_charts.meals.map((m: any) => `
                   <tr>
-                    <td><strong>${m.time}</strong></td>
-                    <td><span style="color: #6b21a8; font-weight: 600;">${m.meal_name}</span></td>
+                    <td><strong>${escapeHtml(m.time)}</strong></td>
+                    <td><span style="color: #6b21a8; font-weight: 600;">${escapeHtml(m.meal_name)}</span></td>
                     <td>
                       <ul class="item-list">
                         ${m.items?.map((it: any) => `
-                          <li>${it.name} - ${it.qty} (${it.calories} kcal, ${it.protein}g protein)</li>
+                          <li>${escapeHtml(it.name)} - ${escapeHtml(it.qty)} (${escapeHtml(it.calories)} kcal, ${escapeHtml(it.protein)}g protein)</li>
                         `).join('')}
                       </ul>
                     </td>
@@ -178,11 +199,11 @@ export async function GET(
         <!-- Page 3: Personal Exercise Schedule -->
         <div>
           <h2>4. Assigned Training Workouts</h2>
-          <p style="color: #6b7280; font-size: 12px; margin-top: -10px;">Routine: ${member.exercise_charts?.name || 'General Routine'}</p>
+          <p style="color: #6b7280; font-size: 12px; margin-top: -10px;">Routine: ${safeExerciseRoutine}</p>
           ${member.exercise_charts?.days && member.exercise_charts.days.length > 0 ? `
             ${member.exercise_charts.days.map((d: any) => `
               <div style="margin-bottom: 20px;">
-                <h4 style="color: #581c87; border-bottom: 1px solid #f3e8ff; padding-bottom: 5px; margin-bottom: 10px;">${d.day}</h4>
+                <h4 style="color: #581c87; border-bottom: 1px solid #f3e8ff; padding-bottom: 5px; margin-bottom: 10px;">${escapeHtml(d.day)}</h4>
                 <table style="margin-top: 5px;">
                   <thead>
                     <tr>
@@ -196,11 +217,11 @@ export async function GET(
                   <tbody>
                     ${d.exercises?.map((ex: any) => `
                       <tr>
-                        <td><strong>${ex.name}</strong></td>
-                        <td style="text-align: center;">${ex.sets}</td>
-                        <td style="text-align: center;">${ex.reps}</td>
-                        <td style="text-align: center;">${ex.rest_seconds}s</td>
-                        <td style="color: #4b5563; font-style: italic;">${ex.notes || '-'}</td>
+                        <td><strong>${escapeHtml(ex.name)}</strong></td>
+                        <td style="text-align: center;">${escapeHtml(ex.sets)}</td>
+                        <td style="text-align: center;">${escapeHtml(ex.reps)}</td>
+                        <td style="text-align: center;">${escapeHtml(ex.rest_seconds)}s</td>
+                        <td style="color: #4b5563; font-style: italic;">${escapeHtml(ex.notes || '-')}</td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -216,6 +237,9 @@ export async function GET(
     return new NextResponse(htmlContent, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
+        'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox allow-popups;",
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
       },
     });
   } catch (err: unknown) {

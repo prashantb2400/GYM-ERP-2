@@ -18,7 +18,12 @@ async function verifyMetaSignature(request: Request, bodyText: string): Promise<
     .createHmac('sha256', appSecret)
     .update(bodyText)
     .digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig));
+  const sigBuf = Buffer.from(signature);
+  const expBuf = Buffer.from(expectedSig);
+  if (sigBuf.length !== expBuf.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(sigBuf, expBuf);
 }
 
 export async function GET(request: Request) {

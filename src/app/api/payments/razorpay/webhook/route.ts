@@ -11,20 +11,24 @@ export async function POST(request: Request) {
     const razorpaySignature = request.headers.get('x-razorpay-signature');
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     
-    if (keySecret && razorpaySignature) {
-      const expectedSig = crypto
-        .createHmac('sha256', keySecret)
-        .update(bodyText)
-        .digest('hex');
-      
-      const sigBuffer = Buffer.from(razorpaySignature);
-      const expectedBuffer = Buffer.from(expectedSig);
-      if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-      }
-    } else if (keySecret && !razorpaySignature) {
-      // Key is configured but no signature provided — reject
+    if (!keySecret) {
+      console.error('RAZORPAY_KEY_SECRET is not configured on the server');
+      return NextResponse.json({ error: 'Webhook service not configured' }, { status: 503 });
+    }
+
+    if (!razorpaySignature) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+    }
+
+    const expectedSig = crypto
+      .createHmac('sha256', keySecret)
+      .update(bodyText)
+      .digest('hex');
+    
+    const sigBuffer = Buffer.from(razorpaySignature);
+    const expectedBuffer = Buffer.from(expectedSig);
+    if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
     
     const payload = JSON.parse(bodyText);

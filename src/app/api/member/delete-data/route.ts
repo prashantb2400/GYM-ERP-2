@@ -27,11 +27,17 @@ export async function POST(request: NextRequest) {
         phone: '0000000000',
         email: null,
         photo_url: null,
+        face_descriptor: null,
+        face_enrolled: false,
+        biometric_enrolled: false,
+        fingerprint_template: null,
+        qr_token: null,
         dob: null,
         address: null,
         emergency_contact: {},
         health_goals: [],
         medical_conditions: null,
+        status: 'inactive',
         auth_id: null,
       })
       .eq('id', memberData.id);
