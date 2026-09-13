@@ -1,7 +1,39 @@
 import { MemberReportData } from './types';
+import { escapeHtml } from './invoice-template';
 
 export function generateMemberReportHTML(data: MemberReportData): string {
   const { gym, member, reportDate, attendanceStats, planHistory, paymentSummary } = data;
+
+  const resolvedGymName = (gym.name?.trim() && gym.name !== 'Gym Name' && gym.name !== 'Gym Center')
+    ? gym.name.trim()
+    : 'Fitness Club';
+
+  const safeGym = {
+    name: escapeHtml(resolvedGymName),
+    tagline: escapeHtml(gym.tagline || ''),
+    branchName: escapeHtml(gym.branchName || ''),
+    address: escapeHtml(gym.address || 'Facility Address Registered'),
+    phone: escapeHtml(gym.phone || 'N/A'),
+    email: escapeHtml(gym.email || 'N/A'),
+    gstin: escapeHtml(gym.gstin || ''),
+  };
+
+  const safeMember = {
+    id: escapeHtml(member.id),
+    name: escapeHtml(member.name),
+    phone: escapeHtml(member.phone),
+    email: escapeHtml(member.email || 'N/A'),
+    joinDate: member.joinDate ? new Date(member.joinDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+    status: escapeHtml(member.status),
+    bloodGroup: escapeHtml(member.bloodGroup || 'N/A'),
+    height: member.height,
+    weight: member.weight,
+    bmi: member.bmi,
+  };
+
+  const formattedReportDate = reportDate
+    ? new Date(reportDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
   return `
 <!DOCTYPE html>
@@ -49,28 +81,122 @@ export function generateMemberReportHTML(data: MemberReportData): string {
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
+    .print-toolbar {
+      position: sticky;
+      top: 12px;
+      z-index: 1000;
+      max-width: 800px;
+      margin: 0 auto 20px;
+      background: #09090b;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .print-toolbar-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn-print {
+      background: #18181b;
+      color: #ffffff;
+      border: 1px solid #3f3f46;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-print:hover {
+      background: #27272a;
+    }
+
+    .btn-close {
+      background: #27272a;
+      color: #d4d4d8;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-close:hover {
+      background: #3f3f46;
+      color: #ffffff;
+    }
+
     .header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid var(--border);
-      padding-bottom: 2rem;
+      align-items: flex-start;
+      border-bottom: 2.5px solid #000000;
+      padding-bottom: 1.5rem;
       margin-bottom: 2rem;
     }
 
     .gym-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.5rem;
-      color: var(--primary);
-      letter-spacing: 1px;
-      margin-bottom: 0.25rem;
+      font-size: 34px;
+      font-weight: 900;
+      color: #000000;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+      line-height: 1.05;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .branch-pill {
+      font-size: 11px;
+      font-weight: 700;
+      background: #f4f4f5;
+      color: #18181b;
+      border: 1.5px solid #a1a1aa;
+      padding: 2px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .gym-tagline {
+      font-size: 11.5px;
+      color: #52525b;
+      font-style: italic;
+      margin-top: 2px;
+      margin-bottom: 6px;
+    }
+
+    .gym-meta-details {
+      font-size: 12px;
+      color: #3f3f46;
+      line-height: 1.5;
+    }
+
+    .gym-meta-details strong {
+      color: #09090b;
     }
 
     .doc-title {
       font-size: 1.125rem;
       text-transform: uppercase;
-      font-weight: 600;
-      color: var(--secondary);
+      font-weight: 700;
+      color: var(--primary);
       letter-spacing: 1px;
     }
 
@@ -220,6 +346,9 @@ export function generateMemberReportHTML(data: MemberReportData): string {
     }
 
     @media print {
+      .no-print {
+        display: none !important;
+      }
       body {
         background-color: white;
         padding: 0;
@@ -240,15 +369,40 @@ export function generateMemberReportHTML(data: MemberReportData): string {
   </style>
 </head>
 <body>
+  <div class="print-toolbar no-print">
+    <div class="print-toolbar-title">
+      <span>Official Member Report</span>
+      <span class="status-badge status-${safeMember.status.toLowerCase()}">${safeMember.status}</span>
+    </div>
+    <div class="print-toolbar-actions">
+      <button class="btn-print" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Print / Save PDF
+      </button>
+      <button class="btn-close" onclick="window.history.back()">Back</button>
+    </div>
+  </div>
+
   <div class="container">
     <div class="header">
-      <div>
-        <h1 class="gym-name">${gym.name}</h1>
-        <div class="doc-title">Comprehensive Member Report</div>
+      <div class="gym-branding" style="max-width: 65%;">
+        <h1 class="gym-name">
+          ${safeGym.name}
+          ${safeGym.branchName ? `<span class="branch-pill">${safeGym.branchName}</span>` : ''}
+        </h1>
+        ${safeGym.tagline ? `<div class="gym-tagline">${safeGym.tagline}</div>` : ''}
+        <div class="gym-meta-details">
+          <p>${safeGym.address}</p>
+          <p><strong>Phone:</strong> ${safeGym.phone} &nbsp;|&nbsp; <strong>Email:</strong> ${safeGym.email}</p>
+          ${safeGym.gstin ? `<p><strong>GSTIN:</strong> ${safeGym.gstin}</p>` : ''}
+        </div>
       </div>
       <div class="report-meta">
-        <div>Date: ${new Date(reportDate).toLocaleDateString()}</div>
-        <div>Member ID: ${member.id}</div>
+        <div class="doc-title">Member Report</div>
+        <div class="report-meta-details">
+          <div><strong>Date:</strong> ${formattedReportDate}</div>
+          <div><strong>Member ID:</strong> ${safeMember.id.slice(0, 10)}</div>
+        </div>
       </div>
     </div>
 
@@ -346,8 +500,8 @@ export function generateMemberReportHTML(data: MemberReportData): string {
     </div>
 
     <div class="footer">
-      <p>Generated by ${gym.name} Management System</p>
-      <p>${gym.address} | Phone: ${gym.phone}</p>
+      <p>Official record generated by ${safeGym.name}</p>
+      <p>${safeGym.address} &nbsp;|&nbsp; Phone: ${safeGym.phone}</p>
     </div>
   </div>
 </body>

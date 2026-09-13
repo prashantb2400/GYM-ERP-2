@@ -1,5 +1,6 @@
 export interface GymInfo {
   name: string;
+  business_name?: string;
   tagline?: string;
   logoUrl?: string;
   address: string;
@@ -35,15 +36,15 @@ export interface InvoiceData {
   items: InvoiceItem[];
   subtotal: number;
   discountAmount?: number;
-  cgstAmount: number;
-  sgstAmount: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
   totalAmount: number;
   amountPaid?: number;
   amountDue?: number;
   paymentMode?: string;
   cashierName?: string;
   status: 'PAID' | 'PENDING' | 'OVERDUE' | 'CANCELLED' | 'REFUNDED';
-  amountInWords: string;
+  amountInWords?: string;
 }
 
 export interface DietFoodItem {

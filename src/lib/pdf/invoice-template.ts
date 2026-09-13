@@ -21,8 +21,8 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     dueDate,
     subtotal,
     discountAmount = 0,
-    cgstAmount,
-    sgstAmount,
+    cgstAmount = 0,
+    sgstAmount = 0,
     totalAmount,
     amountPaid = 0,
     amountDue = 0,
@@ -32,8 +32,12 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     amountInWords,
   } = data;
 
+  const resolvedGymName = (gym.name?.trim() && gym.name !== 'Gym Center')
+    ? gym.name.trim()
+    : (gym.business_name?.trim() || 'Fitness Club');
+
   const safeGym = {
-    name: escapeHtml(gym.name || 'Gym Center'),
+    name: escapeHtml(resolvedGymName),
     tagline: escapeHtml(gym.tagline || ''),
     branchName: escapeHtml(gym.branchName || ''),
     address: escapeHtml(gym.address || 'Address not provided'),
@@ -136,40 +140,134 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     }
 
     /* Header Section */
+    /* Screen-Only Toolbar */
+    .print-toolbar {
+      position: sticky;
+      top: 12px;
+      z-index: 1000;
+      max-width: 820px;
+      margin: 0 auto 20px;
+      background: #09090b;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .print-toolbar-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .status-pill-small {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      background: ${statusStyle.bg};
+      color: ${statusStyle.text};
+      border: 1px solid ${statusStyle.border};
+    }
+
+    .print-toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-print {
+      background: #18181b;
+      color: #ffffff;
+      border: 1px solid #3f3f46;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-print:hover {
+      background: #27272a;
+    }
+
+    .btn-close {
+      background: #27272a;
+      color: #d4d4d8;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-close:hover {
+      background: #3f3f46;
+      color: #ffffff;
+    }
+
     .header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 2px solid var(--primary);
+      border-bottom: 2.5px solid #000000;
       padding-bottom: 20px;
       margin-bottom: 24px;
     }
 
     .gym-branding h1 {
-      font-size: 26px;
-      font-weight: 800;
+      font-size: 34px;
+      font-weight: 900;
       letter-spacing: -0.5px;
-      color: var(--primary);
+      color: #000000;
       text-transform: uppercase;
-      line-height: 1.1;
+      line-height: 1.05;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .branch-pill {
+      font-size: 11.5px;
+      font-weight: 700;
+      background: #f4f4f5;
+      color: #09090b;
+      border: 1.5px solid #a1a1aa;
+      padding: 2px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      display: inline-block;
     }
 
     .gym-tagline {
-      font-size: 11px;
-      color: var(--text-muted);
+      font-size: 11.5px;
+      color: #52525b;
       font-style: italic;
       margin-top: 2px;
       margin-bottom: 8px;
     }
 
     .gym-details {
-      font-size: 11.5px;
-      color: var(--text-muted);
-      line-height: 1.45;
+      font-size: 12px;
+      color: #3f3f46;
+      line-height: 1.5;
     }
 
     .gym-details strong {
-      color: var(--text);
+      color: #09090b;
     }
 
     .invoice-title-area {
@@ -474,6 +572,9 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     }
 
     @media print {
+      .no-print {
+        display: none !important;
+      }
       body {
         background-color: #ffffff;
         padding: 0;
@@ -492,14 +593,30 @@ export function generateInvoiceHTML(data: InvoiceData): string {
   </style>
 </head>
 <body>
+  <div class="print-toolbar no-print">
+    <div class="print-toolbar-title">
+      <span>Official Tax Invoice</span>
+      <span class="status-pill-small">${safeStatus}</span>
+    </div>
+    <div class="print-toolbar-actions">
+      <button class="btn-print" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Print / Save PDF
+      </button>
+      <button class="btn-close" onclick="window.history.back()">Back</button>
+    </div>
+  </div>
+
   <div class="container">
     <!-- Header -->
     <div class="header">
       <div class="gym-branding">
-        <h1>${safeGym.name}</h1>
+        <h1>
+          ${safeGym.name}
+          ${safeGym.branchName ? `<span class="branch-pill">${safeGym.branchName}</span>` : ''}
+        </h1>
         ${safeGym.tagline ? `<div class="gym-tagline">${safeGym.tagline}</div>` : ''}
         <div class="gym-details">
-          ${safeGym.branchName ? `<p><strong>Facility Branch:</strong> ${safeGym.branchName}</p>` : ''}
           <p>${safeGym.address}</p>
           <p><strong>Phone:</strong> ${safeGym.phone} &nbsp;|&nbsp; <strong>Email:</strong> ${safeGym.email}</p>
           <p>

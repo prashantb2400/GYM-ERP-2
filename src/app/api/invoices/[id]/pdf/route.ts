@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { generateInvoiceHTML } from '@/lib/pdf/invoice-template';
 import { InvoiceData, InvoiceItem } from '@/lib/pdf/types';
 import { numberToIndianWords } from '@/lib/utils/number-to-words';
@@ -10,11 +10,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
     const invoiceId = id;
 
-    // Fetch invoice details
-    const { data: invoice, error: invoiceError } = await supabase
+    // Fetch invoice details using supabaseAdmin to bypass RLS for PDF printouts
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
       .select('*, members(*)')
       .eq('id', invoiceId)
@@ -26,7 +25,7 @@ export async function GET(
     }
 
     // Fetch gym details
-    const { data: gymProfile } = await supabase
+    const { data: gymProfile } = await supabaseAdmin
       .from('gyms')
       .select('*')
       .eq('id', invoice.gym_id)
@@ -35,7 +34,7 @@ export async function GET(
     // Fetch branch details if invoice has branch_id
     let branchData: any = null;
     if (invoice.branch_id) {
-      const { data: branch } = await supabase
+      const { data: branch } = await supabaseAdmin
         .from('branches')
         .select('*')
         .eq('id', invoice.branch_id)
@@ -43,13 +42,19 @@ export async function GET(
       branchData = branch;
     }
 
-    const gymData = gymProfile || {
-      name: 'Gym Center',
-      tagline: '',
-      address: {},
-      phone: '',
-      email: '',
-      settings: {},
+    const resolvedGymName = (gymProfile?.name?.trim() && gymProfile.name !== 'Gym Center')
+      ? gymProfile.name.trim()
+      : (gymProfile?.business_name?.trim() || 'Fitness Club');
+
+    const gymData = {
+      name: resolvedGymName,
+      tagline: gymProfile?.tagline || '',
+      address: gymProfile?.address || {},
+      phone: gymProfile?.phone || '',
+      email: gymProfile?.email || '',
+      gstin: gymProfile?.gstin || '',
+      pan: gymProfile?.pan || '',
+      settings: gymProfile?.settings || {},
     };
 
     // Format address prioritizing specific branch address then gym address

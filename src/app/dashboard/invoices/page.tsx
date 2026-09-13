@@ -51,8 +51,10 @@ export default function InvoicesPage() {
   const [gymDetails, setGymDetails] = useState<any>(null);
 
   const activeGym: any = gymDetails || gym || {};
+  const rawGymName = activeGym.name?.trim() || activeGym.business_name?.trim() || '';
+  const resolvedGymName = (rawGymName && rawGymName !== 'Gym Center') ? rawGymName : 'Fitness Club';
   const displayGym = {
-    name: activeGym.name || 'Gym Center',
+    name: resolvedGymName,
     tagline: activeGym.tagline || '',
     address: activeGym.address || { street: '', city: '', state: '', pin: '' },
     phone: activeGym.phone || '',
@@ -437,7 +439,7 @@ export default function InvoicesPage() {
                 {/* Invoice Header */}
                 <div className="flex justify-between items-start border-b border-zinc-200 pb-4">
                   <div>
-                    <h2 className="text-xl font-bold tracking-tight text-purple-700">{displayGym.name}</h2>
+                    <h2 className="text-3xl font-black uppercase tracking-tight text-zinc-950 leading-none">{displayGym.name}</h2>
                     {displayGym.tagline && <p className="text-xs text-zinc-500 italic mt-0.5">{displayGym.tagline}</p>}
                     <p className="text-xs text-zinc-600 mt-2">
                       {[displayGym.address?.street, displayGym.address?.city, displayGym.address?.state].filter(Boolean).join(', ')}

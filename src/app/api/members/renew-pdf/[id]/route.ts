@@ -77,7 +77,51 @@ export async function GET(
       total: Number(invoice.total) || 0,
     } : null;
 
-    // 3. Construct a beautiful unified HTML template for A4 download/print consolidation
+    // 3. Fetch gym and branch details using supabaseAdmin
+    const { data: gymProfile } = await supabaseAdmin
+      .from('gyms')
+      .select('*')
+      .eq('id', member.gym_id)
+      .single();
+
+    let branchData: any = null;
+    if (member.branch_id) {
+      const { data: branch } = await supabaseAdmin
+        .from('branches')
+        .select('*')
+        .eq('id', member.branch_id)
+        .maybeSingle();
+      branchData = branch;
+    }
+
+    const rawGymName = gymProfile?.name?.trim() || gymProfile?.business_name?.trim() || '';
+    const resolvedGymName = (rawGymName && rawGymName !== 'Gym Name' && rawGymName !== 'Gym Center')
+      ? rawGymName
+      : 'Fitness Club';
+
+    const activeAddress = branchData?.address && Object.keys(branchData.address).length > 0
+      ? branchData.address
+      : gymProfile?.address;
+
+    let addressStr = '';
+    if (typeof activeAddress === 'string') {
+      addressStr = activeAddress;
+    } else if (activeAddress && typeof activeAddress === 'object') {
+      addressStr = [activeAddress.street, activeAddress.city, activeAddress.state, activeAddress.pin || activeAddress.postal_code].filter(Boolean).join(', ');
+    }
+    if (!addressStr) addressStr = 'Facility Address Registered';
+
+    const safeGym = {
+      name: escapeHtml(resolvedGymName),
+      tagline: escapeHtml(gymProfile?.tagline || ''),
+      branchName: escapeHtml(branchData?.name || ''),
+      address: escapeHtml(addressStr),
+      phone: escapeHtml(branchData?.phone || gymProfile?.phone || 'N/A'),
+      email: escapeHtml(branchData?.email || gymProfile?.email || 'N/A'),
+      gstin: escapeHtml(gymProfile?.gstin || ''),
+    };
+
+    // 4. Construct unified HTML template for A4 download/print consolidation
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -86,25 +130,57 @@ export async function GET(
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
         <title>Renewal Pack - ${safeMemberName}</title>
         <style>
-          body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1c1917; line-height: 1.5; margin: 0; padding: 40px; background-color: #ffffff; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1c1917; line-height: 1.5; margin: 0; padding: 40px; background-color: #ffffff; }
           .page-break { page-break-after: always; }
-          h1, h2, h3 { color: #6b21a8; margin-top: 0; }
-          .header { border-bottom: 2px solid #e9d5ff; padding-bottom: 20px; margin-bottom: 20px; }
-          .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; }
+          h1, h2, h3 { color: #09090b; margin-top: 0; }
+          .print-toolbar { position: sticky; top: 12px; z-index: 1000; max-width: 820px; margin: 0 auto 20px; background: #09090b; color: #ffffff; padding: 12px 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
+          .btn-print { background: #18181b; color: #ffffff; border: 1px solid #3f3f46; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+          .btn-close { background: #27272a; color: #d4d4d8; border: none; padding: 7px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+          .header { border-bottom: 2.5px solid #000000; padding-bottom: 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+          .gym-name { font-size: 34px; font-weight: 900; color: #000000; text-transform: uppercase; line-height: 1.05; letter-spacing: -0.5px; margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+          .branch-pill { font-size: 11px; font-weight: 700; background: #f4f4f5; color: #18181b; border: 1.5px solid #a1a1aa; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+          .gym-details { font-size: 11.5px; color: #44403c; line-height: 1.4; margin-top: 4px; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
           .section { margin-bottom: 30px; }
           table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th { background-color: #f3e8ff; color: #581c87; font-weight: bold; text-align: left; padding: 10px; font-size: 12px; }
-          td { border-bottom: 1px solid #f3f4f6; padding: 10px; font-size: 12px; }
-          .bmi-badge { background-color: #faf5ff; border: 1px solid #e9d5ff; padding: 15px; border-radius: 8px; margin-top: 10px; }
+          th { background-color: #f4f4f5; color: #18181b; font-weight: 700; text-align: left; padding: 10px; font-size: 11.5px; border-top: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; }
+          td { border-bottom: 1px solid #f4f4f5; padding: 10px; font-size: 12px; }
+          .bmi-badge { background-color: #fafafa; border: 1px solid #e4e4e7; padding: 15px; border-radius: 8px; margin-top: 10px; }
           .item-list { margin: 5px 0 0 15px; padding: 0; font-size: 11px; color: #4b5563; }
+          @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; }
+          }
         </style>
       </head>
       <body>
+        <div class="print-toolbar no-print">
+          <div style="font-size: 13px; font-weight: 600;">Renewal Pack &bull; ${safeMemberName}</div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-print" onclick="window.print()">Print / Save PDF</button>
+            <button class="btn-close" onclick="window.history.back()">Back</button>
+          </div>
+        </div>
+
         <!-- Page 1: Plan Invoice & BMI Status -->
         <div class="page-break">
           <div class="header">
-            <h1 style="margin: 0; font-size: 24px;">GymERP Member Renewal Pack</h1>
-            <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Unified Invoice, Diet & Routine Document</p>
+            <div style="max-width: 65%;">
+              <h1 class="gym-name">
+                ${safeGym.name}
+                ${safeGym.branchName ? `<span class="branch-pill">${safeGym.branchName}</span>` : ''}
+              </h1>
+              ${safeGym.tagline ? `<div style="font-size: 11px; color: #78716c; font-style: italic; margin-top: 2px;">${safeGym.tagline}</div>` : ''}
+              <div class="gym-details">
+                <p style="margin: 3px 0;">${safeGym.address}</p>
+                <p style="margin: 3px 0;"><strong>Phone:</strong> ${safeGym.phone} &nbsp;|&nbsp; <strong>Email:</strong> ${safeGym.email}</p>
+                ${safeGym.gstin ? `<p style="margin: 3px 0;"><strong>GSTIN:</strong> ${safeGym.gstin}</p>` : ''}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 14px; font-weight: 800; color: #09090b; text-transform: uppercase; letter-spacing: 0.5px;">Member Renewal Pack</div>
+              <p style="margin: 4px 0 0 0; color: #78716c; font-size: 11px;">Unified Receipt, Health &amp; Routines</p>
+            </div>
           </div>
 
           <div class="section">
@@ -166,6 +242,15 @@ export async function GET(
 
         <!-- Page 2: Personalized Nutrition Diet Chart -->
         <div class="page-break">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #09090b; padding-bottom: 8px; margin-bottom: 20px;">
+            <div style="font-size: 20px; font-weight: 900; color: #000000; text-transform: uppercase;">
+              ${safeGym.name} ${safeGym.branchName ? `&bull; ${safeGym.branchName}` : ''}
+            </div>
+            <div style="font-size: 11px; color: #71717a; text-align: right;">
+              <div>Member: <strong>${safeMemberName}</strong> (${safeMemberCode})</div>
+              <div>${safeGym.phone}</div>
+            </div>
+          </div>
           <h2>3. Assigned Daily Nutrition Diet</h2>
           <p style="color: #6b7280; font-size: 12px; margin-top: -10px;">Plan: ${safeDietName}</p>
           ${member.diet_charts?.meals && member.diet_charts.meals.length > 0 ? `
@@ -198,6 +283,15 @@ export async function GET(
 
         <!-- Page 3: Personal Exercise Schedule -->
         <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #09090b; padding-bottom: 8px; margin-bottom: 20px;">
+            <div style="font-size: 20px; font-weight: 900; color: #000000; text-transform: uppercase;">
+              ${safeGym.name} ${safeGym.branchName ? `&bull; ${safeGym.branchName}` : ''}
+            </div>
+            <div style="font-size: 11px; color: #71717a; text-align: right;">
+              <div>Member: <strong>${safeMemberName}</strong> (${safeMemberCode})</div>
+              <div>${safeGym.phone}</div>
+            </div>
+          </div>
           <h2>4. Assigned Training Workouts</h2>
           <p style="color: #6b7280; font-size: 12px; margin-top: -10px;">Routine: ${safeExerciseRoutine}</p>
           ${member.exercise_charts?.days && member.exercise_charts.days.length > 0 ? `

@@ -162,11 +162,12 @@ export function generateExercisePlanHTML(data: ExercisePlanData): string {
     }
 
     .gym-name {
-      font-size: 26px;
-      font-weight: 800;
-      color: var(--primary);
+      font-size: 34px;
+      font-weight: 900;
+      color: #000000;
+      text-transform: uppercase;
       letter-spacing: -0.5px;
-      line-height: 1.1;
+      line-height: 1.05;
       display: flex;
       align-items: center;
       gap: 8px;

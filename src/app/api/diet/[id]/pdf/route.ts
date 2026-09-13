@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { generateDietChartHTML } from '@/lib/pdf/diet-template';
 import { DietChartData, DietFoodItem, Meal } from '@/lib/pdf/types';
 
@@ -9,11 +9,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
     const dietId = id;
 
-    // 1. Fetch diet chart by ID or check if ID belongs to a member
-    let { data: chart } = await supabase
+    // 1. Fetch diet chart by ID or check if ID belongs to a member (using admin client to bypass RLS for print)
+    let { data: chart } = await supabaseAdmin
       .from('diet_charts')
       .select('*, gyms(*)')
       .eq('id', dietId)
@@ -23,7 +22,7 @@ export async function GET(
     let gymRecord = chart?.gyms as any;
 
     if (!chart) {
-      const { data: member } = await supabase
+      const { data: member } = await supabaseAdmin
         .from('members')
         .select('*, diet_charts(*), gyms(*)')
         .eq('id', dietId)
@@ -40,7 +39,7 @@ export async function GET(
     // 2. Resolve Gym Profile
     let gymProfile = gymRecord;
     if (!gymProfile && gymId) {
-      const { data: g } = await supabase.from('gyms').select('*').eq('id', gymId).single();
+      const { data: g } = await supabaseAdmin.from('gyms').select('*').eq('id', gymId).single();
       gymProfile = g;
     }
 
@@ -48,16 +47,21 @@ export async function GET(
     let branchData: any = null;
     const branchId = memberData?.branch_id || chart?.branch_id;
     if (branchId) {
-      const { data: branch } = await supabase.from('branches').select('*').eq('id', branchId).maybeSingle();
+      const { data: branch } = await supabaseAdmin.from('branches').select('*').eq('id', branchId).maybeSingle();
       branchData = branch;
     }
 
-    const gymData = gymProfile || {
-      name: 'Fitness & Health Club',
-      tagline: 'Transforming Lives Through Fitness',
-      address: {},
-      phone: '',
-      email: '',
+    const rawGymName = gymProfile?.name?.trim() || gymProfile?.business_name?.trim() || '';
+    const resolvedGymName = (rawGymName && rawGymName !== 'Gym Center' && rawGymName !== 'Fitness & Health Club')
+      ? rawGymName
+      : 'Fitness Club';
+
+    const gymData = {
+      name: resolvedGymName,
+      tagline: gymProfile?.tagline || '',
+      address: gymProfile?.address || {},
+      phone: gymProfile?.phone || '',
+      email: gymProfile?.email || '',
     };
 
     // Format branch/gym address
@@ -112,12 +116,12 @@ export async function GET(
 
     const templateData: DietChartData = {
       gym: {
-        name: gymData.business_name || gymData.name || 'Fitness & Health Club',
-        tagline: gymData.tagline || 'Transforming Lives Through Fitness',
+        name: gymData.name,
+        tagline: gymData.tagline,
         branchName: branchData?.name,
         address: addressStr,
-        phone: branchData?.phone || gymData.phone || 'Front Desk',
-        email: branchData?.email || gymData.email || 'support@gym.com',
+        phone: branchData?.phone || gymData.phone || 'N/A',
+        email: branchData?.email || gymData.email || 'N/A',
       },
       planTitle,
       isTemplate,

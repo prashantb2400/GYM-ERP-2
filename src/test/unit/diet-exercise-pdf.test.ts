@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { generateDietChartHTML } from '@/lib/pdf/diet-template';
 import { generateExercisePlanHTML } from '@/lib/pdf/exercise-template';
+import { generateInvoiceHTML } from '@/lib/pdf/invoice-template';
+import { generateMemberReportHTML } from '@/lib/pdf/member-report-template';
 import { DietChartData, ExercisePlanData } from '@/lib/pdf/types';
 
 describe('Diet Chart PDF Printout Generation', () => {
@@ -164,5 +166,108 @@ describe('Exercise Plan PDF Printout Generation', () => {
     expect(html).toContain('Progressive Overload');
     expect(html).toContain('Print / Save PDF');
     expect(html).toContain('@media print');
+    expect(html).toContain('font-size: 34px');
+    expect(html).toContain('font-weight: 900');
   });
 });
+
+describe('Invoice PDF Generation & Gym Branding Priority', () => {
+  const mockInvoiceData = {
+    gym: {
+      name: 'Spartan Strength Arena',
+      branchName: 'Uptown Branch',
+      address: '77 Olympiad Road, South City, Pune - 411001',
+      phone: '+91 98220 11223',
+      email: 'billing@spartanarena.com',
+      gstin: '27AABCS1429B1Z8',
+      pan: 'AABCS1429B',
+      upiId: 'spartan@icici',
+    },
+    invoiceNo: 'INV-2026-0089',
+    date: '2026-09-13T10:00:00Z',
+    items: [
+      {
+        description: 'Annual Platinum Gym Membership',
+        hsnCode: '999723',
+        qty: 1,
+        rate: 18000,
+        amount: 18000,
+      },
+    ],
+    subtotal: 18000,
+    totalAmount: 21240,
+    amountPaid: 21240,
+    amountDue: 0,
+    status: 'PAID' as const,
+    member: {
+      id: 'mem-99',
+      memberCode: 'SP-0099',
+      name: 'Pooja Verma',
+      phone: '+91 91234 56789',
+    },
+  };
+
+  it('renders gym name at top priority with 34px font-weight 900 and branch badge', () => {
+    const html = generateInvoiceHTML(mockInvoiceData);
+    expect(html).toContain('Spartan Strength Arena');
+    expect(html).toContain('Uptown Branch');
+    expect(html).toContain('font-size: 34px');
+    expect(html).toContain('font-weight: 900');
+    expect(html).toContain('27AABCS1429B1Z8');
+    expect(html).not.toContain('Gym Center');
+  });
+
+  it('eradicates Gym Center even if empty gym name is passed', () => {
+    const html = generateInvoiceHTML({
+      ...mockInvoiceData,
+      gym: {
+        ...mockInvoiceData.gym,
+        name: 'Gym Center', // legacy bad fallback passed in
+      },
+    });
+    expect(html).not.toContain('<h1>Gym Center</h1>');
+  });
+});
+
+describe('Member Report PDF Generation & Gym Branding Priority', () => {
+  const mockReportData = {
+    gym: {
+      name: 'Apex Fitness Center',
+      branchName: 'Tech Park Branch',
+      address: 'Outer Ring Road, Bellandur, Bengaluru',
+      phone: '+91 99887 76655',
+      email: 'contact@apexfitness.in',
+      gstin: '29ABCDE1234F1Z5',
+    },
+    member: {
+      id: 'mem-apex-01',
+      name: 'Amit Patel',
+      phone: '+91 98765 11223',
+      joinDate: '2026-01-15T00:00:00Z',
+      status: 'ACTIVE' as const,
+    },
+    reportDate: '2026-09-13T00:00:00Z',
+    attendanceStats: {
+      totalDays: 85,
+      presentDaysThisMonth: 18,
+      currentStreak: 5,
+    },
+    planHistory: [],
+    paymentSummary: {
+      totalPaid: 25000,
+      totalPending: 0,
+    },
+  };
+
+  it('renders gym name at 34px font-weight 900 in top header with credentials', () => {
+    const html = generateMemberReportHTML(mockReportData);
+    expect(html).toContain('Apex Fitness Center');
+    expect(html).toContain('Tech Park Branch');
+    expect(html).toContain('Outer Ring Road');
+    expect(html).toContain('font-size: 34px');
+    expect(html).toContain('font-weight: 900');
+    expect(html).not.toContain('Gym Name');
+    expect(html).not.toContain('Gym Center');
+  });
+});
+
