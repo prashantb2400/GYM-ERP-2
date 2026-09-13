@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
 import { useBranch } from '@/hooks/useBranch';
+import { RequirePermission } from '@/components/auth/RequirePermission';
 import {
   UserCog,
   Plus,
@@ -110,36 +111,33 @@ export default function StaffCRUDPage() {
       setLoading(true);
       setError(null);
 
-      // 1. Primary: Server-side API route (immune to client-side RLS recursion)
-      const res = await fetchWithAuth('/api/staff');
-      if (res.ok) {
-        const result = await res.json();
-        if (result.staff) {
-          setStaffList(result.staff);
-          setLoading(false);
-          return;
-        }
+      // Server-side API route (immune to client-side RLS recursion)
+      const res = await fetchWithAuth(`/api/staff?gym_id=${encodeURIComponent(user.gymId)}`, {
+        headers: {
+          'x-gym-id': user.gymId,
+        },
+      });
+
+      const result = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(result?.error || `Error ${res.status}: Failed to load staff list`);
       }
 
-      // 2. Fallback: Direct Supabase client query
-      const { data, error: clientErr } = await supabase
-        .from('users')
-        .select('*')
-        .eq('gym_id', user.gymId)
-        .order('role', { ascending: true });
-
-      if (clientErr) {
-        const errorMsg = (clientErr as any)?.message || 'Failed to load staff list';
-        console.warn('Direct Supabase staff query warning:', clientErr);
-        setError(errorMsg);
-        toast.error(errorMsg);
+      if (result?.staff) {
+        const sanitized = result.staff.map((member: any) => ({
+          ...member,
+          permissions: Array.isArray(member.permissions) ? member.permissions : [],
+        }));
+        setStaffList(sanitized);
         return;
       }
 
-      setStaffList(data || []);
+      setStaffList([]);
     } catch (err: unknown) {
       const msg =
         (err as any)?.message || (err instanceof Error ? err.message : 'Failed to load staff list');
+      console.error('Staff loading failure:', err);
       setError(msg);
       toast.error(msg);
     } finally {
@@ -174,8 +172,8 @@ export default function StaffCRUDPage() {
     setSelectedStaffId(staff.id);
     setSelectedStaffName(staff.name);
     
-    // Set initially selected permissions
-    setSelectedPermissions(staff.permissions || []);
+    // Set initially selected permissions (defensively as Array)
+    setSelectedPermissions(Array.isArray(staff.permissions) ? staff.permissions : []);
     setOpenPermsModal(true);
   };
 
@@ -311,19 +309,38 @@ export default function StaffCRUDPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Staff Accounts</h2>
-          <p className="text-zinc-500 text-xs mt-1">Manage team profiles (receptionists & trainers) and assign granular page access checks.</p>
+    <RequirePermission permission="staff.view">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Staff Accounts</h2>
+            <p className="text-zinc-500 text-xs mt-1">Manage team profiles (receptionists & trainers) and assign granular page access checks.</p>
+          </div>
+          {can('staff.manage') && (
+            <Button onClick={handleOpenAddModal} className="bg-purple-600 hover:bg-purple-700 text-white gap-2 font-medium">
+              <Plus className="h-4 w-4" /> Add Team Member
+            </Button>
+          )}
         </div>
-        {can('staff.manage') && (
-          <Button onClick={handleOpenAddModal} className="bg-purple-600 hover:bg-purple-700 text-white gap-2 font-medium">
-            <Plus className="h-4 w-4" /> Add Team Member
-          </Button>
+
+        {/* Error Alert Banner with Retry */}
+        {error && (
+          <div className="rounded-xl border border-red-800/40 bg-red-950/20 p-4 text-red-400 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+              <p className="text-sm font-medium">{error}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchStaff}
+              className="border-red-800/50 hover:bg-red-950/40 text-red-300 text-xs"
+            >
+              Retry
+            </Button>
+          </div>
         )}
-      </div>
 
       {/* Grid: Staff Cards */}
       {loading ? (
@@ -378,19 +395,21 @@ export default function StaffCRUDPage() {
 
                 {staff.role !== 'owner' && (
                   <div className="space-y-1.5">
-                    <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Access Permissions ({staff.permissions?.length || 0})</span>
+                    <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+                      Access Permissions ({(Array.isArray(staff.permissions) ? staff.permissions : []).length})
+                    </span>
                     <div className="flex flex-wrap gap-1">
-                      {staff.permissions?.slice(0, 4).map((p: string) => (
+                      {(Array.isArray(staff.permissions) ? staff.permissions : []).slice(0, 4).map((p: string) => (
                         <Badge key={p} className="bg-zinc-800 text-zinc-400 text-[9px] border-zinc-700 capitalize">
                           {p.replace('.', ' ')}
                         </Badge>
                       ))}
-                      {staff.permissions?.length > 4 && (
+                      {(Array.isArray(staff.permissions) ? staff.permissions : []).length > 4 && (
                         <Badge className="bg-purple-950/40 text-purple-400 text-[9px] border-purple-800/20 font-bold">
-                          +{staff.permissions.length - 4} more
+                          +{(staff.permissions.length - 4)} more
                         </Badge>
                       )}
-                      {(!staff.permissions || staff.permissions.length === 0) && (
+                      {(!Array.isArray(staff.permissions) || staff.permissions.length === 0) && (
                         <span className="text-xs text-zinc-600">No permissions assigned.</span>
                       )}
                     </div>
@@ -620,5 +639,6 @@ export default function StaffCRUDPage() {
         onConfirm={confirmToggleStaffStatus}
       />
     </div>
+  </RequirePermission>
   );
 }

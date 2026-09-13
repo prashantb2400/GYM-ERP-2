@@ -3,18 +3,69 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAuthUser } from '@/lib/server/auth-helper';
 
 /**
- * Helper to safely resolve the caller's gym_id and user record.
- * Uses order('created_at', { ascending: false }).limit(1) to avoid PGRST116 multi-row errors.
+ * Safely parses permissions from various storage formats (JSON array, Postgres array string, or array)
+ * into a guaranteed JavaScript Array of strings.
  */
-async function resolveCallerGym(authUserId: string) {
-  const { data: callerUser } = await supabaseAdmin
+function parsePermissions(rawPermissions: any): string[] {
+  if (Array.isArray(rawPermissions)) {
+    return rawPermissions.filter(p => typeof p === 'string');
+  }
+  if (typeof rawPermissions === 'string') {
+    try {
+      const parsed = JSON.parse(rawPermissions);
+      if (Array.isArray(parsed)) return parsed.filter(p => typeof p === 'string');
+    } catch {
+      // Postgres array format e.g. "{staff.view,members.view}"
+      return rawPermissions
+        .replace(/^\{|\}$/g, '')
+        .split(',')
+        .map((s: string) => s.trim().replace(/^"|"$/g, ''))
+        .filter(Boolean);
+    }
+  }
+  return [];
+}
+
+/**
+ * Helper to safely resolve the caller's gym_id and user record.
+ * Supports auth_id matching, email matching fallback, query param / header hints,
+ * and handles owners claiming or managing gyms cleanly.
+ */
+async function resolveCallerGym(
+  authUserId: string,
+  authEmail?: string | null,
+  requestedGymId?: string | null
+) {
+  // 1. Try resolving callerUser by auth_id
+  const { data: callerUserByAuth } = await supabaseAdmin
     .from('users')
     .select('id, gym_id, role, permissions')
     .eq('auth_id', authUserId)
     .maybeSingle();
 
+  let callerUser = callerUserByAuth || null;
+
+  // 2. If not found by auth_id, fallback to matching by email
+  if (!callerUser && authEmail) {
+    const { data: userByEmail } = await supabaseAdmin
+      .from('users')
+      .select('id, gym_id, role, permissions')
+      .ilike('email', authEmail.trim())
+      .maybeSingle();
+
+    if (userByEmail) {
+      callerUser = userByEmail;
+      // Auto-link auth_id for future requests
+      await supabaseAdmin
+        .from('users')
+        .update({ auth_id: authUserId })
+        .eq('id', callerUser.id);
+    }
+  }
+
   let resolvedGymId = callerUser?.gym_id;
 
+  // 3. If gym_id not found on user record, check if caller is a gym owner
   if (!resolvedGymId) {
     const { data: ownedGym } = await supabaseAdmin
       .from('gyms')
@@ -27,6 +78,48 @@ async function resolveCallerGym(authUserId: string) {
     if (ownedGym) {
       resolvedGymId = ownedGym.id;
     }
+  }
+
+  // 4. Fallback search by gym email if still unlinked
+  if (!resolvedGymId && authEmail) {
+    const { data: gymByEmail } = await supabaseAdmin
+      .from('gyms')
+      .select('id')
+      .ilike('email', authEmail.trim())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (gymByEmail) {
+      resolvedGymId = gymByEmail.id;
+    }
+  }
+
+  // 5. If requestedGymId is passed (via header or query parameter), verify caller's access to it
+  if (requestedGymId && (!resolvedGymId || resolvedGymId !== requestedGymId)) {
+    const { data: targetGym } = await supabaseAdmin
+      .from('gyms')
+      .select('id, owner_id')
+      .eq('id', requestedGymId)
+      .maybeSingle();
+
+    if (targetGym) {
+      if (targetGym.owner_id === authUserId) {
+        resolvedGymId = targetGym.id;
+      } else if (callerUser && callerUser.gym_id === targetGym.id) {
+        resolvedGymId = targetGym.id;
+      }
+    }
+  }
+
+  // 6. If caller owns gym but has no callerUser record, synthesize an owner user profile
+  if (!callerUser && resolvedGymId) {
+    callerUser = {
+      id: authUserId,
+      gym_id: resolvedGymId,
+      role: 'owner',
+      permissions: ['*'],
+    };
   }
 
   return { callerUser, resolvedGymId };
@@ -44,18 +137,21 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
     }
 
-    const { callerUser, resolvedGymId } = await resolveCallerGym(user.id);
+    const { searchParams } = new URL(request.url);
+    const requestedGymId = searchParams.get('gym_id') || request.headers.get('x-gym-id');
+
+    const { callerUser, resolvedGymId } = await resolveCallerGym(user.id, user.email, requestedGymId);
 
     if (!resolvedGymId) {
       return NextResponse.json({ error: 'No gym workspace associated with this user' }, { status: 403 });
     }
 
-    // Verify permission: owner or staff.view or staff.manage or wildcard
+    const userPerms = parsePermissions(callerUser?.permissions);
     const isOwner = callerUser?.role === 'owner' || (!callerUser && Boolean(resolvedGymId));
     const hasViewPerm =
-      callerUser?.permissions?.includes('staff.view') ||
-      callerUser?.permissions?.includes('staff.manage') ||
-      callerUser?.permissions?.includes('*');
+      userPerms.includes('staff.view') ||
+      userPerms.includes('staff.manage') ||
+      userPerms.includes('*');
 
     if (!isOwner && !hasViewPerm) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions to view staff' }, { status: 403 });
@@ -87,6 +183,7 @@ export async function GET(request: Request) {
 
     const enrichedStaff = (staffList || []).map(member => ({
       ...member,
+      permissions: parsePermissions(member.permissions),
       branch_name: member.branch_id ? (branchMap.get(member.branch_id) || null) : null,
       branches: member.branch_id && branchMap.has(member.branch_id)
         ? { name: branchMap.get(member.branch_id) }
@@ -113,17 +210,18 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
     }
 
-    const { callerUser, resolvedGymId } = await resolveCallerGym(user.id);
+    const requestedGymId = request.headers.get('x-gym-id');
+    const { callerUser, resolvedGymId } = await resolveCallerGym(user.id, user.email, requestedGymId);
 
     if (!resolvedGymId) {
       return NextResponse.json({ error: 'No gym workspace associated with this user' }, { status: 403 });
     }
 
-    // Verify permission: owner or staff.manage or wildcard
+    const userPerms = parsePermissions(callerUser?.permissions);
     const isOwner = callerUser?.role === 'owner' || (!callerUser && Boolean(resolvedGymId));
     const hasManagePerm =
-      callerUser?.permissions?.includes('staff.manage') ||
-      callerUser?.permissions?.includes('*');
+      userPerms.includes('staff.manage') ||
+      userPerms.includes('*');
 
     if (!isOwner && !hasManagePerm) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions to manage staff' }, { status: 403 });
@@ -217,10 +315,12 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
     }
 
-    const { callerUser, resolvedGymId } = await resolveCallerGym(user.id);
+    const { searchParams } = new URL(request.url);
+    const requestedGymId = searchParams.get('gym_id') || request.headers.get('x-gym-id');
+    const { callerUser, resolvedGymId } = await resolveCallerGym(user.id, user.email, requestedGymId);
 
     if (!resolvedGymId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'No gym workspace associated with this user' }, { status: 403 });
     }
 
     const isOwner = callerUser?.role === 'owner' || (!callerUser && Boolean(resolvedGymId));
@@ -228,7 +328,6 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Only gym owners can delete staff accounts' }, { status: 403 });
     }
 
-    const { searchParams } = new URL(request.url);
     const staffId = searchParams.get('id');
 
     if (!staffId) {

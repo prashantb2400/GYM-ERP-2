@@ -115,6 +115,67 @@ describe('/api/staff Endpoint', () => {
       const json = await res.json();
       expect(json.error).toBe('Database connection timeout');
     });
+
+    it('safely parses Postgres array strings into JavaScript arrays for permissions', async () => {
+      (getAuthUser as any).mockResolvedValue({ user: { id: 'auth-user-1', email: 'owner@gym.com' }, error: null });
+
+      const mockStaff = [
+        { id: 'u1', name: 'Receptionist Sarah', role: 'receptionist', permissions: '{members.view,invoices.view}' },
+        { id: 'u2', name: 'Trainer Mike', role: 'trainer', permissions: JSON.stringify(['diet.view']) },
+        { id: 'u3', name: 'Raw Owner', role: 'owner', permissions: null },
+      ];
+
+      (supabaseAdmin.from as any).mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({ data: mockStaff, error: null }),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { id: 'u1', gym_id: 'gym-123', role: 'owner', permissions: ['*'] },
+            }),
+          };
+        }
+        if (table === 'branches') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        return {};
+      });
+
+      const req = new Request('http://localhost:3000/api/staff');
+      const res = await GET(req);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.staff[0].permissions).toEqual(['members.view', 'invoices.view']);
+      expect(json.staff[1].permissions).toEqual(['diet.view']);
+      expect(json.staff[2].permissions).toEqual([]);
+    });
+
+    it('denies access with 403 when staff user lacks staff.view permission', async () => {
+      (getAuthUser as any).mockResolvedValue({ user: { id: 'staff-auth-99' }, error: null });
+
+      (supabaseAdmin.from as any).mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { id: 'u99', gym_id: 'gym-123', role: 'trainer', permissions: ['diet.view', 'exercise.view'] },
+            }),
+          };
+        }
+        return {};
+      });
+
+      const req = new Request('http://localhost:3000/api/staff');
+      const res = await GET(req);
+      expect(res.status).toBe(403);
+      const json = await res.json();
+      expect(json.error).toContain('Forbidden: Insufficient permissions to view staff');
+    });
   });
 
   describe('PATCH /api/staff', () => {
