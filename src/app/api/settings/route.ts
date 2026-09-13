@@ -65,9 +65,34 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Gym workspace record not found' }, { status: 404 });
     }
 
+    const isOwner = callerUser?.role === 'owner' || (!callerUser && Boolean(resolvedGymId));
+    const hasManagePerm = isOwner || callerUser?.permissions?.includes('settings.manage');
+
+    // Redact sensitive secrets and credentials for non-owners
+    const sanitizedGym = { ...gym };
+    if (!isOwner && !hasManagePerm) {
+      delete sanitizedGym.whatsapp_access_token;
+      delete sanitizedGym.whatsapp_phone_number_id;
+      delete sanitizedGym.razorpay_key_secret;
+      delete sanitizedGym.cctv_ip;
+      delete sanitizedGym.cctv_username;
+      delete sanitizedGym.cctv_password;
+      delete sanitizedGym.cctv_stream_url;
+      delete sanitizedGym.pan;
+      delete sanitizedGym.bank_details;
+
+      if (sanitizedGym.settings && typeof sanitizedGym.settings === 'object') {
+        const safeSettings = { ...sanitizedGym.settings };
+        delete safeSettings.razorpay_secret;
+        delete safeSettings.whatsapp_token;
+        delete safeSettings.api_keys;
+        sanitizedGym.settings = safeSettings;
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      gym,
+      gym: sanitizedGym,
       plans: plans || [],
     });
   } catch (err: unknown) {
@@ -116,7 +141,7 @@ export async function PATCH(request: Request) {
     }
 
     const isOwner = callerUser?.role === 'owner' || (!callerUser && Boolean(resolvedGymId));
-    const hasManagePerm = isOwner || callerUser?.permissions?.includes('settings.manage') || callerUser?.permissions?.includes('*');
+    const hasManagePerm = isOwner || callerUser?.permissions?.includes('settings.manage');
 
     if (!hasManagePerm) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions to manage settings' }, { status: 403 });

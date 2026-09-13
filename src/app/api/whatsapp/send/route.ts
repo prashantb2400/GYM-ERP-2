@@ -12,15 +12,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Resolve gym from authenticated user
+    // Resolve gym and verify permissions from authenticated user
     const { data: userData } = await supabase
       .from('users')
-      .select('gym_id')
+      .select('gym_id, role, permissions')
       .eq('auth_id', user.id)
       .single();
     
     if (!userData?.gym_id) {
       return NextResponse.json({ error: 'No gym associated' }, { status: 403 });
+    }
+
+    const canSend = userData.role === 'owner' ||
+      userData.role === 'receptionist' ||
+      userData.permissions?.includes('whatsapp.send');
+
+    if (!canSend) {
+      return NextResponse.json({ error: 'Forbidden: Insufficient permissions to send WhatsApp messages' }, { status: 403 });
     }
     
     const body = await request.json();

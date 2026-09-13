@@ -50,6 +50,16 @@ export function formatPhone(phone: string): string {
   return phone;
 }
 
+export function maskPhone(phone?: string | null): string {
+  if (!phone) return '';
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length >= 10) {
+    const last10 = cleaned.slice(-10);
+    return `+91 ${last10.slice(0, 2)}******${last10.slice(8)}`;
+  }
+  return '******';
+}
+
 export function formatMemberCode(count: number): string {
   return 'GYM' + String(count).padStart(4, '0');
 }

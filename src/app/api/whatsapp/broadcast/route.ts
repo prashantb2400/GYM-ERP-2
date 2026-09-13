@@ -25,24 +25,29 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { phones, templateName, paramsPerPhone, gymId: requestedGymId } = body;
 
-    // Resolve gym from authenticated user
+    // Resolve gym and permissions from authenticated user
     const { data: userData } = await supabase
       .from('users')
-      .select('gym_id, role')
+      .select('gym_id, role, permissions')
       .eq('auth_id', user.id)
       .single();
+
+    const superAdmin = await isSuperAdmin(user.id);
+    const canBroadcast = userData?.role === 'owner' || userData?.permissions?.includes('whatsapp.broadcast') || superAdmin;
+
+    if (!canBroadcast) {
+      return NextResponse.json({ error: 'Forbidden: Only gym owners can trigger mass WhatsApp broadcasts' }, { status: 403 });
+    }
 
     let targetGymId = userData?.gym_id;
 
     if (!targetGymId) {
-      const superAdmin = await isSuperAdmin(user.id);
       if (superAdmin && requestedGymId) {
         targetGymId = requestedGymId;
       } else {
         return NextResponse.json({ error: 'No gym associated with user' }, { status: 403 });
       }
     } else if (requestedGymId && requestedGymId !== targetGymId) {
-      const superAdmin = await isSuperAdmin(user.id);
       if (!superAdmin) {
         return NextResponse.json({ error: 'Forbidden: Cross-tenant broadcast prohibited' }, { status: 403 });
       }

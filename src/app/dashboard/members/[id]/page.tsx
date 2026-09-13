@@ -49,7 +49,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getInitials, formatDate, formatDateTime, formatPhone, formatCurrency, getDaysRemaining } from '@/lib/utils/format';
+import { getInitials, formatDate, formatDateTime, formatPhone, maskPhone, formatCurrency, getDaysRemaining } from '@/lib/utils/format';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -703,27 +703,31 @@ export default function MemberDetailPage() {
               <div className="flex items-center justify-between text-zinc-300 py-1">
                 <div className="flex items-center gap-2.5">
                   <Phone className="h-4 w-4 text-purple-400 shrink-0" />
-                  <span>{formatPhone(member.phone)}</span>
+                  <span>{user?.role === 'trainer' ? maskPhone(member.phone) : formatPhone(member.phone)}</span>
                 </div>
-                <a href={`tel:${member.phone}`} className="text-purple-400 hover:text-purple-300 text-[11px] font-medium">
-                  Call
-                </a>
+                {user?.role !== 'trainer' && (
+                  <a href={`tel:${member.phone}`} className="text-purple-400 hover:text-purple-300 text-[11px] font-medium">
+                    Call
+                  </a>
+                )}
               </div>
 
               {/* WhatsApp */}
               <div className="flex items-center justify-between text-zinc-300 py-1 border-t border-zinc-800/60 pt-2">
                 <div className="flex items-center gap-2.5">
                   <MessageCircle className="h-4 w-4 text-green-400 shrink-0" />
-                  <span>{formatPhone(member.whatsapp_phone || member.phone)}</span>
+                  <span>{user?.role === 'trainer' ? maskPhone(member.whatsapp_phone || member.phone) : formatPhone(member.whatsapp_phone || member.phone)}</span>
                 </div>
-                <a
-                  href={`https://wa.me/91${(member.whatsapp_phone || member.phone).replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-green-400 hover:text-green-300 text-[11px] font-medium flex items-center gap-1"
-                >
-                  Chat <ExternalLink className="h-3 w-3" />
-                </a>
+                {user?.role !== 'trainer' && (
+                  <a
+                    href={`https://wa.me/91${(member.whatsapp_phone || member.phone).replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-400 hover:text-green-300 text-[11px] font-medium flex items-center gap-1"
+                  >
+                    Chat <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </div>
 
               {/* Email */}

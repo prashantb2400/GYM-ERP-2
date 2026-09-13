@@ -5,7 +5,7 @@ export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000
 export const SIDEBAR_ITEMS = [
   { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard', permission: null },
   { label: 'Members', href: '/dashboard/members', icon: 'Users', permission: 'members.view' as const },
-  { label: 'Leads', href: '/dashboard/leads', icon: 'Target', permission: 'members.view' as const },
+  { label: 'Leads', href: '/dashboard/leads', icon: 'Target', permission: 'leads.view' as const },
   { label: 'Plans', href: '/dashboard/plans', icon: 'CreditCard', permission: 'plans.view' as const },
   { label: 'Staff', href: '/dashboard/staff', icon: 'UserCog', permission: 'staff.view' as const },
   { label: 'Branches', href: '/dashboard/branches', icon: 'Building2', permission: 'branches.view' as const },
@@ -20,7 +20,7 @@ export const SIDEBAR_ITEMS = [
   { label: 'Diet Charts', href: '/dashboard/diet', icon: 'Apple', permission: 'diet.view' as const },
   { label: 'Exercise Plans', href: '/dashboard/exercise', icon: 'Dumbbell', permission: 'exercise.view' as const },
   { label: 'KYC', href: '/dashboard/kyc', icon: 'FileCheck', permission: 'kyc.view' as const },
-  { label: 'Cron Jobs', href: '/dashboard/cron', icon: 'Clock', permission: null },
+  { label: 'Cron Jobs', href: '/dashboard/cron', icon: 'Clock', permission: 'settings.manage' as const },
   { label: 'Settings', href: '/dashboard/settings', icon: 'Settings', permission: 'settings.view' as const },
 ] as const;
 

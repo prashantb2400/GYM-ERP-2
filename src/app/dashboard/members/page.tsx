@@ -36,7 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getInitials, formatDate, formatPhone } from '@/lib/utils/format';
+import { formatPhone, maskPhone, formatDate, formatCurrency, getInitials } from '@/lib/utils/format';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -182,6 +182,11 @@ export default function MembersListPage() {
 
   const confirmDeleteMember = async () => {
     if (!deleteTarget) return;
+
+    if (user?.role !== 'owner') {
+      toast.error('Only the gym owner can permanently delete member profiles');
+      return;
+    }
 
     try {
       setDeleteLoading(true);
@@ -558,7 +563,9 @@ export default function MembersListPage() {
                       <span className="font-medium text-zinc-200 text-xs">{member.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-zinc-400 text-xs">{formatPhone(member.phone)}</TableCell>
+                  <TableCell className="text-zinc-400 text-xs">
+                    {user?.role === 'trainer' ? maskPhone(member.phone) : formatPhone(member.phone)}
+                  </TableCell>
                   <TableCell>
                     <GlowingBadge variant={member.status as any} pulse={member.status === 'active'}>
                       {member.status}

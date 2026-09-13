@@ -213,6 +213,21 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'No gym workspace associated with this user' }, { status: 403 });
     }
 
+    // Verify caller has permission to delete leads
+    const { data: callerUser } = await supabaseAdmin
+      .from('users')
+      .select('role, permissions')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    const canDelete = callerUser?.role === 'owner' ||
+      callerUser?.permissions?.includes('leads.manage') ||
+      callerUser?.permissions?.includes('followups.manage');
+
+    if (!canDelete) {
+      return NextResponse.json({ error: 'Forbidden: Insufficient permissions to delete leads' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

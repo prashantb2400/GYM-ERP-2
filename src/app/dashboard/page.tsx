@@ -18,6 +18,9 @@ import {
   TrendingUp,
   Activity,
   Sparkles,
+  Dumbbell,
+  Apple,
+  Receipt,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,12 +56,18 @@ export default function DashboardHome() {
   const { user } = useAuth();
   const { gym } = useGym();
 
+  const isOwner = user?.role === 'owner';
+  const isReceptionist = user?.role === 'receptionist';
+  const isTrainer = user?.role === 'trainer';
+
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     activeMembers: 0,
     monthlyRevenue: 0,
     duesOutstanding: 0,
     expiringSoon: 0,
+    exercisePlans: 0,
+    dietPlans: 0,
   });
   const [todayStats, setTodayStats] = useState({ revenue: 0, checkins: 0, newMembers: 0 });
 
@@ -117,50 +126,75 @@ export default function DashboardHome() {
           setLoading(true);
         }
 
-        // 1. Fetch counts
+        // 1. Fetch active member count
         const { count: activeCount } = await supabase
           .from('members')
           .select('*', { count: 'exact', head: true })
           .eq('gym_id', user.gymId)
           .eq('status', 'active');
 
-        // 2. Fetch monthly revenue (sum of invoices issued this month)
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
+        let revenueSum = 0;
+        let duesSum = 0;
+        let expiringCount = 0;
+        let exerciseCount = 0;
+        let dietCount = 0;
 
-        const { data: invoicesData } = await supabase
-          .from('invoices')
-          .select('total')
-          .eq('gym_id', user.gymId)
-          .gte('issued_at', startOfMonth.toISOString());
+        if (isTrainer) {
+          // Floor Trainers: Fetch workouts and nutrition plans (NEVER query invoices or financial dues)
+          const [{ count: exCount }, { count: dtCount }] = await Promise.all([
+            supabase
+              .from('exercise_plans')
+              .select('*', { count: 'exact', head: true })
+              .eq('gym_id', user.gymId),
+            supabase
+              .from('diet_plans')
+              .select('*', { count: 'exact', head: true })
+              .eq('gym_id', user.gymId),
+          ]);
+          exerciseCount = exCount || 0;
+          dietCount = dtCount || 0;
+        } else {
+          // Owner & Receptionist: dues and expiring counts
+          const endOfWeek = new Date();
+          endOfWeek.setDate(endOfWeek.getDate() + 7);
 
-        const revenueSum = invoicesData?.reduce((acc, curr) => acc + Number(curr.total), 0) || 0;
+          const [{ data: memberDues }, { count: expCount }] = await Promise.all([
+            supabase.from('members').select('total_due').eq('gym_id', user.gymId),
+            supabase
+              .from('members')
+              .select('*', { count: 'exact', head: true })
+              .eq('gym_id', user.gymId)
+              .eq('status', 'active')
+              .lte('plan_end_date', endOfWeek.toISOString().split('T')[0])
+              .gte('plan_end_date', new Date().toISOString().split('T')[0]),
+          ]);
 
-        // 3. Fetch outstanding dues
-        const { data: memberDues } = await supabase
-          .from('members')
-          .select('total_due')
-          .eq('gym_id', user.gymId);
-          
-        const duesSum = memberDues?.reduce((acc, curr) => acc + Number(curr.total_due), 0) || 0;
+          duesSum = memberDues?.reduce((acc, curr) => acc + Number(curr.total_due || 0), 0) || 0;
+          expiringCount = expCount || 0;
 
-        // 4. Fetch expiring soon (next 7 days)
-        const endOfWeek = new Date();
-        endOfWeek.setDate(endOfWeek.getDate() + 7);
-        const { count: expiringCount } = await supabase
-          .from('members')
-          .select('*', { count: 'exact', head: true })
-          .eq('gym_id', user.gymId)
-          .eq('status', 'active')
-          .lte('plan_end_date', endOfWeek.toISOString().split('T')[0])
-          .gte('plan_end_date', new Date().toISOString().split('T')[0]);
+          if (isOwner) {
+            // Only gym owners fetch gross monthly revenue across invoices
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            const { data: invoicesData } = await supabase
+              .from('invoices')
+              .select('total')
+              .eq('gym_id', user.gymId)
+              .gte('issued_at', startOfMonth.toISOString());
+
+            revenueSum = invoicesData?.reduce((acc, curr) => acc + Number(curr.total || 0), 0) || 0;
+          }
+        }
 
         setStats({
           activeMembers: activeCount || 0,
           monthlyRevenue: revenueSum,
           duesOutstanding: duesSum,
           expiringSoon: expiringCount || 0,
+          exercisePlans: exerciseCount,
+          dietPlans: dietCount,
         });
 
         // Today's snapshot
@@ -168,13 +202,16 @@ export default function DashboardHome() {
         todayStart.setHours(0, 0, 0, 0);
         const todayISO = todayStart.toISOString();
 
-        // Revenue today
-        const { data: todayInvoices } = await supabase
-          .from('invoices')
-          .select('amount_paid')
-          .eq('gym_id', user.gymId)
-          .gte('issued_at', todayISO);
-        const todayRevenue = todayInvoices?.reduce((a, c) => a + Number(c.amount_paid || 0), 0) || 0;
+        let todayRevenue = 0;
+        if (!isTrainer) {
+          // Revenue today (for front desk reconciliation / owner)
+          const { data: todayInvoices } = await supabase
+            .from('invoices')
+            .select('amount_paid')
+            .eq('gym_id', user.gymId)
+            .gte('issued_at', todayISO);
+          todayRevenue = todayInvoices?.reduce((a, c) => a + Number(c.amount_paid || 0), 0) || 0;
+        }
 
         // Check-ins today
         const today = new Date().toISOString().split('T')[0];
@@ -272,7 +309,7 @@ export default function DashboardHome() {
     <div className="space-y-8 animate-fade-in relative min-h-screen">
       <GridPattern className="absolute inset-0 opacity-20 -z-10" />
 
-      {stats.activeMembers === 0 && !demoSeeded && (
+      {stats.activeMembers === 0 && !demoSeeded && isOwner && (
         <div className="mb-6 rounded-xl border border-purple-500/30 bg-purple-950/20 p-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="text-2xl">🎯</div>
@@ -310,30 +347,62 @@ export default function DashboardHome() {
           <p className="text-zinc-500 text-sm mt-1">Here is a quick summary of what is happening at {gym?.name} today.</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm gap-2"
-            onClick={() => setQuickAddOpen(true)}
-          >
-            ⚡ Quick Add
-          </Button>
-          <Link href="/dashboard/invoices">
-            <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 gap-2">
-              <PlusCircle className="h-4 w-4" /> New Invoice
+          {!isTrainer && (
+            <Button 
+              className="bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm gap-2"
+              onClick={() => setQuickAddOpen(true)}
+            >
+              ⚡ Quick Add
             </Button>
-          </Link>
+          )}
+          {!isTrainer && (
+            <Link href="/dashboard/invoices">
+              <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 gap-2">
+                <PlusCircle className="h-4 w-4" /> New Invoice
+              </Button>
+            </Link>
+          )}
+          {isTrainer && (
+            <Link href="/dashboard/exercise">
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm gap-2">
+                <Dumbbell className="h-4 w-4" /> Workout Plans
+              </Button>
+            </Link>
+          )}
+          {isTrainer && (
+            <Link href="/dashboard/diet">
+              <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 gap-2">
+                <Apple className="h-4 w-4" /> Diet Charts
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
       {/* Today's Snapshot */}
       <div className="grid grid-cols-3 gap-3 mb-2">
         <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-            <IndianRupee className="h-4 w-4 text-green-400" />
-          </div>
-          <div>
-            <p className="text-xs text-zinc-500">Today's Revenue</p>
-            <p className="text-sm font-bold text-zinc-100">₹<NumberTicker value={todayStats.revenue} /></p>
-          </div>
+          {isTrainer ? (
+            <>
+              <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                <Dumbbell className="h-4 w-4 text-orange-400" />
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500">Active Routines</p>
+                <p className="text-sm font-bold text-zinc-100"><NumberTicker value={stats.exercisePlans} /></p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <IndianRupee className="h-4 w-4 text-green-400" />
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500">Today's Collections</p>
+                <p className="text-sm font-bold text-zinc-100">₹<NumberTicker value={todayStats.revenue} /></p>
+              </div>
+            </>
+          )}
         </div>
         <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -359,7 +428,9 @@ export default function DashboardHome() {
         <SpotlightCard>
           <Card className="border-zinc-800 bg-zinc-900/40">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Active Members</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                {isTrainer ? 'Active Trainees' : 'Active Members'}
+              </CardTitle>
               <Users className="h-4 w-4 text-purple-400" />
             </CardHeader>
             <CardContent>
@@ -371,48 +442,107 @@ export default function DashboardHome() {
           </Card>
         </SpotlightCard>
 
-        <SpotlightCard>
-          <Card className="border-zinc-800 bg-zinc-900/40">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Monthly Revenue</CardTitle>
-              <IndianRupee className="h-4 w-4 text-purple-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                <NumberTicker value={stats.monthlyRevenue} prefix="₹" />
-              </div>
-              <p className="text-xs text-zinc-500 mt-1">Invoices issued this month</p>
-            </CardContent>
-          </Card>
-        </SpotlightCard>
-
-        <SpotlightCard>
-          <Card className="border-zinc-800 bg-zinc-900/40">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Dues Outstanding</CardTitle>
-              <CalendarDays className="h-4 w-4 text-purple-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                <NumberTicker value={stats.duesOutstanding} prefix="₹" />
-              </div>
-              <p className="text-xs text-zinc-500 mt-1">Pending payments to collect</p>
-            </CardContent>
-          </Card>
-        </SpotlightCard>
-
-        <SpotlightCard>
-          <Link href="/dashboard/members?filter=expiring" className="block">
+        {isTrainer ? (
+          <SpotlightCard>
+            <Link href="/dashboard/exercise" className="block">
+              <Card className="border-zinc-800 bg-zinc-900/40">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Workout Routines</CardTitle>
+                  <Dumbbell className="h-4 w-4 text-purple-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    <NumberTicker value={stats.exercisePlans} />
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-1">Active exercise routines</p>
+                </CardContent>
+              </Card>
+            </Link>
+          </SpotlightCard>
+        ) : isOwner ? (
+          <SpotlightCard>
             <Card className="border-zinc-800 bg-zinc-900/40">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Expiring Soon</CardTitle>
+                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Monthly Revenue</CardTitle>
+                <IndianRupee className="h-4 w-4 text-purple-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <NumberTicker value={stats.monthlyRevenue} prefix="₹" />
+                </div>
+                <p className="text-xs text-zinc-500 mt-1">Invoices issued this month</p>
+              </CardContent>
+            </Card>
+          </SpotlightCard>
+        ) : (
+          <SpotlightCard>
+            <Card className="border-zinc-800 bg-zinc-900/40">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Today's Collections</CardTitle>
+                <IndianRupee className="h-4 w-4 text-green-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <NumberTicker value={todayStats.revenue} prefix="₹" />
+                </div>
+                <p className="text-xs text-zinc-500 mt-1">Desk payment collections</p>
+              </CardContent>
+            </Card>
+          </SpotlightCard>
+        )}
+
+        {isTrainer ? (
+          <SpotlightCard>
+            <Link href="/dashboard/diet" className="block">
+              <Card className="border-zinc-800 bg-zinc-900/40">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Diet Charts</CardTitle>
+                  <Apple className="h-4 w-4 text-green-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    <NumberTicker value={stats.dietPlans} />
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-1">Nutrition & meal charts</p>
+                </CardContent>
+              </Card>
+            </Link>
+          </SpotlightCard>
+        ) : (
+          <SpotlightCard>
+            <Link href="/dashboard/due" className="block">
+              <Card className="border-zinc-800 bg-zinc-900/40">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Dues Outstanding</CardTitle>
+                  <CalendarDays className="h-4 w-4 text-purple-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    <NumberTicker value={stats.duesOutstanding} prefix="₹" />
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-1">Pending payments to collect</p>
+                </CardContent>
+              </Card>
+            </Link>
+          </SpotlightCard>
+        )}
+
+        <SpotlightCard>
+          <Link href={isTrainer ? "/dashboard/attendance" : "/dashboard/members?filter=expiring"} className="block">
+            <Card className="border-zinc-800 bg-zinc-900/40">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  {isTrainer ? 'Floor Check-ins' : 'Expiring Soon'}
+                </CardTitle>
                 <Clock className="h-4 w-4 text-purple-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  <NumberTicker value={stats.expiringSoon} />
+                  <NumberTicker value={isTrainer ? todayStats.checkins : stats.expiringSoon} />
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">Plans ending in next 7 days</p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  {isTrainer ? "Today's check-ins" : 'Plans ending in next 7 days'}
+                </p>
                 <p className="text-xs text-zinc-500 mt-1">Click to view →</p>
               </CardContent>
             </Card>
@@ -497,47 +627,115 @@ export default function DashboardHome() {
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-zinc-100">Member List</h4>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Search profiles, view logs, edit statuses.</p>
+                <h4 className="text-sm font-bold text-zinc-100">
+                  {isTrainer ? 'Trainee List' : 'Member List'}
+                </h4>
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Search profiles, view logs, check details.</p>
               </div>
             </GlowCard>
           </Link>
 
-          <Link href="/dashboard/whatsapp" className="block">
-            <GlowCard className="group flex items-start gap-4" glowColor="purple">
-              <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                <MessageCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-zinc-100">WhatsApp</h4>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Submit templates, trigger broadcasts.</p>
-              </div>
-            </GlowCard>
-          </Link>
+          {isTrainer ? (
+            <Link href="/dashboard/exercise" className="block">
+              <GlowCard className="group flex items-start gap-4" glowColor="purple">
+                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
+                  <Dumbbell className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-100">Workout Routines</h4>
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Assign exercise splits, sets, and reps.</p>
+                </div>
+              </GlowCard>
+            </Link>
+          ) : (
+            <Link href="/dashboard/invoices" className="block">
+              <GlowCard className="group flex items-start gap-4" glowColor="purple">
+                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
+                  <Receipt className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-100">Billing & Invoices</h4>
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Print receipts, view payment history.</p>
+                </div>
+              </GlowCard>
+            </Link>
+          )}
 
-          <Link href="/dashboard/followups" className="block">
-            <GlowCard className="group flex items-start gap-4" glowColor="purple">
-              <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                <Clock className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-zinc-100">CRM Follow-ups</h4>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Clear outstanding due alerts, view tasks.</p>
-              </div>
-            </GlowCard>
-          </Link>
+          {isTrainer ? (
+            <Link href="/dashboard/diet" className="block">
+              <GlowCard className="group flex items-start gap-4" glowColor="purple">
+                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
+                  <Apple className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-100">Diet Charts</h4>
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Customize daily macro and meal targets.</p>
+                </div>
+              </GlowCard>
+            </Link>
+          ) : isReceptionist ? (
+            <Link href="/dashboard/due" className="block">
+              <GlowCard className="group flex items-start gap-4" glowColor="purple">
+                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
+                  <IndianRupee className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-100">Due Collection</h4>
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Collect fee dues, record desk receipts.</p>
+                </div>
+              </GlowCard>
+            </Link>
+          ) : (
+            <Link href="/dashboard/analytics" className="block">
+              <GlowCard className="group flex items-start gap-4" glowColor="purple">
+                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-100">Analytics</h4>
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Gross sales volume, profit margins, growth.</p>
+                </div>
+              </GlowCard>
+            </Link>
+          )}
 
-          <Link href="/dashboard/settings" className="block">
-            <GlowCard className="group flex items-start gap-4" glowColor="purple">
-              <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-zinc-100">Settings</h4>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Setup working hours, modify RLS permissions.</p>
-              </div>
-            </GlowCard>
-          </Link>
+          {isTrainer ? (
+            <Link href="/dashboard/attendance" className="block">
+              <GlowCard className="group flex items-start gap-4" glowColor="purple">
+                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
+                  <CalendarCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-100">Attendance</h4>
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Track daily client gym check-ins.</p>
+                </div>
+              </GlowCard>
+            </Link>
+          ) : isReceptionist ? (
+            <Link href="/dashboard/attendance" className="block">
+              <GlowCard className="group flex items-start gap-4" glowColor="purple">
+                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
+                  <CalendarCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-100">Attendance</h4>
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Verify member entries and manage kiosks.</p>
+                </div>
+              </GlowCard>
+            </Link>
+          ) : (
+            <Link href="/dashboard/settings" className="block">
+              <GlowCard className="group flex items-start gap-4" glowColor="purple">
+                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-100">Settings</h4>
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Operating hours, branches & integrations.</p>
+                </div>
+              </GlowCard>
+            </Link>
+          )}
         </div>
       </div>
       

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
+import { RequirePermission } from '@/components/auth/RequirePermission';
 import {
   IndianRupee,
   Search,
@@ -55,6 +56,11 @@ export default function DueCollectionPage() {
 
   const fetchDues = async () => {
     if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
+
+    if (user.role !== 'owner' && !can('due.view')) {
       setLoading(false);
       return;
     }
@@ -355,7 +361,12 @@ export default function DueCollectionPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <RequirePermission
+      permission="due.view"
+      fallbackTitle="Due Collection Restricted"
+      fallbackDescription="You do not have permission to view member payment dues or execute fee collections."
+    >
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
@@ -550,5 +561,6 @@ export default function DueCollectionPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </RequirePermission>
   );
 }

@@ -28,6 +28,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
+import { RequirePermission } from '@/components/auth/RequirePermission';
 
 const COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#6366f1'];
 
@@ -53,6 +54,11 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
+
+    if (user.role !== 'owner' && !can('analytics.view')) {
       setLoading(false);
       return;
     }
@@ -235,7 +241,12 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <RequirePermission
+      permission="analytics.view"
+      fallbackTitle="Analytics Restricted"
+      fallbackDescription="Only gym owners and executive staff have permissions to view business analytics, financial volumes, and profit metrics."
+    >
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
@@ -432,5 +443,6 @@ export default function AnalyticsPage() {
         </GlowCard>
       </div>
     </div>
+    </RequirePermission>
   );
 }

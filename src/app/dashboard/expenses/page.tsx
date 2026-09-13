@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useBranch } from '@/hooks/useBranch';
 import type { Expense } from '@/types/database';
 import { usePermission } from '@/hooks/usePermission';
+import { RequirePermission } from '@/components/auth/RequirePermission';
 import {
   Wallet,
   PlusCircle,
@@ -75,6 +76,11 @@ export default function ExpenseTrackerPage() {
 
   const fetchExpenses = async () => {
     if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
+
+    if (user.role !== 'owner' && !can('expenses.view')) {
       setLoading(false);
       return;
     }
@@ -190,6 +196,11 @@ export default function ExpenseTrackerPage() {
   const confirmDeleteExpense = async () => {
     if (!deleteTarget) return;
 
+    if (!isOwner) {
+      toast.error('Only the gym owner can delete expense records');
+      return;
+    }
+
     try {
       setDeleteLoading(true);
       const { error } = await supabase.from('expenses').delete().eq('id', deleteTarget.id);
@@ -207,7 +218,12 @@ export default function ExpenseTrackerPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <RequirePermission
+      permission="expenses.view"
+      fallbackTitle="Expenses Access Restricted"
+      fallbackDescription="You do not have permission to view gym operational and branch expenses."
+    >
+      <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
@@ -282,7 +298,7 @@ export default function ExpenseTrackerPage() {
                   <TableHead className="text-zinc-400 font-semibold text-xs">Date</TableHead>
                   <TableHead className="text-zinc-400 font-semibold text-xs">Payment Mode</TableHead>
                   <TableHead className="text-zinc-400 font-semibold text-xs">Amount</TableHead>
-                  {can('expenses.manage') && <TableHead className="text-zinc-400 font-semibold text-xs text-right">Actions</TableHead>}
+                  {isOwner && <TableHead className="text-zinc-400 font-semibold text-xs text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -293,7 +309,7 @@ export default function ExpenseTrackerPage() {
                     <TableCell className="text-zinc-400 text-xs">{formatDate(exp.date)}</TableCell>
                     <TableCell className="text-zinc-400 text-xs uppercase">{exp.payment_mode || '-'}</TableCell>
                     <TableCell className="text-zinc-100 font-bold text-xs">{formatCurrency(exp.amount)}</TableCell>
-                    {can('expenses.manage') && (
+                    {isOwner && (
                       <TableCell className="text-right">
                         <Button
                           aria-label={`Delete expense record ${exp.title}`}
@@ -442,5 +458,6 @@ export default function ExpenseTrackerPage() {
         onConfirm={confirmDeleteExpense}
       />
     </div>
+    </RequirePermission>
   );
 }

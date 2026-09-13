@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
+import { RequirePermission } from '@/components/auth/RequirePermission';
 import {
   Clock,
   Play,
@@ -88,7 +89,10 @@ export default function CronDashboardPage() {
   const [runningJob, setRunningJob] = useState<string | null>(null);
 
   const fetchCronLogs = async () => {
-    if (!user?.gymId) return;
+    if (!user?.gymId || user?.role !== 'owner') {
+      setLoadingLogs(false);
+      return;
+    }
 
     try {
       setLoadingLogs(true);
@@ -141,7 +145,12 @@ export default function CronDashboardPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <RequirePermission
+      role="owner"
+      fallbackTitle="Cron Management Restricted"
+      fallbackDescription="Only gym owners have permissions to view background automation tasks and trigger manual cron job execution."
+    >
+      <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
@@ -254,5 +263,6 @@ export default function CronDashboardPage() {
         )}
       </Card>
     </div>
+    </RequirePermission>
   );
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
-import { AuthUser, AuthMember } from '@/types/auth';
+import { AuthUser, AuthMember, DEFAULT_PERMISSIONS, UserRole } from '@/types/auth';
 
 export async function GET(request: Request) {
   try {
@@ -94,7 +94,9 @@ export async function GET(request: Request) {
           name: userData.name,
           email: userData.email || authUser.email,
           role: userData.role,
-          permissions: userData.permissions || ['*'],
+          permissions: (Array.isArray(userData.permissions) && userData.permissions.length > 0)
+            ? userData.permissions
+            : (DEFAULT_PERMISSIONS[userData.role as UserRole] || []),
           photoUrl: userData.photo_url || null,
           isActive: userData.is_active ?? true,
         };

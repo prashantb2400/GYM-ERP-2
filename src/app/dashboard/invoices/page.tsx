@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useGym } from '@/hooks/useGym';
 import type { Invoice } from '@/types/database';
 import { usePermission } from '@/hooks/usePermission';
+import { RequirePermission } from '@/components/auth/RequirePermission';
 import {
   Receipt,
   Search,
@@ -64,6 +65,11 @@ export default function InvoicesPage() {
 
   const fetchInvoices = async () => {
     if (!user?.gymId) {
+      setLoading(false);
+      return;
+    }
+
+    if (user.role !== 'owner' && !can('invoices.view')) {
       setLoading(false);
       return;
     }
@@ -284,7 +290,12 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <RequirePermission
+      permission="invoices.view"
+      fallbackTitle="Invoices Access Restricted"
+      fallbackDescription="You do not have permission to view billing records and gym tax invoices."
+    >
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
@@ -565,5 +576,6 @@ export default function InvoicesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </RequirePermission>
   );
 }
