@@ -22,6 +22,7 @@ import {
   Calendar,
   Clock,
   Zap,
+  Copy,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -522,6 +523,19 @@ export default function ExercisePlansPage() {
     }
   };
 
+  // Duplicate a workout day
+  const handleDuplicateDay = (dayIdx: number) => {
+    const source = days[dayIdx];
+    if (!source) return;
+    const duplicate: ExerciseDay = {
+      day: `${source.day} (Copy)`,
+      exercises: JSON.parse(JSON.stringify(source.exercises || [])),
+    };
+    setDays([...days, duplicate]);
+    setActiveDayIndex(days.length);
+    toast.success(`Duplicated "${source.day}"`);
+  };
+
   // Update day title
   const handleUpdateDayName = (dayIdx: number, val: string) => {
     const updated = [...days];
@@ -946,173 +960,178 @@ export default function ExercisePlansPage() {
               </div>
             </div>
 
-            {/* Quick Muscle-Group Exercise Library Chips */}
-            <div className="bg-zinc-900/60 border border-zinc-800 p-3.5 rounded-xl space-y-2.5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-zinc-200">Exercise Movement Library</span>
-                  <span className="text-[10px] text-zinc-500">
-                    (Click to add into active day: <span className="text-purple-400 font-semibold">{days[activeDayIndex]?.day || 'Day'}</span>)
-                  </span>
-                </div>
-
-                {/* Muscle Group Filter Tabs */}
-                <div className="flex items-center gap-1 flex-wrap">
-                  {['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'].map((grp) => (
-                    <button
-                      key={grp}
-                      type="button"
-                      onClick={() => setSelectedMuscleFilter(grp)}
-                      className={`text-[10px] px-2 py-0.5 rounded font-semibold transition-colors ${
-                        selectedMuscleFilter === grp
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 text-zinc-300'
-                      }`}
-                    >
-                      {grp}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Chips */}
-              <div className="flex flex-wrap gap-1.5 max-h-[85px] overflow-y-auto pt-1">
-                {filteredQuickChips.map((ex, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleAddQuickExercise(ex)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-zinc-950 border border-zinc-800 hover:border-purple-500/60 hover:bg-purple-950/20 text-zinc-300 transition-colors"
-                  >
-                    <span>{ex.name}</span>
-                    <span className="text-[10px] text-purple-400 font-mono font-semibold">({ex.sets}x{ex.reps})</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Routine Days Composer List */}
+            {/* -------------------------------------------------------- */}
+            {/* Workout Days Composer - Clean Tabbed Architecture        */}
+            {/* -------------------------------------------------------- */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                  <Calendar className="h-3.5 w-3.5 text-purple-400" />
-                  Training Days Schedule ({days.length})
-                </h3>
-
+              {/* Header with Preset Quick Adders */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-zinc-500 hidden sm:inline">Add preset:</span>
-                  <div className="flex flex-wrap gap-1">
-                    {['Mon Push', 'Tue Pull', 'Wed Legs', 'Thu Upper', 'Fri Lower', 'Sat Cardio'].map((preset) => (
-                      <Button
-                        key={preset}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAddDayCard(preset)}
-                        className="h-7 text-[10px] px-2 border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300"
-                      >
-                        + {preset}
-                      </Button>
-                    ))}
+                  <Calendar className="h-4 w-4 text-purple-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Training Routine Schedule ({days.length} {days.length === 1 ? 'Day' : 'Days'})
+                  </h3>
+                </div>
+
+                <div className="flex items-center flex-wrap gap-1.5">
+                  <span className="text-[10px] text-zinc-500 font-medium mr-1">Add Preset:</span>
+                  {['Mon Push', 'Tue Pull', 'Wed Legs', 'Thu Upper', 'Fri Lower', 'Sat Cardio'].map((preset) => (
                     <Button
+                      key={preset}
                       type="button"
+                      variant="outline"
                       size="sm"
-                      onClick={() => handleAddDayCard()}
-                      className="h-7 text-[10px] px-2.5 bg-purple-600 hover:bg-purple-700 text-white"
+                      onClick={() => handleAddDayCard(preset)}
+                      className="h-7 text-[11px] px-2.5 border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 transition-colors"
                     >
-                      <Plus className="h-3 w-3 mr-1" /> Custom Day
+                      + {preset}
                     </Button>
-                  </div>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleAddDayCard()}
+                    className="h-7 text-[11px] px-3 bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-sm transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Custom Day
+                  </Button>
                 </div>
               </div>
 
               {days.length === 0 ? (
-                <div className="text-center py-10 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-xs">
-                  No workout days added. Click "+ Custom Day" or choose one of the presets above.
+                <div className="text-center py-12 border border-dashed border-zinc-800 rounded-2xl bg-zinc-950/40 p-6 space-y-3">
+                  <div className="h-10 w-10 mx-auto rounded-full bg-purple-950/40 border border-purple-800/40 flex items-center justify-center text-purple-400">
+                    <Dumbbell className="h-5 w-5" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-zinc-200">No Training Days in this Split</h4>
+                  <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+                    Click any preset above (Mon Push, Tue Pull, Wed Legs) or load a pre-built split from the top bar.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleAddDayCard('Day 1: Full Body')}
+                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add First Training Day
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {days.map((day, dayIdx) => {
-                    const isActive = activeDayIndex === dayIdx;
-                    const exCount = (day.exercises || []).length;
+                  {/* Horizontal Day Tabs Navigator */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-zinc-800">
+                    {days.map((d, idx) => {
+                      const isActive = (activeDayIndex >= days.length ? 0 : activeDayIndex) === idx;
+                      const exCount = (d.exercises || []).length;
+
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setActiveDayIndex(idx)}
+                          className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all border shrink-0 ${
+                            isActive
+                              ? 'bg-purple-600 border-purple-500 text-white font-semibold shadow-md shadow-purple-950/40'
+                              : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-200'
+                          }`}
+                        >
+                          <span className="font-mono text-[10px] opacity-80">Day {idx + 1}</span>
+                          <span>{d.day || `Day ${idx + 1}`}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                              isActive ? 'bg-purple-700/80 text-purple-100' : 'bg-zinc-800 text-zinc-400'
+                            }`}
+                          >
+                            {exCount} {exCount === 1 ? 'exercise' : 'exercises'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Active Day Focus Card */}
+                  {(() => {
+                    const safeIdx = Math.min(Math.max(0, activeDayIndex), days.length - 1);
+                    const activeDay = days[safeIdx];
+                    if (!activeDay) return null;
+
+                    const exCount = (activeDay.exercises || []).length;
 
                     return (
-                      <div
-                        key={dayIdx}
-                        onClick={() => setActiveDayIndex(dayIdx)}
-                        className={`border rounded-xl transition-all ${
-                          isActive
-                            ? 'border-purple-500/70 bg-zinc-900/40 shadow-sm shadow-purple-950/20'
-                            : 'border-zinc-800 bg-zinc-900/20 hover:border-zinc-700'
-                        }`}
-                      >
-                        {/* Day Card Header */}
-                        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 bg-zinc-950/40 rounded-t-xl">
-                          <div className="flex items-center gap-3 flex-1">
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono ${
-                                isActive ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-400'
-                              }`}
-                            >
-                              Day {dayIdx + 1}
+                      <div className="border border-zinc-800 bg-zinc-900/30 rounded-2xl overflow-hidden shadow-lg shadow-black/20 space-y-0">
+                        {/* Day Header Bar */}
+                        <div className="p-4 bg-zinc-950/70 border-b border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-wrap flex-1">
+                            <span className="bg-purple-600/20 text-purple-300 border border-purple-500/30 text-[11px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider font-mono">
+                              Day #{safeIdx + 1}
                             </span>
                             <Input
-                              value={day.day}
-                              onChange={(e) => handleUpdateDayName(dayIdx, e.target.value)}
-                              placeholder="e.g. Monday: Push (Chest & Shoulders)"
-                              className="h-7 text-xs font-bold bg-transparent border-none text-zinc-200 focus-visible:ring-0 focus-visible:bg-zinc-900 max-w-[340px]"
+                              value={activeDay.day}
+                              onChange={(e) => handleUpdateDayName(safeIdx, e.target.value)}
+                              placeholder="e.g. Monday: Push (Chest & Triceps)"
+                              className="h-8 text-xs font-semibold bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-purple-500 max-w-sm"
                             />
                           </div>
 
                           <div className="flex items-center justify-between sm:justify-end gap-3">
-                            <span className="text-[11px] text-purple-400 font-mono font-semibold">
-                              {exCount} exercises planned
+                            <span className="text-xs font-mono bg-zinc-900/80 border border-zinc-800 px-3 py-1 rounded-lg text-purple-300 font-medium">
+                              {exCount} planned {exCount === 1 ? 'exercise' : 'exercises'}
                             </span>
+
                             <Button
                               type="button"
                               variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveDayCard(dayIdx);
-                              }}
-                              className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-zinc-800"
+                              size="sm"
+                              onClick={() => handleDuplicateDay(safeIdx)}
+                              className="h-8 px-2.5 text-xs text-zinc-400 hover:text-purple-300 hover:bg-zinc-800"
+                              title="Duplicate Routine Day"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Copy className="h-3.5 w-3.5 mr-1" /> Duplicate
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveDayCard(safeIdx)}
+                              className="h-8 px-2.5 text-xs text-zinc-400 hover:text-red-400 hover:bg-red-950/20"
+                              title="Delete Routine Day"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                             </Button>
                           </div>
                         </div>
 
-                        {/* Exercises List in Day */}
-                        <div className="p-3.5 space-y-2">
-                          {(day.exercises || []).length === 0 ? (
-                            <div className="text-center py-4 text-zinc-600 text-xs">
-                              No exercises in this day. Click movement chips above or type below.
+                        {/* Exercises in Active Day */}
+                        <div className="p-4 space-y-4">
+                          {(activeDay.exercises || []).length === 0 ? (
+                            <div className="text-center py-6 border border-dashed border-zinc-800/80 rounded-xl bg-zinc-950/20 text-zinc-500 text-xs">
+                              No exercises planned for this day yet. Click movements below or add custom exercises.
                             </div>
                           ) : (
-                            <div className="space-y-1.5">
-                              <div className="grid grid-cols-12 gap-2 text-[10px] text-zinc-500 font-semibold px-2 uppercase">
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-bold text-zinc-500 px-2 tracking-wider">
                                 <div className="col-span-4">Exercise Name</div>
                                 <div className="col-span-2">Sets</div>
                                 <div className="col-span-2">Reps</div>
                                 <div className="col-span-1">Rest (s)</div>
-                                <div className="col-span-2">Form Notes</div>
-                                <div className="col-span-1 text-center">Del</div>
+                                <div className="col-span-2">Form Coaching Notes</div>
+                                <div className="col-span-1 text-center">Action</div>
                               </div>
 
-                              {day.exercises.map((ex, exIdx) => (
+                              {activeDay.exercises.map((ex, exIdx) => (
                                 <div
                                   key={exIdx}
-                                  className="grid grid-cols-12 gap-2 items-center bg-zinc-950/60 p-1.5 rounded-lg border border-zinc-800/60 text-xs"
+                                  className="grid grid-cols-12 gap-2 items-center bg-zinc-950/50 p-2 rounded-xl border border-zinc-800/70 hover:border-zinc-700 transition-colors"
                                 >
                                   <div className="col-span-4">
                                     <Input
                                       value={ex.name}
                                       onChange={(e) =>
-                                        handleUpdateExercise(dayIdx, exIdx, 'name', e.target.value)
+                                        handleUpdateExercise(safeIdx, exIdx, 'name', e.target.value)
                                       }
                                       placeholder="Exercise name"
-                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-200"
+                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-100 focus:border-purple-500"
                                     />
                                   </div>
                                   <div className="col-span-2">
@@ -1120,20 +1139,20 @@ export default function ExercisePlansPage() {
                                       type="number"
                                       value={ex.sets || ''}
                                       onChange={(e) =>
-                                        handleUpdateExercise(dayIdx, exIdx, 'sets', e.target.value)
+                                        handleUpdateExercise(safeIdx, exIdx, 'sets', e.target.value)
                                       }
-                                      placeholder="Sets"
-                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-purple-400 font-mono font-semibold"
+                                      placeholder="4"
+                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-purple-400 font-mono font-bold focus:border-purple-500"
                                     />
                                   </div>
                                   <div className="col-span-2">
                                     <Input
                                       value={ex.reps}
                                       onChange={(e) =>
-                                        handleUpdateExercise(dayIdx, exIdx, 'reps', e.target.value)
+                                        handleUpdateExercise(safeIdx, exIdx, 'reps', e.target.value)
                                       }
                                       placeholder="8-12"
-                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 font-mono"
+                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-200 font-mono focus:border-purple-500"
                                     />
                                   </div>
                                   <div className="col-span-1">
@@ -1141,30 +1160,32 @@ export default function ExercisePlansPage() {
                                       type="number"
                                       value={ex.rest_seconds || ''}
                                       onChange={(e) =>
-                                        handleUpdateExercise(dayIdx, exIdx, 'rest_seconds', e.target.value)
+                                        handleUpdateExercise(safeIdx, exIdx, 'rest_seconds', e.target.value)
                                       }
                                       placeholder="60"
-                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-400 font-mono"
+                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-400 font-mono focus:border-purple-500"
                                     />
                                   </div>
                                   <div className="col-span-2">
                                     <Input
                                       value={ex.notes || ''}
                                       onChange={(e) =>
-                                        handleUpdateExercise(dayIdx, exIdx, 'notes', e.target.value)
+                                        handleUpdateExercise(safeIdx, exIdx, 'notes', e.target.value)
                                       }
-                                      placeholder="Optional tips"
-                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-400"
+                                      placeholder="e.g. Strict tempo"
+                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-300 focus:border-purple-500"
                                     />
                                   </div>
                                   <div className="col-span-1 flex justify-center">
-                                    <button
+                                    <Button
                                       type="button"
-                                      onClick={() => handleRemoveExercise(dayIdx, exIdx)}
-                                      className="text-zinc-500 hover:text-red-400 p-1"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleRemoveExercise(safeIdx, exIdx)}
+                                      className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg"
                                     >
-                                      &times;
-                                    </button>
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
                                   </div>
                                 </div>
                               ))}
@@ -1172,68 +1193,115 @@ export default function ExercisePlansPage() {
                           )}
 
                           {/* Quick Custom Exercise Add Row */}
-                          {isActive && (
-                            <div className="pt-2 border-t border-zinc-800/40">
-                              <div className="grid grid-cols-12 gap-2 items-center bg-zinc-900/40 p-2 rounded-lg border border-dashed border-zinc-800">
-                                <div className="col-span-4">
-                                  <Input
-                                    value={manualExName}
-                                    onChange={(e) => setManualExName(e.target.value)}
-                                    placeholder="+ Custom exercise (e.g. Pec Deck)"
-                                    className="h-7 text-xs bg-zinc-950 border-zinc-800"
-                                  />
-                                </div>
-                                <div className="col-span-2">
-                                  <Input
-                                    type="number"
-                                    value={manualExSets}
-                                    onChange={(e) => setManualExSets(e.target.value)}
-                                    placeholder="Sets (3)"
-                                    className="h-7 text-xs bg-zinc-950 border-zinc-800 font-mono"
-                                  />
-                                </div>
-                                <div className="col-span-2">
-                                  <Input
-                                    value={manualExReps}
-                                    onChange={(e) => setManualExReps(e.target.value)}
-                                    placeholder="Reps (10-12)"
-                                    className="h-7 text-xs bg-zinc-950 border-zinc-800 font-mono"
-                                  />
-                                </div>
-                                <div className="col-span-1">
-                                  <Input
-                                    type="number"
-                                    value={manualExRest}
-                                    onChange={(e) => setManualExRest(e.target.value)}
-                                    placeholder="Rest (s)"
-                                    className="h-7 text-xs bg-zinc-950 border-zinc-800 font-mono"
-                                  />
-                                </div>
-                                <div className="col-span-2">
-                                  <Input
-                                    value={manualExNotes}
-                                    onChange={(e) => setManualExNotes(e.target.value)}
-                                    placeholder="Form notes"
-                                    className="h-7 text-xs bg-zinc-950 border-zinc-800"
-                                  />
-                                </div>
-                                <div className="col-span-1 flex justify-center">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={handleAddManualExercise}
-                                    className="h-7 px-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold"
-                                  >
-                                    Add
-                                  </Button>
-                                </div>
+                          <div className="pt-2 border-t border-zinc-800/60">
+                            <div className="text-[11px] font-semibold text-zinc-400 mb-2">
+                              + Add Custom Exercise to {activeDay.day || `Day ${safeIdx + 1}`}:
+                            </div>
+                            <div className="grid grid-cols-12 gap-2 items-center bg-zinc-950/60 p-2.5 rounded-xl border border-dashed border-zinc-800">
+                              <div className="col-span-4">
+                                <Input
+                                  value={manualExName}
+                                  onChange={(e) => setManualExName(e.target.value)}
+                                  placeholder="e.g. Pec Deck Flyes"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 text-zinc-100"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Input
+                                  type="number"
+                                  value={manualExSets}
+                                  onChange={(e) => setManualExSets(e.target.value)}
+                                  placeholder="Sets (3)"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 font-mono text-purple-400 font-bold"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Input
+                                  value={manualExReps}
+                                  onChange={(e) => setManualExReps(e.target.value)}
+                                  placeholder="Reps (10-12)"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 font-mono text-zinc-200"
+                                />
+                              </div>
+                              <div className="col-span-1">
+                                <Input
+                                  type="number"
+                                  value={manualExRest}
+                                  onChange={(e) => setManualExRest(e.target.value)}
+                                  placeholder="Rest (s)"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 font-mono text-zinc-400"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Input
+                                  value={manualExNotes}
+                                  onChange={(e) => setManualExNotes(e.target.value)}
+                                  placeholder="Coaching notes"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 text-zinc-300"
+                                />
+                              </div>
+                              <div className="col-span-1 flex justify-center">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={handleAddManualExercise}
+                                  className="h-8 px-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold"
+                                >
+                                  Add
+                                </Button>
                               </div>
                             </div>
-                          )}
+                          </div>
+
+                          {/* Filtered Movement Palette */}
+                          <div className="pt-2 border-t border-zinc-800/60 space-y-2.5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-300">Exercise Movement Library</span>
+                                <span className="text-[10px] text-zinc-500">
+                                  (1-Click to add into {activeDay.day || 'Day'})
+                                </span>
+                              </div>
+
+                              {/* Muscle Group Filter Tabs */}
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'].map((grp) => (
+                                  <button
+                                    key={grp}
+                                    type="button"
+                                    onClick={() => setSelectedMuscleFilter(grp)}
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                                      selectedMuscleFilter === grp
+                                        ? 'bg-purple-600 text-white font-semibold'
+                                        : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800'
+                                    }`}
+                                  >
+                                    {grp}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                              {filteredQuickChips.map((ex, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => handleAddQuickExercise(ex)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-950 border border-zinc-800/80 hover:border-purple-500/60 hover:bg-purple-950/20 text-zinc-300 transition-all hover:scale-[1.02] active:scale-95"
+                                >
+                                  <span>{ex.name}</span>
+                                  <span className="text-[10px] text-purple-400 font-mono font-semibold">
+                                    ({ex.sets}x{ex.reps})
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );
-                  })}
+                  })()}
                 </div>
               )}
             </div>

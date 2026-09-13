@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateInvoiceHTML } from '@/lib/pdf/invoice-template';
 import { InvoiceData, InvoiceItem } from '@/lib/pdf/types';
+import { numberToIndianWords } from '@/lib/utils/number-to-words';
 
 export async function GET(
   request: Request,
@@ -31,47 +32,98 @@ export async function GET(
       .eq('id', invoice.gym_id)
       .single();
 
+    // Fetch branch details if invoice has branch_id
+    let branchData: any = null;
+    if (invoice.branch_id) {
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('*')
+        .eq('id', invoice.branch_id)
+        .maybeSingle();
+      branchData = branch;
+    }
+
     const gymData = gymProfile || {
-      name: 'Gym Name',
-      address: 'Gym Address',
-      phone: '1234567890',
-      email: 'contact@gym.com',
+      name: 'Gym Center',
+      tagline: '',
+      address: {},
+      phone: '',
+      email: '',
       settings: {},
     };
 
+    // Format address prioritizing specific branch address then gym address
+    const activeAddress = branchData?.address && Object.keys(branchData.address).length > 0
+      ? branchData.address
+      : gymData.address;
+
+    let addressStr = '';
+    if (typeof activeAddress === 'string') {
+      addressStr = activeAddress;
+    } else if (activeAddress && typeof activeAddress === 'object') {
+      const parts = [
+        activeAddress.street,
+        activeAddress.city,
+        activeAddress.state,
+        activeAddress.pin ? `PIN: ${activeAddress.pin}` : '',
+      ].filter(Boolean);
+      addressStr = parts.join(', ');
+    }
+    if (!addressStr) {
+      addressStr = 'Facility Address Registered';
+    }
+
     // Convert line items
-    const items: InvoiceItem[] = Array.isArray(invoice.line_items) 
+    const items: InvoiceItem[] = Array.isArray(invoice.line_items)
       ? invoice.line_items.map((item: any) => ({
-          description: item.description || 'Item',
+          description: item.description || 'Gym Membership / Personal Training Service',
+          hsnCode: item.hsnCode || '999723',
+          qty: Number(item.qty) || 1,
+          rate: Number(item.rate) || Number(item.amount) || 0,
           amount: Number(item.amount) || 0,
         }))
       : [];
 
-    // Map to our standard template data
+    const totalAmount = Number(invoice.total) || 0;
+    const amountPaid = Number(invoice.amount_paid) || 0;
+    const amountDue = Number(invoice.amount_due) || 0;
+
+    // Map to standard template data
     const templateData: InvoiceData = {
       gym: {
         name: gymData.name,
-        address: `${gymData.address?.street || ''} ${gymData.address?.city || ''} ${gymData.address?.state || ''} ${gymData.address?.pin || ''}`.trim() || gymData.address || 'Address not provided',
-        phone: gymData.phone || 'N/A',
+        tagline: gymData.tagline,
+        branchName: branchData?.name,
+        address: addressStr,
+        phone: branchData?.phone || gymData.phone || 'N/A',
         email: gymData.email || 'N/A',
         gstin: gymData.gstin,
         pan: gymData.pan,
-        upiId: gymData.settings?.upi_id,
+        upiId: gymData.settings?.upi_id || branchData?.settings?.upi_id,
       },
       member: {
         id: invoice.member_id || 'UNKNOWN',
-        name: invoice.member_name || invoice.members?.name || 'Walk-in Customer',
+        memberCode: invoice.members?.member_code || invoice.member_id?.slice(0, 8),
+        name: invoice.member_name || invoice.members?.name || 'Walk-in Member',
         phone: invoice.members?.phone || 'N/A',
+        email: invoice.members?.email || '',
+        address: invoice.members?.address || '',
       },
       invoiceNo: invoice.invoice_number || invoice.id.slice(0, 8),
       date: invoice.issued_at || new Date().toISOString(),
+      dueDate: invoice.due_date,
       items: items,
-      subtotal: Number(invoice.subtotal) || 0,
+      subtotal: Number(invoice.subtotal) || totalAmount,
+      discountAmount: Number(invoice.discount_amount) || 0,
       cgstAmount: Number(invoice.cgst_amount) || 0,
       sgstAmount: Number(invoice.sgst_amount) || 0,
-      totalAmount: Number(invoice.total) || 0,
-      status: invoice.status === 'paid' || invoice.amount_due <= 0 ? 'PAID' : (invoice.amount_due > 0 ? 'PENDING' : 'PAID'),
-      amountInWords: 'Amount generated electronically', // In a real app, use a library to convert number to words
+      totalAmount: totalAmount,
+      amountPaid: amountPaid,
+      amountDue: amountDue,
+      paymentMode: invoice.payment_mode || (amountDue <= 0 ? 'UPI / Cash' : 'Pending'),
+      cashierName: 'Front Desk Cashier',
+      status: invoice.status === 'paid' || amountDue <= 0 ? 'PAID' : (amountDue > 0 ? 'PENDING' : 'PAID'),
+      amountInWords: numberToIndianWords(totalAmount),
     };
 
     const html = generateInvoiceHTML(templateData);

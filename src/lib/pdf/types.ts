@@ -1,5 +1,6 @@
 export interface GymInfo {
   name: string;
+  tagline?: string;
   logoUrl?: string;
   address: string;
   phone: string;
@@ -7,11 +8,14 @@ export interface GymInfo {
   gstin?: string;
   pan?: string;
   upiId?: string;
+  branchName?: string;
 }
 
 export interface InvoiceItem {
   description: string;
   hsnCode?: string;
+  qty?: number;
+  rate?: number;
   amount: number;
 }
 
@@ -26,12 +30,18 @@ export interface InvoiceData {
     phone: string;
     email?: string;
     address?: string;
+    memberCode?: string;
   };
   items: InvoiceItem[];
   subtotal: number;
+  discountAmount?: number;
   cgstAmount: number;
   sgstAmount: number;
   totalAmount: number;
+  amountPaid?: number;
+  amountDue?: number;
+  paymentMode?: string;
+  cashierName?: string;
   status: 'PAID' | 'PENDING' | 'OVERDUE' | 'CANCELLED' | 'REFUNDED';
   amountInWords: string;
 }

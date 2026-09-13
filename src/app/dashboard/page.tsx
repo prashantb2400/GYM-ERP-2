@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGym } from '@/hooks/useGym';
@@ -50,6 +50,7 @@ import { AnimatedList } from '@/components/magicui/animated-list';
 import { GradientText } from '@/components/magicui/gradient-text';
 import { GridPattern } from '@/components/magicui/grid-pattern';
 import { QuickAddMember } from '@/components/shared/QuickAddMember';
+import { GymReadinessChecklist } from '@/components/dashboard/GymReadinessChecklist';
 
 export default function DashboardHome() {
   const supabase = createClient();
@@ -76,6 +77,8 @@ export default function DashboardHome() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [demoSeeded, setDemoSeeded] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [planCount, setPlanCount] = useState(0);
+  const [staffCount, setStaffCount] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
@@ -117,16 +120,15 @@ export default function DashboardHome() {
     }
   }, [user?.gymId]);
 
-  useEffect(() => {
+  const fetchDashboardData = useCallback(async () => {
     if (!user?.gymId) return;
 
-    const fetchDashboardData = async () => {
-      try {
-        if (!hasInitiallyLoaded) {
-          setLoading(true);
-        }
+    try {
+      if (!hasInitiallyLoaded) {
+        setLoading(true);
+      }
 
-        // 1. Fetch active member count
+      // 1. Fetch active member count
         const { count: activeCount } = await supabase
           .from('members')
           .select('*', { count: 'exact', head: true })
@@ -185,6 +187,13 @@ export default function DashboardHome() {
               .gte('issued_at', startOfMonth.toISOString());
 
             revenueSum = invoicesData?.reduce((acc, curr) => acc + Number(curr.total || 0), 0) || 0;
+
+            const [{ count: pCount }, { count: sCount }] = await Promise.all([
+              supabase.from('plans').select('*', { count: 'exact', head: true }).eq('gym_id', user.gymId),
+              supabase.from('users').select('*', { count: 'exact', head: true }).eq('gym_id', user.gymId),
+            ]);
+            setPlanCount(pCount || 0);
+            setStaffCount(sCount || 0);
           }
         }
 
@@ -269,7 +278,10 @@ export default function DashboardHome() {
         setHasInitiallyLoaded(true);
         setLoading(false);
       }
-    };
+  }, [user?.gymId, isOwner, isReceptionist, isTrainer, hasInitiallyLoaded]);
+
+  useEffect(() => {
+    if (!user?.gymId) return;
 
     fetchDashboardData();
 
@@ -378,6 +390,17 @@ export default function DashboardHome() {
           )}
         </div>
       </div>
+
+      {/* Pre-Flight Gym Setup Checklist (Visible for Owners when starting up) */}
+      {isOwner && stats.activeMembers === 0 && (
+        <GymReadinessChecklist
+          gym={gym}
+          planCount={planCount}
+          staffCount={staffCount}
+          activeMemberCount={stats.activeMembers}
+          onPlansUpdated={fetchDashboardData}
+        />
+      )}
 
       {/* Today's Snapshot */}
       <div className="grid grid-cols-3 gap-3 mb-2">

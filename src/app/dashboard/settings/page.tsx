@@ -23,6 +23,8 @@ import {
   FileSpreadsheet,
   Download,
   UploadCloud,
+  QrCode,
+  CreditCard,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -62,6 +64,7 @@ export default function SettingsPage() {
   const [gstin, setGstin] = useState('');
   const [pan, setPan] = useState('');
   const [tagline, setTagline] = useState('');
+  const [upiId, setUpiId] = useState('');
   
   // Address States
   const [street, setStreet] = useState('');
@@ -116,6 +119,7 @@ export default function SettingsPage() {
     setGstin(data.gstin || '');
     setPan(data.pan || '');
     setTagline(data.tagline || '');
+    setUpiId(data.settings?.upi_id || '');
 
     // Address
     setStreet(data.address?.street || '');
@@ -215,6 +219,7 @@ export default function SettingsPage() {
       const hoursPayload = { open: openTime, close: closeTime };
       const settingsPayload = {
         ...(gym?.settings || {}),
+        upi_id: upiId.trim() || null,
         cctv_enabled: cctvEnabled,
         whatsapp_enabled: whatsappEnabled,
         biometric_enabled: biometricEnabled,
@@ -406,6 +411,33 @@ export default function SettingsPage() {
                     <Label htmlFor="pan" className="text-zinc-400 text-xs">PAN Card Number</Label>
                     <Input id="pan" placeholder="ABCDE1234F" value={pan} onChange={(e) => setPan(e.target.value)} className="border-zinc-800 bg-zinc-950 text-xs text-zinc-100 font-mono uppercase" />
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* UPI & Payment QR Settings Card */}
+            <Card className="border-zinc-800 bg-zinc-900/30">
+              <CardHeader className="pb-3 border-b border-zinc-800/40">
+                <div className="flex items-center gap-2">
+                  <QrCode className="h-4.5 w-4.5 text-purple-400" />
+                  <CardTitle className="text-sm font-bold">Billing & Official Payment QR Code (UPI)</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="upiId" className="text-zinc-400 text-xs font-semibold">
+                    Gym Official UPI ID / VPA *
+                  </Label>
+                  <Input
+                    id="upiId"
+                    placeholder="e.g. yourgymname@okhdfcbank or 9876543210@paytm"
+                    value={upiId}
+                    onChange={(e) => setUpiId(e.target.value)}
+                    className="border-zinc-800 bg-zinc-950 text-xs text-zinc-100 font-mono"
+                  />
+                  <p className="text-[11px] text-zinc-500 mt-1">
+                    This UPI ID generates the real, dynamic scan-and-pay QR code printed on all tax invoices and due receipts. Members can scan with Google Pay, PhonePe, Paytm, or BHIM.
+                  </p>
                 </div>
               </CardContent>
             </Card>

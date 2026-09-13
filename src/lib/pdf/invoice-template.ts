@@ -1,4 +1,5 @@
 import { InvoiceData } from './types';
+import { numberToIndianWords } from '@/lib/utils/number-to-words';
 
 export function escapeHtml(str: unknown): string {
   if (str === null || str === undefined) return '';
@@ -11,65 +12,102 @@ export function escapeHtml(str: unknown): string {
 }
 
 export function generateInvoiceHTML(data: InvoiceData): string {
-  const { gym, member, items, invoiceNo, date, dueDate, subtotal, cgstAmount, sgstAmount, totalAmount, status, amountInWords } = data;
+  const {
+    gym,
+    member,
+    items,
+    invoiceNo,
+    date,
+    dueDate,
+    subtotal,
+    discountAmount = 0,
+    cgstAmount,
+    sgstAmount,
+    totalAmount,
+    amountPaid = 0,
+    amountDue = 0,
+    paymentMode,
+    cashierName,
+    status,
+    amountInWords,
+  } = data;
 
   const safeGym = {
-    name: escapeHtml(gym.name),
-    address: escapeHtml(gym.address),
-    phone: escapeHtml(gym.phone),
-    email: escapeHtml(gym.email),
-    gstin: escapeHtml(gym.gstin),
-    pan: escapeHtml(gym.pan),
-    upiId: gym.upiId,
+    name: escapeHtml(gym.name || 'Gym Center'),
+    tagline: escapeHtml(gym.tagline || ''),
+    branchName: escapeHtml(gym.branchName || ''),
+    address: escapeHtml(gym.address || 'Address not provided'),
+    phone: escapeHtml(gym.phone || 'N/A'),
+    email: escapeHtml(gym.email || 'N/A'),
+    gstin: escapeHtml(gym.gstin || ''),
+    pan: escapeHtml(gym.pan || ''),
+    upiId: gym.upiId ? gym.upiId.trim() : '',
   };
 
   const safeMember = {
-    id: escapeHtml(member.id),
-    name: escapeHtml(member.name),
-    phone: escapeHtml(member.phone),
-    email: escapeHtml(member.email),
-    address: escapeHtml(member.address),
+    id: escapeHtml(member.id || 'N/A'),
+    memberCode: escapeHtml(member.memberCode || member.id?.slice(0, 8) || 'N/A'),
+    name: escapeHtml(member.name || 'Walk-in Member'),
+    phone: escapeHtml(member.phone || 'N/A'),
+    email: escapeHtml(member.email || ''),
+    address: escapeHtml(member.address || ''),
   };
 
   const safeInvoiceNo = escapeHtml(invoiceNo);
-  const safeAmountInWords = escapeHtml(amountInWords);
-  const safeStatus = escapeHtml(status);
+  const safeDate = date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+  const safeDueDate = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+  const safePaymentMode = escapeHtml(paymentMode || 'Cash');
+  const safeCashier = escapeHtml(cashierName || 'Front Desk Staff');
+  const safeStatus = escapeHtml(status || (amountDue <= 0 ? 'PAID' : 'PENDING'));
+
+  const words = amountInWords && amountInWords !== 'Amount generated electronically'
+    ? amountInWords
+    : numberToIndianWords(totalAmount);
+  const safeAmountInWords = escapeHtml(words);
 
   const safeItems = items.map(item => ({
-    description: escapeHtml(item.description),
-    hsnCode: escapeHtml(item.hsnCode),
+    description: escapeHtml(item.description || 'Gym Membership & Services'),
+    hsnCode: escapeHtml(item.hsnCode || '999723'), // SAC 999723: Physical well-being & fitness center services
+    qty: item.qty || 1,
+    rate: item.rate !== undefined ? item.rate : item.amount,
     amount: item.amount,
   }));
 
-  const upiQrUrl = safeGym.upiId ? `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`upi://pay?pa=${safeGym.upiId}&am=${totalAmount}&tn=Invoice${invoiceNo}`)}` : '';
+  const isPaid = status === 'PAID' || amountDue <= 0;
+  const payableAmount = amountDue > 0 ? amountDue : totalAmount;
 
-  const statusColors = {
-    PAID: { bg: '#dcfce7', text: '#166534' },
-    PENDING: { bg: '#fef9c3', text: '#854d0e' },
-    OVERDUE: { bg: '#fee2e2', text: '#991b1b' },
-    CANCELLED: { bg: '#f3f4f6', text: '#374151' },
-    REFUNDED: { bg: '#e0e7ff', text: '#3730a3' },
+  // Real NPCI dynamic UPI QR Code generation
+  let upiQrUrl = '';
+  let upiPayload = '';
+  if (safeGym.upiId && !isPaid) {
+    upiPayload = `upi://pay?pa=${encodeURIComponent(safeGym.upiId)}&pn=${encodeURIComponent(safeGym.name)}&am=${payableAmount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Inv-${invoiceNo}`)}`;
+    upiQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(upiPayload)}`;
+  }
+
+  const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+    PAID: { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' },
+    PENDING: { bg: '#fef9c3', text: '#854d0e', border: '#fef08a' },
+    OVERDUE: { bg: '#fee2e2', text: '#991b1b', border: '#fecaca' },
+    CANCELLED: { bg: '#f3f4f6', text: '#374151', border: '#e5e7eb' },
+    REFUNDED: { bg: '#e0e7ff', text: '#3730a3', border: '#c7d2fe' },
   };
 
-  const statusStyle = statusColors[status] || statusColors.PENDING;
+  const statusStyle = statusColors[safeStatus] || statusColors.PENDING;
 
-  return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data: https:;">
-  <title>Invoice - ${safeInvoiceNo}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>Tax Invoice - ${safeInvoiceNo}</title>
   <style>
     :root {
-      --primary: #111827;
-      --border: #e5e7eb;
-      --text: #374151;
-      --text-light: #6b7280;
+      --primary: #09090b;
+      --secondary: #4f46e5;
+      --border: #e4e4e7;
+      --text: #18181b;
+      --text-muted: #71717a;
+      --bg: #fafafa;
     }
     
     * {
@@ -79,279 +117,373 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: var(--text);
-      line-height: 1.5;
-      background-color: #f9fafb;
-      padding: 2rem;
+      line-height: 1.4;
+      background-color: var(--bg);
+      padding: 24px;
       -webkit-font-smoothing: antialiased;
     }
 
     .container {
-      max-width: 800px;
+      max-width: 820px;
       margin: 0 auto;
       background: #ffffff;
-      padding: 3rem;
+      padding: 36px 40px;
       border-radius: 8px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
+    /* Header Section */
     .header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 2px solid var(--border);
-      padding-bottom: 2rem;
-      margin-bottom: 2rem;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 20px;
+      margin-bottom: 24px;
     }
 
-    .gym-info h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 3rem;
-      letter-spacing: 1px;
+    .gym-branding h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
       color: var(--primary);
-      margin-bottom: 0.5rem;
-      line-height: 1;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .gym-tagline {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 2px;
+      margin-bottom: 8px;
     }
 
     .gym-details {
-      font-size: 0.875rem;
-      color: var(--text-light);
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.45;
     }
 
-    .gym-details p {
-      margin-bottom: 0.25rem;
+    .gym-details strong {
+      color: var(--text);
     }
 
-    .invoice-title {
+    .invoice-title-area {
       text-align: right;
     }
 
-    .invoice-title h2 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.5rem;
-      color: var(--primary);
+    .tax-badge {
+      font-size: 20px;
+      font-weight: 800;
       letter-spacing: 1px;
-      margin-bottom: 0.5rem;
+      color: var(--primary);
+      text-transform: uppercase;
     }
 
-    .status-badge {
+    .status-pill {
       display: inline-block;
-      padding: 0.25rem 0.75rem;
+      padding: 3px 12px;
       border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       background-color: ${statusStyle.bg};
       color: ${statusStyle.text};
+      border: 1px solid ${statusStyle.border};
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      margin-top: 6px;
     }
 
-    .meta-info {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 2rem;
+    /* Meta Info Grid */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      background-color: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 24px;
+      font-size: 12px;
     }
 
-    .bill-to h3 {
-      font-size: 0.875rem;
+    .meta-box h3 {
+      font-size: 10.5px;
       text-transform: uppercase;
-      color: var(--text-light);
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
     }
 
-    .bill-to p {
-      font-size: 0.95rem;
+    .meta-box p {
+      margin-bottom: 3px;
+    }
+
+    .meta-box .name {
+      font-size: 14px;
+      font-weight: 700;
       color: var(--primary);
-      font-weight: 500;
-      margin-bottom: 0.25rem;
-    }
-    
-    .bill-to .light-text {
-      font-weight: 400;
-      color: var(--text-light);
-      font-size: 0.875rem;
+      margin-bottom: 4px;
     }
 
-    .invoice-details table {
+    .invoice-numbers-table {
       width: 100%;
       border-collapse: collapse;
-      text-align: right;
-      font-size: 0.875rem;
-    }
-    
-    .invoice-details td {
-      padding: 0.25rem 0;
-    }
-    
-    .invoice-details td:first-child {
-      color: var(--text-light);
-      padding-right: 1rem;
-    }
-    
-    .invoice-details td:last-child {
-      font-weight: 500;
-      color: var(--primary);
     }
 
+    .invoice-numbers-table td {
+      padding: 2.5px 0;
+      font-size: 12px;
+    }
+
+    .invoice-numbers-table td:first-child {
+      color: var(--text-muted);
+      width: 45%;
+    }
+
+    .invoice-numbers-table td:last-child {
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
+    }
+
+    /* Itemized Table */
     .items-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 2rem;
+      margin-bottom: 24px;
     }
 
     .items-table th {
-      background-color: #f3f4f6;
+      background-color: #f4f4f5;
       text-align: left;
-      padding: 0.75rem 1rem;
-      font-size: 0.75rem;
+      padding: 10px 12px;
+      font-size: 10.5px;
       text-transform: uppercase;
-      color: var(--text-light);
-      font-weight: 600;
+      color: var(--text-muted);
+      font-weight: 700;
       letter-spacing: 0.05em;
-    }
-
-    .items-table th.right {
-      text-align: right;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
     }
 
     .items-table td {
-      padding: 1rem;
+      padding: 11px 12px;
       border-bottom: 1px solid var(--border);
-      font-size: 0.875rem;
-      color: var(--primary);
+      font-size: 12.5px;
+      color: var(--text);
     }
 
-    .items-table td.right {
-      text-align: right;
+    .items-table .text-center { text-align: center; }
+    .items-table .text-right { text-align: right; }
+
+    /* Summary & Settlement Area */
+    .summary-area {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      margin-bottom: 28px;
     }
 
-    .summary-section {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 3rem;
-    }
-
-    .payment-info {
-      width: 50%;
-    }
-
-    .payment-info h4 {
-      font-size: 0.875rem;
-      color: var(--text-light);
-      text-transform: uppercase;
-      margin-bottom: 0.5rem;
-    }
-
-    .amount-words {
-      font-size: 0.875rem;
-      font-style: italic;
-      color: var(--text-light);
-      margin-bottom: 1rem;
-    }
-
-    .qr-container {
-      margin-top: 1rem;
-      padding: 0.5rem;
+    .payment-instruction {
+      background: #fafafa;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      display: inline-block;
+      border-radius: 6px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
-    
-    .qr-container img {
-      display: block;
+
+    .amount-words-box h4 {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .amount-words-text {
+      font-size: 12px;
+      font-weight: 600;
+      font-style: italic;
+      color: var(--primary);
+      line-height: 1.4;
+    }
+
+    /* Dynamic Real UPI QR Container */
+    .upi-qr-card {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #ffffff;
+      border: 1px solid #d4d4d8;
+      border-radius: 6px;
+      padding: 10px;
+    }
+
+    .upi-qr-img {
       width: 100px;
       height: 100px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      display: block;
     }
-    
-    .qr-text {
+
+    .upi-qr-info {
+      font-size: 11px;
+    }
+
+    .upi-qr-info strong {
+      display: block;
+      color: #047857;
+      font-size: 11.5px;
+      margin-bottom: 2px;
+    }
+
+    .upi-vpa {
+      font-family: monospace;
+      font-size: 10.5px;
+      background: #f4f4f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin: 3px 0;
+      color: #18181b;
+      font-weight: bold;
+    }
+
+    /* Official Paid Stamp Seal */
+    .paid-stamp {
+      margin-top: 14px;
+      border: 2px dashed #16a34a;
+      background: #f0fdf4;
+      color: #15803d;
+      border-radius: 8px;
+      padding: 14px;
       text-align: center;
-      font-size: 0.75rem;
-      margin-top: 0.5rem;
-      color: var(--text-light);
     }
 
-    .totals {
-      width: 40%;
+    .paid-stamp-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
     }
 
-    .totals table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .totals td {
-      padding: 0.5rem 0;
-      font-size: 0.875rem;
-    }
-
-    .totals td.right {
-      text-align: right;
+    .paid-stamp-details {
+      font-size: 11px;
+      margin-top: 4px;
+      color: #166534;
       font-weight: 500;
     }
 
-    .totals tr.border-top td {
-      border-top: 1px solid var(--border);
-      padding-top: 0.75rem;
+    .no-upi-banner {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #854d0e;
+      background: #fef9c3;
+      border: 1px solid #fde047;
+      padding: 8px 10px;
+      border-radius: 4px;
     }
 
-    .totals tr.grand-total td {
-      font-size: 1.125rem;
-      font-weight: 700;
+    /* Financial Totals Table */
+    .totals-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+
+    .totals-table td {
+      padding: 5px 0;
+    }
+
+    .totals-table td:first-child {
+      color: var(--text-muted);
+    }
+
+    .totals-table td:last-child {
+      text-align: right;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .totals-table tr.grand-total td {
+      border-top: 2px solid var(--border);
+      border-bottom: 2px solid var(--border);
+      padding: 8px 0;
+      font-size: 14.5px;
+      font-weight: 800;
       color: var(--primary);
-      padding-top: 1rem;
     }
 
+    .totals-table tr.highlight-due td {
+      color: #dc2626;
+      font-weight: 700;
+      padding-top: 6px;
+    }
+
+    /* Footer / Terms */
     .footer {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-top: 4rem;
-      padding-top: 2rem;
       border-top: 1px solid var(--border);
+      padding-top: 20px;
+      margin-top: 20px;
+    }
+
+    .terms {
+      max-width: 55%;
+      font-size: 10px;
+      color: var(--text-muted);
+      line-height: 1.45;
     }
 
     .terms h4 {
-      font-size: 0.75rem;
-      color: var(--text-light);
+      font-size: 10.5px;
       text-transform: uppercase;
-      margin-bottom: 0.25rem;
-    }
-
-    .terms p {
-      font-size: 0.75rem;
-      color: var(--text-light);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 3px;
     }
 
     .signatory {
       text-align: center;
+      width: 180px;
     }
 
     .signatory-line {
-      width: 200px;
-      border-bottom: 1px solid var(--primary);
-      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--text);
+      margin-bottom: 6px;
     }
 
     .signatory p {
-      font-size: 0.75rem;
-      color: var(--text-light);
+      font-size: 10.5px;
+      color: var(--text-muted);
+      font-weight: 600;
     }
 
     @media print {
       body {
-        background-color: white;
+        background-color: #ffffff;
         padding: 0;
       }
       .container {
+        border: none;
         box-shadow: none;
         padding: 0;
         max-width: 100%;
       }
-      /* Ensure colors are printed */
       * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -361,118 +493,184 @@ export function generateInvoiceHTML(data: InvoiceData): string {
 </head>
 <body>
   <div class="container">
+    <!-- Header -->
     <div class="header">
-      <div class="gym-info">
+      <div class="gym-branding">
         <h1>${safeGym.name}</h1>
+        ${safeGym.tagline ? `<div class="gym-tagline">${safeGym.tagline}</div>` : ''}
         <div class="gym-details">
+          ${safeGym.branchName ? `<p><strong>Facility Branch:</strong> ${safeGym.branchName}</p>` : ''}
           <p>${safeGym.address}</p>
-          <p>Phone: ${safeGym.phone} | Email: ${safeGym.email}</p>
-          ${safeGym.gstin ? `<p><strong>GSTIN:</strong> ${safeGym.gstin}</p>` : ''}
-          ${safeGym.pan ? `<p><strong>PAN:</strong> ${safeGym.pan}</p>` : ''}
+          <p><strong>Phone:</strong> ${safeGym.phone} &nbsp;|&nbsp; <strong>Email:</strong> ${safeGym.email}</p>
+          <p>
+            ${safeGym.gstin ? `<strong>GSTIN:</strong> ${safeGym.gstin}` : '<strong>Tax Status:</strong> Unregistered / Regular'}
+            ${safeGym.pan ? ` &nbsp;|&nbsp; <strong>PAN:</strong> ${safeGym.pan}` : ''}
+          </p>
         </div>
       </div>
-      <div class="invoice-title">
-        <h2>TAX INVOICE</h2>
-        <div class="status-badge">${safeStatus}</div>
+      <div class="invoice-title-area">
+        <div class="tax-badge">TAX INVOICE</div>
+        <div class="status-pill">${safeStatus}</div>
       </div>
     </div>
 
-    <div class="meta-info">
-      <div class="bill-to">
-        <h3>Bill To:</h3>
-        <p>${safeMember.name}</p>
-        <p class="light-text">Member ID: ${safeMember.id}</p>
-        <p class="light-text">${safeMember.phone}</p>
-        ${safeMember.email ? `<p class="light-text">${safeMember.email}</p>` : ''}
-        ${safeMember.address ? `<p class="light-text">${safeMember.address}</p>` : ''}
+    <!-- Meta Info: Billed To and Invoice Credentials -->
+    <div class="meta-grid">
+      <div class="meta-box">
+        <h3>Billed To (Member Details)</h3>
+        <p class="name">${safeMember.name}</p>
+        <p><strong>Member ID:</strong> ${safeMember.memberCode}</p>
+        <p><strong>Phone:</strong> ${safeMember.phone}</p>
+        ${safeMember.email ? `<p><strong>Email:</strong> ${safeMember.email}</p>` : ''}
+        ${safeMember.address ? `<p><strong>Address:</strong> ${safeMember.address}</p>` : ''}
       </div>
-      <div class="invoice-details">
-        <table>
+
+      <div class="meta-box">
+        <h3>Invoice Details</h3>
+        <table class="invoice-numbers-table">
           <tr>
             <td>Invoice No:</td>
             <td>${safeInvoiceNo}</td>
           </tr>
           <tr>
-            <td>Date:</td>
-            <td>${new Date(date).toLocaleDateString()}</td>
+            <td>Date of Issue:</td>
+            <td>${safeDate}</td>
           </tr>
-          ${dueDate ? `
+          ${safeDueDate ? `
           <tr>
-            <td>Due Date:</td>
-            <td>${new Date(dueDate).toLocaleDateString()}</td>
+            <td>Payment Due:</td>
+            <td>${safeDueDate}</td>
+          </tr>` : ''}
+          <tr>
+            <td>Payment Mode:</td>
+            <td>${safePaymentMode}</td>
           </tr>
-          ` : ''}
+          <tr>
+            <td>Billed By:</td>
+            <td>${safeCashier}</td>
+          </tr>
         </table>
       </div>
     </div>
 
+    <!-- Items Table -->
     <table class="items-table">
       <thead>
         <tr>
-          <th>Description</th>
-          <th>HSN/SAC</th>
-          <th class="right">Amount</th>
+          <th style="width: 50%;">Description / Service Plan</th>
+          <th class="text-center" style="width: 15%;">SAC Code</th>
+          <th class="text-center" style="width: 10%;">Qty</th>
+          <th class="text-right" style="width: 12%;">Rate</th>
+          <th class="text-right" style="width: 13%;">Amount (₹)</th>
         </tr>
       </thead>
       <tbody>
         ${safeItems.map(item => `
         <tr>
-          <td>${item.description}</td>
-          <td>${item.hsnCode || '-'}</td>
-          <td class="right">₹${item.amount.toFixed(2)}</td>
+          <td>
+            <strong>${item.description}</strong>
+          </td>
+          <td class="text-center" style="font-family: monospace; font-size: 11px;">${item.hsnCode}</td>
+          <td class="text-center">${item.qty}</td>
+          <td class="text-right">₹${Number(item.rate).toFixed(2)}</td>
+          <td class="text-right"><strong>₹${Number(item.amount).toFixed(2)}</strong></td>
         </tr>
         `).join('')}
       </tbody>
     </table>
 
-    <div class="summary-section">
-      <div class="payment-info">
-        <h4>Amount in Words</h4>
-        <p class="amount-words">${safeAmountInWords}</p>
-        
-        ${upiQrUrl && status !== 'PAID' ? `
-        <div class="qr-container">
-          <img src="${upiQrUrl}" alt="UPI QR Code" />
-          <div class="qr-text">Scan to Pay</div>
+    <!-- Financial Summary & Real Dynamic UPI QR / Paid Seal -->
+    <div class="summary-area">
+      <!-- Left Column: Amount in words & Dynamic Payment QR / Paid Stamp -->
+      <div class="payment-instruction">
+        <div class="amount-words-box">
+          <h4>Amount in Words:</h4>
+          <div class="amount-words-text">${safeAmountInWords}</div>
         </div>
-        ` : ''}
+
+        ${isPaid ? `
+        <!-- Official Paid Seal for Settled Invoices -->
+        <div class="paid-stamp">
+          <div class="paid-stamp-title">✓ PAID & VERIFIED</div>
+          <div class="paid-stamp-details">
+            Settled in full via ${safePaymentMode} on ${safeDate}<br/>
+            Zero Balance Outstanding
+          </div>
+        </div>
+        ` : upiQrUrl ? `
+        <!-- Real Dynamic NPCI UPI QR Code for Unpaid / Due Invoices -->
+        <div class="upi-qr-card">
+          <img class="upi-qr-img" src="${upiQrUrl}" alt="Real UPI Payment QR Code" />
+          <div class="upi-qr-info">
+            <strong>Scan to Pay Dues (₹${payableAmount.toFixed(2)})</strong>
+            <span>Scan with any UPI App (GPay / PhonePe / Paytm)</span>
+            <div><span class="upi-vpa">${safeGym.upiId}</span></div>
+            <span style="color: #71717a; font-size: 10px;">Instant credit to ${safeGym.name}</span>
+          </div>
+        </div>
+        ` : `
+        <div class="no-upi-banner">
+          <strong>UPI Setup Notice:</strong> Official Gym UPI ID is not configured. Set up your UPI VPA in Settings &gt; Billing to enable real instant payment QR codes on invoices.
+        </div>
+        `}
       </div>
 
-      <div class="totals">
-        <table>
+      <!-- Right Column: Tax Breakdown -->
+      <div style="background: #fafafa; border: 1px solid var(--border); border-radius: 6px; padding: 16px;">
+        <table class="totals-table">
           <tr>
-            <td>Subtotal</td>
-            <td class="right">₹${subtotal.toFixed(2)}</td>
+            <td>Subtotal:</td>
+            <td>₹${subtotal.toFixed(2)}</td>
+          </tr>
+          ${discountAmount > 0 ? `
+          <tr>
+            <td style="color: #16a34a;">Discount Applied:</td>
+            <td style="color: #16a34a;">-₹${discountAmount.toFixed(2)}</td>
+          </tr>` : ''}
+          <tr>
+            <td>CGST (9%):</td>
+            <td>₹${cgstAmount.toFixed(2)}</td>
           </tr>
           <tr>
-            <td>CGST (9%)</td>
-            <td class="right">₹${cgstAmount.toFixed(2)}</td>
+            <td>SGST (9%):</td>
+            <td>₹${sgstAmount.toFixed(2)}</td>
+          </tr>
+          <tr class="grand-total">
+            <td>Total Invoice Value:</td>
+            <td>₹${totalAmount.toFixed(2)}</td>
           </tr>
           <tr>
-            <td>SGST (9%)</td>
-            <td class="right">₹${sgstAmount.toFixed(2)}</td>
+            <td style="color: #15803d; font-weight: 600;">Amount Paid:</td>
+            <td style="color: #15803d; font-weight: 600;">₹${amountPaid.toFixed(2)}</td>
           </tr>
-          <tr class="border-top grand-total">
-            <td>Grand Total</td>
-            <td class="right">₹${totalAmount.toFixed(2)}</td>
-          </tr>
+          ${amountDue > 0 ? `
+          <tr class="highlight-due">
+            <td>Balance Due:</td>
+            <td>₹${amountDue.toFixed(2)}</td>
+          </tr>` : `
+          <tr>
+            <td style="color: var(--text-muted);">Balance Due:</td>
+            <td>₹0.00</td>
+          </tr>`}
         </table>
       </div>
     </div>
 
+    <!-- Footer -->
     <div class="footer">
       <div class="terms">
         <h4>Terms & Conditions</h4>
-        <p>1. All payments are non-refundable.</p>
-        <p>2. Subject to local jurisdiction.</p>
+        <p>1. Membership fees and personal training packages are strictly non-refundable and non-transferable.</p>
+        <p>2. Members must comply with facility safety guidelines, hygiene rules, and dress codes at all times.</p>
+        <p>3. This document is a computer-generated tax invoice issued in accordance with GST rules.</p>
       </div>
       <div class="signatory">
         <div class="signatory-line"></div>
         <p>Authorized Signatory</p>
+        <p style="font-size: 9.5px; color: #a1a1aa; margin-top: 2px;">For ${safeGym.name}</p>
       </div>
     </div>
   </div>
 </body>
-</html>
-  `;
+</html>`;
 }

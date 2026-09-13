@@ -489,19 +489,40 @@ export default function InvoicesPage() {
 
                 {/* Calculation breakdown & Scan to Pay */}
                 <div className="grid grid-cols-2 gap-8 pt-4">
-                  {/* Left Column: UPI QR Code for instant counter payments */}
+                  {/* Left Column: Real UPI QR Code or Official Paid Seal */}
                   <div className="flex flex-col justify-end items-start">
-                    {selectedInvoice.amount_due > 0 && (
-                      <div className="border border-zinc-200 p-2.5 rounded-lg bg-zinc-50 flex flex-col items-center">
-                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5 block">Scan to Pay Outstanding Dues</span>
-                        <img 
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(
-                            `upi://pay?pa=${displayGym.settings?.upi_id || 'reception@paytm'}&pn=${encodeURIComponent(displayGym.name || 'Gym')}&am=${selectedInvoice.amount_due}&cu=INR&tn=${selectedInvoice.invoice_number}`
-                          )}`} 
-                          alt="UPI QR Code" 
-                          className="h-[100px] w-[100px] border border-zinc-200 p-1 bg-white rounded"
-                        />
-                        <span className="text-[9.5px] text-zinc-700 font-bold mt-1 font-mono">₹{selectedInvoice.amount_due}</span>
+                    {selectedInvoice.amount_due > 0 ? (
+                      displayGym.settings?.upi_id ? (
+                        <div className="border border-zinc-200 p-2.5 rounded-lg bg-zinc-50 flex flex-col items-center">
+                          <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider mb-1.5 block">
+                            Scan to Pay Dues (₹{selectedInvoice.amount_due})
+                          </span>
+                          <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(
+                              `upi://pay?pa=${displayGym.settings.upi_id}&pn=${encodeURIComponent(displayGym.name || 'Gym')}&am=${selectedInvoice.amount_due}&cu=INR&tn=Invoice-${selectedInvoice.invoice_number}`
+                            )}`} 
+                            alt="Official UPI QR Code" 
+                            className="h-[110px] w-[110px] border border-zinc-200 p-1 bg-white rounded shadow-sm"
+                          />
+                          <span className="text-[9.5px] text-zinc-800 font-mono font-bold mt-1 bg-zinc-200/70 px-2 py-0.5 rounded">
+                            {displayGym.settings.upi_id}
+                          </span>
+                          <span className="text-[8.5px] text-zinc-500 mt-0.5">GPay • PhonePe • Paytm • BHIM</span>
+                        </div>
+                      ) : (
+                        <div className="border border-amber-200 bg-amber-50/80 p-2.5 rounded-lg text-amber-800 text-[10px] space-y-1">
+                          <span className="font-bold block">UPI QR Setup Required</span>
+                          <span>Configure your official Gym UPI ID in Settings &gt; Billing to display real payment QR codes.</span>
+                        </div>
+                      )
+                    ) : (
+                      <div className="border-2 border-dashed border-emerald-600 bg-emerald-50/80 p-3 rounded-lg text-center w-full max-w-[220px]">
+                        <span className="text-[11px] font-black text-emerald-700 uppercase tracking-wider block">
+                          ✓ PAID & VERIFIED
+                        </span>
+                        <span className="text-[9.5px] text-emerald-800 mt-1 block">
+                          Settled via {selectedInvoice.payment_mode || 'Cash / UPI'} • No Dues
+                        </span>
                       </div>
                     )}
                   </div>

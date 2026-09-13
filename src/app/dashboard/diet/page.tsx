@@ -25,6 +25,7 @@ import {
   ChevronUp,
   Target,
   Zap,
+  Copy,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -277,25 +278,28 @@ interface QuickFood {
   calories: number;
   protein: number;
   icon: string;
+  category: 'protein' | 'carbs' | 'fats' | 'greens';
 }
 
 const QUICK_FOODS: QuickFood[] = [
-  { name: '4 Boiled Egg Whites', qty: '140g', calories: 70, protein: 15, icon: '🥚' },
-  { name: '4 Whole Boiled Eggs', qty: '200g', calories: 280, protein: 24, icon: '🥚' },
-  { name: 'Whey Protein (1 Scoop)', qty: '33g', calories: 125, protein: 25, icon: '🥛' },
-  { name: 'Grilled Chicken Breast', qty: '150g', calories: 240, protein: 46, icon: '🍗' },
-  { name: 'Fresh Paneer', qty: '100g', calories: 265, protein: 18, icon: '🧀' },
-  { name: 'Soya Chunks (Cooked)', qty: '50g dry / 150g', calories: 180, protein: 26, icon: '🌱' },
-  { name: 'Rolled Oats with Milk', qty: '50g', calories: 190, protein: 7, icon: '🥣' },
-  { name: 'Steamed Brown Rice', qty: '1 bowl (150g)', calories: 170, protein: 4, icon: '🍚' },
-  { name: 'Boiled Sweet Potato', qty: '150g', calories: 130, protein: 2, icon: '🥔' },
-  { name: 'Greek Yogurt / Thick Curd', qty: '150g', calories: 100, protein: 10, icon: '🥣' },
-  { name: 'Whole Wheat Roti', qty: '1 pc (35g)', calories: 85, protein: 3, icon: '🫓' },
-  { name: 'Boiled Sprouts / Chana', qty: '100g', calories: 160, protein: 9, icon: '🥗' },
-  { name: 'Banana', qty: '1 medium', calories: 105, protein: 1, icon: '🍌' },
-  { name: 'Raw Almonds', qty: '15 pcs (20g)', calories: 120, protein: 4, icon: '🥜' },
-  { name: 'Grilled Fish Fillet', qty: '150g', calories: 180, protein: 35, icon: '🐟' },
-  { name: 'Mixed Green Salad', qty: '1 bowl (150g)', calories: 35, protein: 1, icon: '🥗' },
+  { name: '4 Boiled Egg Whites', qty: '140g', calories: 70, protein: 15, icon: '🥚', category: 'protein' },
+  { name: '4 Whole Boiled Eggs', qty: '200g', calories: 280, protein: 24, icon: '🥚', category: 'protein' },
+  { name: 'Whey Protein (1 Scoop)', qty: '33g', calories: 125, protein: 25, icon: '🥛', category: 'protein' },
+  { name: 'Grilled Chicken Breast', qty: '150g', calories: 240, protein: 46, icon: '🍗', category: 'protein' },
+  { name: 'Fresh Paneer', qty: '100g', calories: 265, protein: 18, icon: '🧀', category: 'protein' },
+  { name: 'Soya Chunks (Cooked)', qty: '50g dry / 150g', calories: 180, protein: 26, icon: '🌱', category: 'protein' },
+  { name: 'Grilled Fish Fillet', qty: '150g', calories: 180, protein: 35, icon: '🐟', category: 'protein' },
+  { name: 'Greek Yogurt / Thick Curd', qty: '150g', calories: 100, protein: 10, icon: '🥣', category: 'protein' },
+  { name: 'Rolled Oats with Milk', qty: '50g', calories: 190, protein: 7, icon: '🥣', category: 'carbs' },
+  { name: 'Steamed Brown Rice', qty: '1 bowl (150g)', calories: 170, protein: 4, icon: '🍚', category: 'carbs' },
+  { name: 'Boiled Sweet Potato', qty: '150g', calories: 130, protein: 2, icon: '🥔', category: 'carbs' },
+  { name: 'Whole Wheat Roti', qty: '1 pc (35g)', calories: 85, protein: 3, icon: '🫓', category: 'carbs' },
+  { name: 'Raw Almonds', qty: '15 pcs (20g)', calories: 120, protein: 4, icon: '🥜', category: 'fats' },
+  { name: 'Peanut Butter (Natural)', qty: '1 tbsp (16g)', calories: 95, protein: 4, icon: '🥜', category: 'fats' },
+  { name: 'Boiled Sprouts / Chana', qty: '100g', calories: 160, protein: 9, icon: '🥗', category: 'greens' },
+  { name: 'Banana', qty: '1 medium', calories: 105, protein: 1, icon: '🍌', category: 'greens' },
+  { name: 'Fresh Apple', qty: '1 medium', calories: 65, protein: 0, icon: '🍎', category: 'greens' },
+  { name: 'Mixed Green Salad', qty: '1 bowl (150g)', calories: 35, protein: 1, icon: '🥗', category: 'greens' },
 ];
 
 export default function DietChartsPage() {
@@ -327,6 +331,7 @@ export default function DietChartsPage() {
 
   // Active meal being edited with food chips
   const [activeMealIndex, setActiveMealIndex] = useState<number>(0);
+  const [foodCategory, setFoodCategory] = useState<'all' | 'protein' | 'carbs' | 'fats' | 'greens'>('all');
 
   // Manual food adder input row
   const [manualItemName, setManualItemName] = useState('');
@@ -564,6 +569,20 @@ export default function DietChartsPage() {
     if (activeMealIndex >= mealIdx && activeMealIndex > 0) {
       setActiveMealIndex(activeMealIndex - 1);
     }
+  };
+
+  // Duplicate meal
+  const handleDuplicateMeal = (mealIdx: number) => {
+    const source = meals[mealIdx];
+    if (!source) return;
+    const duplicate: Meal = {
+      meal_name: `${source.meal_name} (Copy)`,
+      time: source.time,
+      items: JSON.parse(JSON.stringify(source.items || [])),
+    };
+    setMeals([...meals, duplicate]);
+    setActiveMealIndex(meals.length);
+    toast.success(`Duplicated "${source.meal_name}"`);
   };
 
   // Update meal title or time
@@ -998,174 +1017,214 @@ export default function DietChartsPage() {
               </div>
             </div>
 
-            {/* Quick Fitness Food Chips Library */}
-            <div className="bg-zinc-900/60 border border-zinc-800 p-3.5 rounded-xl space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-zinc-200">Quick Fitness Food Library</span>
-                  <span className="text-[10px] text-zinc-500">
-                    (Click to add directly into active meal: <span className="text-purple-400 font-semibold">{meals[activeMealIndex]?.meal_name || 'Meal'}</span>)
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5 pt-1 max-h-[85px] overflow-y-auto">
-                {QUICK_FOODS.map((food, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleAddQuickFood(food)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-zinc-950 border border-zinc-800 hover:border-purple-500/60 hover:bg-purple-950/20 text-zinc-300 transition-colors"
-                  >
-                    <span>{food.icon}</span>
-                    <span>{food.name}</span>
-                    <span className="text-[10px] text-zinc-500">({food.calories} kcal)</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Meals Composer List */}
+            {/* -------------------------------------------------------- */}
+            {/* Meals Composer - Clean Tabbed Architecture               */}
+            {/* -------------------------------------------------------- */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                  <Utensils className="h-3.5 w-3.5 text-purple-400" />
-                  Meals Schedule ({meals.length})
-                </h3>
-
+              {/* Header with Preset Quick Adders */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-zinc-500 hidden sm:inline">Add preset:</span>
-                  <div className="flex flex-wrap gap-1">
-                    {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((preset) => (
-                      <Button
-                        key={preset}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAddMealCard(preset)}
-                        className="h-7 text-[10px] px-2 border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300"
-                      >
-                        + {preset}
-                      </Button>
-                    ))}
+                  <Utensils className="h-4 w-4 text-purple-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Daily Meals Schedule ({meals.length})
+                  </h3>
+                </div>
+
+                <div className="flex items-center flex-wrap gap-1.5">
+                  <span className="text-[10px] text-zinc-500 font-medium mr-1">Add Preset:</span>
+                  {['Breakfast', 'Lunch', 'Dinner', 'Evening Snack'].map((preset) => (
                     <Button
+                      key={preset}
                       type="button"
+                      variant="outline"
                       size="sm"
-                      onClick={() => handleAddMealCard()}
-                      className="h-7 text-[10px] px-2.5 bg-purple-600 hover:bg-purple-700 text-white"
+                      onClick={() => handleAddMealCard(preset)}
+                      className="h-7 text-[11px] px-2.5 border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 transition-colors"
                     >
-                      <Plus className="h-3 w-3 mr-1" /> Custom Meal
+                      + {preset}
                     </Button>
-                  </div>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleAddMealCard()}
+                    className="h-7 text-[11px] px-3 bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-sm transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Custom Meal
+                  </Button>
                 </div>
               </div>
 
               {meals.length === 0 ? (
-                <div className="text-center py-10 border border-dashed border-zinc-800 rounded-xl text-zinc-500 text-xs">
-                  No meals added yet. Click "+ Custom Meal" or choose one of the presets above.
+                <div className="text-center py-12 border border-dashed border-zinc-800 rounded-2xl bg-zinc-950/40 p-6 space-y-3">
+                  <div className="h-10 w-10 mx-auto rounded-full bg-purple-950/40 border border-purple-800/40 flex items-center justify-center text-purple-400">
+                    <Utensils className="h-5 w-5" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-zinc-200">No Meals in this Plan Yet</h4>
+                  <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+                    Start by clicking any preset above (Breakfast, Lunch, Dinner) or load a 1-click template from the top bar.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleAddMealCard('Breakfast')}
+                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Breakfast
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {meals.map((meal, mealIdx) => {
-                    const isActive = activeMealIndex === mealIdx;
-                    const mealCals = (meal.items || []).reduce((s, it) => s + (Number(it.calories) || 0), 0);
-                    const mealPro = (meal.items || []).reduce((s, it) => s + (Number(it.protein) || 0), 0);
+                  {/* Horizontal Meal Tabs Navigator */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-zinc-800">
+                    {meals.map((m, idx) => {
+                      const isActive = (activeMealIndex >= meals.length ? 0 : activeMealIndex) === idx;
+                      const mCals = (m.items || []).reduce((s, it) => s + (Number(it.calories) || 0), 0);
+                      const mCount = (m.items || []).length;
+
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setActiveMealIndex(idx)}
+                          className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all border shrink-0 ${
+                            isActive
+                              ? 'bg-purple-600 border-purple-500 text-white font-semibold shadow-md shadow-purple-950/40'
+                              : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-200'
+                          }`}
+                        >
+                          <span className="font-mono text-[10px] opacity-80">#{idx + 1}</span>
+                          <span>{m.meal_name || `Meal ${idx + 1}`}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                              isActive ? 'bg-purple-700/80 text-purple-100' : 'bg-zinc-800 text-zinc-400'
+                            }`}
+                          >
+                            {mCals} kcal • {mCount} {mCount === 1 ? 'item' : 'items'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Active Meal Focus Card */}
+                  {(() => {
+                    const safeIdx = Math.min(Math.max(0, activeMealIndex), meals.length - 1);
+                    const activeMeal = meals[safeIdx];
+                    if (!activeMeal) return null;
+
+                    const activeMealCals = (activeMeal.items || []).reduce(
+                      (s, it) => s + (Number(it.calories) || 0),
+                      0
+                    );
+                    const activeMealPro = (activeMeal.items || []).reduce(
+                      (s, it) => s + (Number(it.protein) || 0),
+                      0
+                    );
+
+                    const filteredQuickFoods =
+                      foodCategory === 'all'
+                        ? QUICK_FOODS
+                        : QUICK_FOODS.filter((f) => f.category === foodCategory);
 
                     return (
-                      <div
-                        key={mealIdx}
-                        onClick={() => setActiveMealIndex(mealIdx)}
-                        className={`border rounded-xl transition-all ${
-                          isActive
-                            ? 'border-purple-500/70 bg-zinc-900/40 shadow-sm shadow-purple-950/20'
-                            : 'border-zinc-800 bg-zinc-900/20 hover:border-zinc-700'
-                        }`}
-                      >
-                        {/* Meal Card Header */}
-                        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 bg-zinc-950/40 rounded-t-xl">
-                          <div className="flex items-center gap-3 flex-1">
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono ${
-                                isActive ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-400'
-                              }`}
-                            >
-                              Meal {mealIdx + 1}
+                      <div className="border border-zinc-800 bg-zinc-900/30 rounded-2xl overflow-hidden shadow-lg shadow-black/20 space-y-0">
+                        {/* Meal Header & Timing Bar */}
+                        <div className="p-4 bg-zinc-950/70 border-b border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="bg-purple-600/20 text-purple-300 border border-purple-500/30 text-[11px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider font-mono">
+                              Meal #{safeIdx + 1}
                             </span>
-                            <Input
-                              value={meal.meal_name}
-                              onChange={(e) => handleUpdateMealMeta(mealIdx, 'meal_name', e.target.value)}
-                              placeholder="Meal Name"
-                              className="h-7 text-xs font-bold bg-transparent border-none text-zinc-200 focus-visible:ring-0 focus-visible:bg-zinc-900 max-w-[200px]"
-                            />
-                            <div className="flex items-center gap-1 text-zinc-500 text-xs font-mono">
-                              <Clock className="h-3 w-3 text-zinc-500" />
+                            <div className="flex items-center gap-2">
                               <Input
-                                value={meal.time}
-                                onChange={(e) => handleUpdateMealMeta(mealIdx, 'time', e.target.value)}
-                                placeholder="08:00 AM"
-                                className="h-7 text-[11px] bg-transparent border-none text-zinc-400 focus-visible:ring-0 focus-visible:bg-zinc-900 max-w-[90px]"
+                                value={activeMeal.meal_name}
+                                onChange={(e) => handleUpdateMealMeta(safeIdx, 'meal_name', e.target.value)}
+                                placeholder="Meal Name (e.g. Pre-Workout Snack)"
+                                className="h-8 text-xs font-semibold bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-purple-500 w-48"
                               />
+                              <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-md px-2 h-8">
+                                <Clock className="h-3.5 w-3.5 text-zinc-400" />
+                                <input
+                                  value={activeMeal.time}
+                                  onChange={(e) => handleUpdateMealMeta(safeIdx, 'time', e.target.value)}
+                                  placeholder="08:00 AM"
+                                  className="text-xs bg-transparent border-none text-zinc-200 focus:outline-none w-20 font-mono"
+                                />
+                              </div>
                             </div>
                           </div>
 
                           <div className="flex items-center justify-between sm:justify-end gap-3">
-                            <div className="text-[11px] text-zinc-400 font-mono">
-                              <span className="text-amber-400 font-semibold">{mealCals}</span> kcal •{' '}
-                              <span className="text-emerald-400 font-semibold">{mealPro}g</span> pro
+                            <div className="text-xs font-mono bg-zinc-900/80 border border-zinc-800 px-3 py-1 rounded-lg">
+                              <span className="text-amber-400 font-bold">{activeMealCals}</span>{' '}
+                              <span className="text-zinc-500">kcal</span> •{' '}
+                              <span className="text-emerald-400 font-bold">{activeMealPro}g</span>{' '}
+                              <span className="text-zinc-500">protein</span>
                             </div>
+
                             <Button
                               type="button"
                               variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveMealCard(mealIdx);
-                              }}
-                              className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-zinc-800"
+                              size="sm"
+                              onClick={() => handleDuplicateMeal(safeIdx)}
+                              className="h-8 px-2.5 text-xs text-zinc-400 hover:text-purple-300 hover:bg-zinc-800"
+                              title="Duplicate Meal"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Copy className="h-3.5 w-3.5 mr-1" /> Duplicate
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveMealCard(safeIdx)}
+                              className="h-8 px-2.5 text-xs text-zinc-400 hover:text-red-400 hover:bg-red-950/20"
+                              title="Delete Meal"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                             </Button>
                           </div>
                         </div>
 
-                        {/* Food Items in Meal */}
-                        <div className="p-3.5 space-y-2">
-                          {(meal.items || []).length === 0 ? (
-                            <div className="text-center py-4 text-zinc-600 text-xs">
-                              No foods in this meal. Click any quick chip above or type below.
+                        {/* Food Items in Active Meal */}
+                        <div className="p-4 space-y-4">
+                          {(activeMeal.items || []).length === 0 ? (
+                            <div className="text-center py-6 border border-dashed border-zinc-800/80 rounded-xl bg-zinc-950/20 text-zinc-500 text-xs">
+                              No foods in this meal yet. Click items in the fitness food palette below or enter custom foods.
                             </div>
                           ) : (
-                            <div className="space-y-1.5">
-                              <div className="grid grid-cols-12 gap-2 text-[10px] text-zinc-500 font-semibold px-2 uppercase">
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-bold text-zinc-500 px-2 tracking-wider">
                                 <div className="col-span-5">Food Item</div>
                                 <div className="col-span-3">Portion / Qty</div>
-                                <div className="col-span-2">Calories</div>
-                                <div className="col-span-1">Protein</div>
-                                <div className="col-span-1 text-center">Del</div>
+                                <div className="col-span-2">Calories (kcal)</div>
+                                <div className="col-span-1">Protein (g)</div>
+                                <div className="col-span-1 text-center">Action</div>
                               </div>
 
-                              {meal.items.map((item, itemIdx) => (
+                              {activeMeal.items.map((item, itemIdx) => (
                                 <div
                                   key={itemIdx}
-                                  className="grid grid-cols-12 gap-2 items-center bg-zinc-950/60 p-1.5 rounded-lg border border-zinc-800/60 text-xs"
+                                  className="grid grid-cols-12 gap-2 items-center bg-zinc-950/50 p-2 rounded-xl border border-zinc-800/70 hover:border-zinc-700 transition-colors"
                                 >
                                   <div className="col-span-5">
                                     <Input
                                       value={item.name}
                                       onChange={(e) =>
-                                        handleUpdateItem(mealIdx, itemIdx, 'name', e.target.value)
+                                        handleUpdateItem(safeIdx, itemIdx, 'name', e.target.value)
                                       }
                                       placeholder="Food name"
-                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-200"
+                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-100 focus:border-purple-500"
                                     />
                                   </div>
                                   <div className="col-span-3">
                                     <Input
                                       value={item.qty}
                                       onChange={(e) =>
-                                        handleUpdateItem(mealIdx, itemIdx, 'qty', e.target.value)
+                                        handleUpdateItem(safeIdx, itemIdx, 'qty', e.target.value)
                                       }
                                       placeholder="150g"
-                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-zinc-200"
+                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-300 focus:border-purple-500"
                                     />
                                   </div>
                                   <div className="col-span-2">
@@ -1173,10 +1232,10 @@ export default function DietChartsPage() {
                                       type="number"
                                       value={item.calories || ''}
                                       onChange={(e) =>
-                                        handleUpdateItem(mealIdx, itemIdx, 'calories', e.target.value)
+                                        handleUpdateItem(safeIdx, itemIdx, 'calories', e.target.value)
                                       }
-                                      placeholder="Kcal"
-                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-amber-400 font-mono"
+                                      placeholder="0"
+                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-amber-400 font-mono font-bold focus:border-purple-500"
                                     />
                                   </div>
                                   <div className="col-span-1">
@@ -1184,20 +1243,22 @@ export default function DietChartsPage() {
                                       type="number"
                                       value={item.protein || ''}
                                       onChange={(e) =>
-                                        handleUpdateItem(mealIdx, itemIdx, 'protein', e.target.value)
+                                        handleUpdateItem(safeIdx, itemIdx, 'protein', e.target.value)
                                       }
-                                      placeholder="Pro"
-                                      className="h-7 text-xs bg-zinc-900 border-zinc-800 text-emerald-400 font-mono"
+                                      placeholder="0"
+                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-emerald-400 font-mono font-bold focus:border-purple-500"
                                     />
                                   </div>
                                   <div className="col-span-1 flex justify-center">
-                                    <button
+                                    <Button
                                       type="button"
-                                      onClick={() => handleRemoveItem(mealIdx, itemIdx)}
-                                      className="text-zinc-500 hover:text-red-400 p-1"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleRemoveItem(safeIdx, itemIdx)}
+                                      className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg"
                                     >
-                                      &times;
-                                    </button>
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
                                   </div>
                                 </div>
                               ))}
@@ -1205,60 +1266,114 @@ export default function DietChartsPage() {
                           )}
 
                           {/* Quick Custom Food Add Row */}
-                          {isActive && (
-                            <div className="pt-2 border-t border-zinc-800/40">
-                              <div className="grid grid-cols-12 gap-2 items-center bg-zinc-900/40 p-2 rounded-lg border border-dashed border-zinc-800">
-                                <div className="col-span-5">
-                                  <Input
-                                    value={manualItemName}
-                                    onChange={(e) => setManualItemName(e.target.value)}
-                                    placeholder="+ Custom item (e.g. Tofu Bhurji)"
-                                    className="h-7 text-xs bg-zinc-950 border-zinc-800"
-                                  />
-                                </div>
-                                <div className="col-span-3">
-                                  <Input
-                                    value={manualItemQty}
-                                    onChange={(e) => setManualItemQty(e.target.value)}
-                                    placeholder="Qty (e.g. 100g)"
-                                    className="h-7 text-xs bg-zinc-950 border-zinc-800"
-                                  />
-                                </div>
-                                <div className="col-span-2">
-                                  <Input
-                                    type="number"
-                                    value={manualItemCals}
-                                    onChange={(e) => setManualItemCals(e.target.value)}
-                                    placeholder="Kcal"
-                                    className="h-7 text-xs bg-zinc-950 border-zinc-800 font-mono"
-                                  />
-                                </div>
-                                <div className="col-span-1">
-                                  <Input
-                                    type="number"
-                                    value={manualItemPro}
-                                    onChange={(e) => setManualItemPro(e.target.value)}
-                                    placeholder="Pro"
-                                    className="h-7 text-xs bg-zinc-950 border-zinc-800 font-mono"
-                                  />
-                                </div>
-                                <div className="col-span-1 flex justify-center">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={handleAddManualItem}
-                                    className="h-7 px-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold"
-                                  >
-                                    Add
-                                  </Button>
-                                </div>
+                          <div className="pt-2 border-t border-zinc-800/60">
+                            <div className="text-[11px] font-semibold text-zinc-400 mb-2">
+                              + Add Custom Food to {activeMeal.meal_name || `Meal ${safeIdx + 1}`}:
+                            </div>
+                            <div className="grid grid-cols-12 gap-2 items-center bg-zinc-950/60 p-2.5 rounded-xl border border-dashed border-zinc-800">
+                              <div className="col-span-5">
+                                <Input
+                                  value={manualItemName}
+                                  onChange={(e) => setManualItemName(e.target.value)}
+                                  placeholder="e.g. Soya Chunks Salad"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 text-zinc-100"
+                                />
+                              </div>
+                              <div className="col-span-3">
+                                <Input
+                                  value={manualItemQty}
+                                  onChange={(e) => setManualItemQty(e.target.value)}
+                                  placeholder="Qty (e.g. 150g)"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 text-zinc-300"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Input
+                                  type="number"
+                                  value={manualItemCals}
+                                  onChange={(e) => setManualItemCals(e.target.value)}
+                                  placeholder="Kcal"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 font-mono text-amber-400"
+                                />
+                              </div>
+                              <div className="col-span-1">
+                                <Input
+                                  type="number"
+                                  value={manualItemPro}
+                                  onChange={(e) => setManualItemPro(e.target.value)}
+                                  placeholder="Pro (g)"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 font-mono text-emerald-400"
+                                />
+                              </div>
+                              <div className="col-span-1 flex justify-center">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={handleAddManualItem}
+                                  className="h-8 px-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold"
+                                >
+                                  Add
+                                </Button>
                               </div>
                             </div>
-                          )}
+                          </div>
+
+                          {/* Filtered Quick Food Palette */}
+                          <div className="pt-2 border-t border-zinc-800/60 space-y-2.5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-300">Quick Fitness Food Palette</span>
+                                <span className="text-[10px] text-zinc-500">
+                                  (1-Click to add into {activeMeal.meal_name || 'Meal'})
+                                </span>
+                              </div>
+
+                              {/* Category Filter Pills */}
+                              <div className="flex items-center gap-1 overflow-x-auto">
+                                {[
+                                  { key: 'all', label: 'All' },
+                                  { key: 'protein', label: '🍗 Protein' },
+                                  { key: 'carbs', label: '🍚 Carbs' },
+                                  { key: 'fats', label: '🥜 Healthy Fats' },
+                                  { key: 'greens', label: '🥗 Greens/Fruits' },
+                                ].map((cat) => (
+                                  <button
+                                    key={cat.key}
+                                    type="button"
+                                    onClick={() => setFoodCategory(cat.key as any)}
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                                      foodCategory === cat.key
+                                        ? 'bg-purple-600 text-white font-semibold'
+                                        : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800'
+                                    }`}
+                                  >
+                                    {cat.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                              {filteredQuickFoods.map((food, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => handleAddQuickFood(food)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-950 border border-zinc-800/80 hover:border-purple-500/60 hover:bg-purple-950/20 text-zinc-300 transition-all hover:scale-[1.02] active:scale-95"
+                                >
+                                  <span>{food.icon}</span>
+                                  <span>{food.name}</span>
+                                  <span className="text-[10px] text-amber-400/90 font-mono">
+                                    ({food.calories} kcal)
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );
-                  })}
+                  })()}
                 </div>
               )}
             </div>

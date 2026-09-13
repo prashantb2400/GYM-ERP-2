@@ -63,6 +63,35 @@ export default function AddMemberPage() {
   const [trainers, setTrainers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [memberBranchId, setMemberBranchId] = useState('');
+  const [seedingPlans, setSeedingPlans] = useState(false);
+
+  const handleSeedStarterPlans = async () => {
+    if (!user?.gymId) return;
+    try {
+      setSeedingPlans(true);
+      const res = await fetch('/api/plans/seed', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to initialize plans');
+
+      toast.success('🎉 Standard gym plans created! Select your plan below.');
+      const { data: plansData } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('gym_id', user.gymId)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (plansData && plansData.length > 0) {
+        setPlans(plansData);
+        setSelectedPlanId(plansData[0].id);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error creating starter plans';
+      toast.error(msg);
+    } finally {
+      setSeedingPlans(false);
+    }
+  };
 
   // Post-Registration Action States
   const [createdMember, setCreatedMember] = useState<any | null>(null);
@@ -984,7 +1013,25 @@ export default function AddMemberPage() {
                         })}
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-500 italic py-2">No active plans configured. Please add plans in settings.</p>
+                      <div className="border border-purple-500/40 bg-purple-950/20 p-4 rounded-xl space-y-2.5 my-2">
+                        <div className="flex items-center gap-2 text-purple-300 font-bold text-xs">
+                          <Sparkles className="h-4 w-4 text-purple-400" />
+                          <span>No Membership Plans Found</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed">
+                          You need at least one active membership plan to enroll a member. Click below to initialize 5 standard gym plans (Monthly, 3-Month, 6-Month, 1-Year, PT) right now without losing any form details.
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleSeedStarterPlans}
+                          disabled={seedingPlans}
+                          className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold gap-1.5 h-8"
+                        >
+                          {seedingPlans ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                          <span>1-Click Create Standard Plans</span>
+                        </Button>
+                      </div>
                     )}
 
                     <div className="pt-1">
