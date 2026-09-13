@@ -27,6 +27,7 @@ import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/utils/api-client';
+import { isMobileDevice, getRecommendedFacingMode } from '@/lib/utils/device';
 
 const SCANNER_CONTAINER_ID = 'qr-reader';
 
@@ -61,6 +62,13 @@ export default function QrKioskPage() {
   const [recentCheckins, setRecentCheckins] = useState<Array<{ name: string; time: string; photo?: string }>>([]);
   const lastScannedRef = useRef<string>('');
   const resultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Device-aware initial camera configuration (auto back-camera on mobile, webcam on laptop)
+  useEffect(() => {
+    const recFacing = getRecommendedFacingMode();
+    setFacingMode(recFacing);
+    facingModeRef.current = recFacing;
+  }, []);
 
   const supabase = createClient();
 
@@ -278,7 +286,7 @@ export default function QrKioskPage() {
         aspectRatio: 1.0,
       };
 
-      const targetFacing = preferredFacing || facingModeRef.current;
+      const targetFacing = preferredFacing || facingModeRef.current || getRecommendedFacingMode();
       const targetId = preferredCameraId || selectedCameraIdRef.current;
 
       let started = false;
@@ -300,7 +308,7 @@ export default function QrKioskPage() {
         }
       }
 
-      // 2. Try preferred facingMode
+      // 2. Try preferred facingMode (environment on mobile, user on laptop)
       if (!started) {
         try {
           await scanner.start(
@@ -317,7 +325,7 @@ export default function QrKioskPage() {
         }
       }
 
-      // 3. Fallback to alternate facingMode (e.g. front if back unavailable)
+      // 3. Fallback to alternate facingMode (e.g. front if back unavailable on mobile)
       if (!started) {
         const fallbackFacing = targetFacing === 'environment' ? 'user' : 'environment';
         await scanner.start(
@@ -381,31 +389,26 @@ export default function QrKioskPage() {
   return (
     <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden text-zinc-100 select-none">
       {/* Top Navigation Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link href="/dashboard/attendance">
-            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-2">
+            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1.5 h-8 px-2 sm:px-3" title="Exit Kiosk">
               <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Exit Kiosk</span>
+              <span className="hidden sm:inline text-xs">Exit</span>
             </Button>
           </Link>
 
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-blue-950/60 border border-blue-800/40 flex items-center justify-center">
-              <QrCode className="h-5 w-5 text-blue-400 animate-pulse" />
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-blue-950/60 border border-blue-800/40 flex items-center justify-center shadow-xs">
+              <QrCode className="h-4 w-4 text-blue-400 animate-pulse" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-black text-sm sm:text-base tracking-tight text-zinc-100">
-                  QR Code Kiosk
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-bold text-sm sm:text-base tracking-tight text-zinc-100">
+                  QR Kiosk
                 </h1>
-                <Badge className="bg-blue-600/10 text-blue-300 border-blue-500/30 font-semibold text-[10px] px-1.5 py-0 hidden sm:inline-flex">
-                  Digital Pass Scanner
-                </Badge>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Scanner Live" />
               </div>
-              <p className="text-[10px] text-zinc-400 font-mono">
-                Camera Pass Scanner Active
-              </p>
             </div>
           </div>
         </div>
@@ -416,58 +419,70 @@ export default function QrKioskPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
             >
               <ScanFace className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">AI Face</span>
+              <span className="hidden md:inline">AI Face</span>
             </Button>
           </Link>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 bg-blue-600 text-white font-semibold hover:bg-blue-600 cursor-default"
+          >
+            <QrCode className="h-3.5 w-3.5 text-white" />
+            <span className="hidden md:inline">QR Code</span>
+          </Button>
 
           <Link href="/dashboard/attendance/kiosk">
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
             >
               <Fingerprint className="h-3.5 w-3.5 text-purple-400" />
-              <span className="hidden sm:inline">Fingerprint</span>
+              <span className="hidden md:inline">Fingerprint</span>
             </Button>
           </Link>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2.5 text-xs rounded-lg gap-1.5 bg-blue-600 text-white font-semibold hover:bg-blue-600 cursor-default"
-          >
-            <QrCode className="h-3.5 w-3.5 text-white" />
-            <span className="hidden sm:inline">QR Code</span>
-          </Button>
         </div>
 
         {/* Status Indicators & Audio */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {/* Active Camera Badge */}
+          <Badge
+            variant="outline"
+            className="hidden sm:inline-flex text-[10px] font-mono text-zinc-300 border-zinc-800 bg-zinc-950 px-2 py-0.5"
+            title={facingMode === 'environment' ? 'Rear / Back Camera' : 'Front Webcam'}
+          >
+            {facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}
+          </Badge>
+
           <Button
             variant="outline"
             size="sm"
             onClick={flipCamera}
-            className="h-8 px-2.5 text-xs rounded-lg gap-1.5 bg-zinc-950 border-zinc-800 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900"
+            className="h-7 px-2 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white gap-1"
             title="Flip Camera (Front / Rear)"
           >
             <SwitchCamera className="h-3.5 w-3.5 text-blue-400" />
-            <span className="hidden sm:inline">Flip Camera</span>
+            <span className="hidden sm:inline text-xs">Flip</span>
           </Button>
 
-          <Badge variant="outline" className={cameraActive ? 'text-green-400 border-green-500/20 bg-green-500/10 font-bold text-xs' : 'text-zinc-500 font-bold text-xs'}>
-            {cameraActive ? 'Camera Live' : 'Camera Off'}
+          <Badge variant="outline" className={cameraActive ? 'text-green-400 border-green-500/20 bg-green-500/10 font-bold text-xs py-0.5' : 'text-zinc-500 font-bold text-xs py-0.5'}>
+            {cameraActive ? 'Live' : 'Off'}
           </Badge>
+
           <Button
             size="icon"
             variant="ghost"
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="h-8 w-8 text-zinc-400 hover:text-zinc-200"
+            className="h-7 w-7 text-zinc-400 hover:text-zinc-200"
+            title={soundEnabled ? 'Mute Chimes' : 'Enable Chimes'}
           >
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            {soundEnabled ? <Volume2 className="h-4 w-4 text-blue-400" /> : <VolumeX className="h-4 w-4" />}
           </Button>
+
           <Badge className="bg-blue-600/20 text-blue-300 border-blue-500/30 font-bold text-xs">
             {todayCount} Today
           </Badge>
@@ -475,12 +490,12 @@ export default function QrKioskPage() {
       </div>
 
       {/* Main Scanner Viewport */}
-      <div className="flex-1 flex flex-col items-center justify-center relative px-4">
-        <div className="relative w-full max-w-[340px] aspect-square">
+      <div className="flex-1 flex flex-col items-center justify-center relative px-3 sm:px-4 py-2">
+        <div className="relative w-full max-w-[290px] sm:max-w-[340px] aspect-square mx-auto">
           <div
             id={SCANNER_CONTAINER_ID}
             className={cn(
-              'w-full h-full rounded-2xl overflow-hidden bg-zinc-900 border-2 transition-colors duration-300 shadow-2xl',
+              'w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden bg-zinc-900 border-2 transition-colors duration-300 shadow-2xl [&_video]:object-cover [&_video]:rounded-2xl',
               scanResult.state === 'success' ? 'border-green-500 shadow-green-500/20' :
               scanResult.state === 'already' ? 'border-blue-500 shadow-blue-500/20' :
               scanResult.state === 'expired' ? 'border-red-500 shadow-red-500/20' :
@@ -490,15 +505,21 @@ export default function QrKioskPage() {
           />
 
           {/* Floating Flip Camera Pill */}
-          <button
-            type="button"
-            onClick={flipCamera}
-            className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 active:scale-95 text-zinc-200 hover:text-white border border-zinc-700/70 backdrop-blur-md text-xs font-medium shadow-xl transition-all cursor-pointer"
-            title="Flip camera between front and rear"
-          >
-            <SwitchCamera className="h-3.5 w-3.5 text-blue-400" />
-            <span>Flip</span>
-          </button>
+          <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5">
+            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/75 border border-zinc-700/70 text-[10px] font-mono text-zinc-300 backdrop-blur-md">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {facingMode === 'environment' ? 'Back Camera' : 'Webcam'}
+            </div>
+            <button
+              type="button"
+              onClick={flipCamera}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-black/90 active:scale-95 text-zinc-200 hover:text-white border border-zinc-700/70 backdrop-blur-md text-xs font-medium shadow-xl transition-all cursor-pointer"
+              title="Flip camera between front and rear"
+            >
+              <SwitchCamera className="h-3.5 w-3.5 text-blue-400" />
+              <span>Flip</span>
+            </button>
+          </div>
 
           {cameraError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 rounded-2xl p-6 text-center z-10">

@@ -368,31 +368,26 @@ export default function FingerprintKioskPage() {
   return (
     <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden text-zinc-100 select-none">
       {/* Top Navigation Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link href="/dashboard/attendance">
-            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-2">
+            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1.5 h-8 px-2 sm:px-3" title="Exit Kiosk">
               <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Exit Kiosk</span>
+              <span className="hidden sm:inline text-xs">Exit</span>
             </Button>
           </Link>
 
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-purple-950/60 border border-purple-800/40 flex items-center justify-center">
-              <Fingerprint className="h-5 w-5 text-purple-400 animate-pulse" />
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-purple-950/60 border border-purple-800/40 flex items-center justify-center shadow-xs">
+              <Fingerprint className="h-4 w-4 text-purple-400 animate-pulse" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-black text-sm sm:text-base tracking-tight text-zinc-100">
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-bold text-sm sm:text-base tracking-tight text-zinc-100">
                   Fingerprint Station
                 </h1>
-                <Badge className="bg-purple-600/10 text-purple-300 border-purple-500/30 font-semibold text-[10px] px-1.5 py-0 hidden sm:inline-flex">
-                  Hardware Biometrics
-                </Badge>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Sensor Live" />
               </div>
-              <p className="text-[10px] text-zinc-400 font-mono">
-                {roster.length} Enrolled Members Active
-              </p>
             </div>
           </div>
         </div>
@@ -403,54 +398,55 @@ export default function FingerprintKioskPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
             >
               <ScanFace className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">AI Face</span>
+              <span className="hidden md:inline">AI Face</span>
             </Button>
           </Link>
 
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2.5 text-xs rounded-lg gap-1.5 bg-purple-600 text-white font-semibold hover:bg-purple-600 cursor-default"
+            className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 bg-purple-600 text-white font-semibold hover:bg-purple-600 cursor-default"
           >
             <Fingerprint className="h-3.5 w-3.5 text-white" />
-            <span className="hidden sm:inline">Fingerprint</span>
+            <span className="hidden md:inline">Fingerprint</span>
           </Button>
 
           <Link href="/dashboard/attendance/qr-kiosk">
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
             >
               <QrCode className="h-3.5 w-3.5 text-blue-400" />
-              <span className="hidden sm:inline">QR Code</span>
+              <span className="hidden md:inline">QR Code</span>
             </Button>
           </Link>
         </div>
 
-        <div className="flex items-center gap-2.5">
-
-          {/* Driver Switcher / Status */}
-          <Select
-            value={deviceInfo?.driverId || 'virtual'}
-            onValueChange={(val) => {
-              scannerManager.setActiveDriver(val as ScannerDriverId);
-              detectHardware();
-            }}
-          >
-            <SelectTrigger className="h-8 text-xs border-zinc-800 bg-zinc-900 text-zinc-300 w-36">
-              <SelectValue placeholder="Driver" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
-              <SelectItem value="mantra">Mantra MFS100</SelectItem>
-              <SelectItem value="secugen">SecuGen Pro 20</SelectItem>
-              <SelectItem value="bridge">Hardware Bridge</SelectItem>
-              <SelectItem value="virtual">Virtual Sensor</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {/* Driver Switcher / Status (Desktop) */}
+          <div className="hidden md:block">
+            <Select
+              value={deviceInfo?.driverId || 'virtual'}
+              onValueChange={(val) => {
+                scannerManager.setActiveDriver(val as ScannerDriverId);
+                detectHardware();
+              }}
+            >
+              <SelectTrigger className="h-7 text-xs border-zinc-800 bg-zinc-900 text-zinc-300 w-32">
+                <SelectValue placeholder="Driver" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                <SelectItem value="mantra">Mantra MFS100</SelectItem>
+                <SelectItem value="secugen">SecuGen Pro 20</SelectItem>
+                <SelectItem value="bridge">Hardware Bridge</SelectItem>
+                <SelectItem value="virtual">Virtual Sensor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <Button
             size="icon"
@@ -460,22 +456,22 @@ export default function FingerprintKioskPage() {
               loadRoster();
             }}
             disabled={loadingRoster}
-            className="h-8 w-8 text-zinc-400 hover:text-zinc-200"
+            className="h-7 w-7 text-zinc-400 hover:text-zinc-200"
             title="Refresh Roster & Hardware"
           >
-            <RefreshCw className={`h-4 w-4 ${loadingRoster ? 'animate-spin text-purple-400' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${loadingRoster ? 'animate-spin text-purple-400' : ''}`} />
           </Button>
 
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+            className="text-zinc-400 hover:text-zinc-200 transition-colors p-1"
             title={soundEnabled ? 'Mute Chimes' : 'Enable Chimes'}
           >
             {soundEnabled ? <Volume2 className="h-4 w-4 text-purple-400" /> : <VolumeX className="h-4 w-4" />}
           </button>
 
-          <Badge className="bg-purple-600/10 text-purple-300 border-purple-500/30 font-bold px-2.5 py-1">
-            {todayCount} Checked In
+          <Badge className="bg-purple-600/10 text-purple-300 border-purple-500/30 font-bold px-2 py-0.5 text-xs">
+            {todayCount} Today
           </Badge>
         </div>
       </div>
@@ -488,7 +484,7 @@ export default function FingerprintKioskPage() {
           <div
             onClick={() => handleScanTouch('left_thumb')}
             className={cn(
-              'relative h-56 w-56 sm:h-64 sm:w-64 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-500 group select-none shadow-2xl',
+              'relative h-48 w-48 sm:h-64 sm:w-64 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-500 group select-none shadow-2xl',
               isScanning
                 ? 'border-purple-500 bg-purple-950/20 shadow-[0_0_60px_rgba(168,85,247,0.5)] scale-105'
                 : kioskResult.state === 'success'
@@ -507,7 +503,7 @@ export default function FingerprintKioskPage() {
             {/* Glowing biometric fingerprint icon */}
             <Fingerprint
               className={cn(
-                'h-24 w-24 sm:h-28 sm:w-28 transition-all duration-300',
+                'h-20 w-20 sm:h-28 sm:w-28 transition-all duration-300',
                 isScanning
                   ? 'text-purple-400 scale-110 animate-pulse'
                   : kioskResult.state === 'success'

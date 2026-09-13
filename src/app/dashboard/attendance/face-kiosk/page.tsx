@@ -28,6 +28,7 @@ import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { isMobileDevice, getRecommendedFacingMode, getRecommendedMirrorState } from '@/lib/utils/device';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 import { FingerprintScannerManager } from '@/lib/fingerprint/drivers';
 import { identifyMemberFromRoster } from '@/lib/fingerprint/matcher';
@@ -99,9 +100,20 @@ export default function FaceKioskPage() {
   const [isMirrored, setIsMirrored] = useState(true);
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [showMobileFpDock, setShowMobileFpDock] = useState(false);
   const isMirroredRef = useRef(true);
   const facingModeRef = useRef<'user' | 'environment'>('user');
   const selectedCameraIdRef = useRef<string>('');
+
+  // Device-aware initial camera configuration (auto back-camera on mobile, webcam on laptop)
+  useEffect(() => {
+    const recFacing = getRecommendedFacingMode();
+    const recMirrored = getRecommendedMirrorState(recFacing);
+    setFacingMode(recFacing);
+    facingModeRef.current = recFacing;
+    setIsMirrored(recMirrored);
+    isMirroredRef.current = recMirrored;
+  }, []);
 
   // Fingerprint State
   const [fpRoster, setFpRoster] = useState<RosterMemberFingerprint[]>([]);
@@ -202,7 +214,7 @@ export default function FaceKioskPage() {
     return [];
   }, []);
 
-  // Camera start with support for preferred facing mode, device ID, and mirror override
+  // Camera start with support for preferred facing mode, device ID, automatic mobile/laptop detection, and fallback
   const startCamera = useCallback(async (
     targetFacing?: 'user' | 'environment',
     targetDeviceId?: string,
@@ -215,16 +227,40 @@ export default function FaceKioskPage() {
         streamRef.current = null;
       }
 
-      const facing = targetFacing || facingModeRef.current;
+      // Auto-determine target facing mode: prefer explicit argument -> ref state -> device recommendation (mobile: environment, laptop: user)
+      const effectiveFacing = targetFacing || facingModeRef.current || getRecommendedFacingMode();
       const deviceId = targetDeviceId || (targetFacing ? undefined : selectedCameraIdRef.current);
 
-      const constraints: MediaStreamConstraints = {
-        video: deviceId
-          ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
-          : { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
-      };
+      let stream: MediaStream | null = null;
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // 1. Try with preferred device ID or target facing mode
+      try {
+        const constraints: MediaStreamConstraints = {
+          video: deviceId
+            ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            : { facingMode: effectiveFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (firstErr) {
+        console.warn(`Primary camera access with facingMode "${effectiveFacing}" failed, attempting automatic fallback:`, firstErr);
+        // If facingMode 'environment' failed on mobile (or 'user' failed on laptop), try opposite
+        const fallbackFacing = effectiveFacing === 'environment' ? 'user' : 'environment';
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: fallbackFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          });
+        } catch (secondErr) {
+          // If specific facing modes failed, attempt any available video camera
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+          });
+        }
+      }
+
+      if (!stream) {
+        throw new Error('No video stream returned from camera');
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -234,21 +270,26 @@ export default function FaceKioskPage() {
       // Check active track settings to update actual device and facingMode
       const videoTrack = stream.getVideoTracks()[0];
       const settings = videoTrack?.getSettings?.();
+      let actualFacing: 'user' | 'environment' = effectiveFacing;
+
       if (settings?.deviceId) {
         setSelectedCameraId(settings.deviceId);
         selectedCameraIdRef.current = settings.deviceId;
       }
       if (settings?.facingMode === 'user' || settings?.facingMode === 'environment') {
+        actualFacing = settings.facingMode;
         setFacingMode(settings.facingMode);
         facingModeRef.current = settings.facingMode;
       } else if (targetFacing) {
+        actualFacing = targetFacing;
         setFacingMode(targetFacing);
         facingModeRef.current = targetFacing;
       }
 
       const shouldMirror = targetMirrored !== undefined
         ? targetMirrored
-        : (facingModeRef.current === 'user');
+        : getRecommendedMirrorState(actualFacing);
+
       setIsMirrored(shouldMirror);
       isMirroredRef.current = shouldMirror;
 
@@ -962,33 +1003,26 @@ export default function FaceKioskPage() {
 
   return (
     <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col overflow-hidden text-zinc-100 select-none">
-      {/* Top Navigation / Status Header Bar */}
-      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
-        <div className="flex items-center gap-3">
+      {/* Top Navigation Bar */}
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-zinc-900/90 border-b border-zinc-800 backdrop-blur-md">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link href="/dashboard/attendance">
-            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1.5 h-8">
+            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 gap-1.5 h-8 px-2 sm:px-3">
               <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Exit</span>
+              <span className="hidden sm:inline text-xs">Exit</span>
             </Button>
           </Link>
 
-          <div className="flex items-center gap-2.5">
-            <div className="flex -space-x-1 items-center">
-              <div className="h-7 w-7 rounded-lg bg-cyan-950/80 border border-cyan-800/60 flex items-center justify-center shadow-xs">
-                <ScanFace className="h-4 w-4 text-cyan-400" />
-              </div>
-              <div className="h-7 w-7 rounded-lg bg-purple-950/80 border border-purple-800/60 flex items-center justify-center shadow-xs">
-                <Fingerprint className="h-4 w-4 text-purple-400" />
-              </div>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-cyan-950/80 border border-cyan-800/60 flex items-center justify-center shadow-xs">
+              <ScanFace className="h-4 w-4 text-cyan-400" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span className="font-bold text-sm sm:text-base tracking-tight text-zinc-100">
                   AI Face Kiosk
                 </span>
-                <Badge className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-zinc-200 border-cyan-500/30 text-[10px] px-1.5 py-0 font-semibold hidden sm:inline-flex">
-                  Face & Biometrics
-                </Badge>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="System Live" />
               </div>
             </div>
           </div>
@@ -1001,31 +1035,31 @@ export default function FaceKioskPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2.5 text-xs rounded-lg gap-1.5 bg-cyan-600 text-white font-semibold hover:bg-cyan-600 cursor-default"
+              className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 bg-cyan-600 text-white font-semibold hover:bg-cyan-600 cursor-default"
             >
               <ScanFace className="h-3.5 w-3.5 text-white" />
-              <span className="hidden sm:inline">AI Face</span>
+              <span className="hidden md:inline">AI Face</span>
             </Button>
-
-            <Link href="/dashboard/attendance/kiosk">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
-              >
-                <Fingerprint className="h-3.5 w-3.5 text-purple-400" />
-                <span className="hidden sm:inline">Fingerprint</span>
-              </Button>
-            </Link>
 
             <Link href="/dashboard/attendance/qr-kiosk">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+                className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
               >
                 <QrCode className="h-3.5 w-3.5 text-blue-400" />
-                <span className="hidden sm:inline">QR Code</span>
+                <span className="hidden md:inline">QR Code</span>
+              </Button>
+            </Link>
+
+            <Link href="/dashboard/attendance/kiosk">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              >
+                <Fingerprint className="h-3.5 w-3.5 text-purple-400" />
+                <span className="hidden md:inline">Fingerprint</span>
               </Button>
             </Link>
           </div>
@@ -1063,42 +1097,18 @@ export default function FaceKioskPage() {
         </div>
 
         {/* Status Indicators & Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Legacy Dimension Warning */}
-          {legacyMemberCount > 0 && (
-            <Badge
-              variant="outline"
-              className="gap-1 text-xs font-semibold text-amber-400 border-amber-500/30 bg-amber-500/10 hidden xl:flex"
-              title={`${legacyMemberCount} member(s) enrolled with older 1024-D models need 1-click re-enrollment in Members section.`}
-            >
-              <AlertCircle className="h-3 w-3 text-amber-400" />
-              <span>{legacyMemberCount} Legacy (Re-enroll)</span>
-            </Badge>
-          )}
-
-          {/* Face ID Status */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {/* Active Camera Indicator Badge */}
           <Badge
             variant="outline"
-            className={cn(
-              'gap-1 text-xs font-semibold hidden md:flex',
-              isOnline ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : 'text-amber-400 border-amber-500/20 bg-amber-500/10'
-            )}
+            className="hidden sm:inline-flex text-[10px] font-mono text-zinc-300 border-zinc-800 bg-zinc-950 px-2 py-0.5"
+            title={facingMode === 'environment' ? 'Rear / Back Camera' : 'Front Webcam'}
           >
-            <ScanFace className="h-3 w-3" />
-            <span>{roster.length} Faces</span>
+            {facingMode === 'environment' ? 'Rear Cam' : 'Webcam'}
           </Badge>
 
-          {/* Fingerprint Status */}
-          <Badge
-            variant="outline"
-            className="gap-1 text-xs font-semibold text-purple-400 border-purple-500/20 bg-purple-500/10 hidden md:flex"
-          >
-            <Fingerprint className="h-3 w-3" />
-            <span>{fpRoster.length} Prints</span>
-          </Badge>
-
-          {/* Optical Scanner Driver Switcher */}
-          <div className="hidden sm:block">
+          {/* Optical Scanner Driver Switcher (Desktop) */}
+          <div className="hidden lg:block">
             <Select
               value={selectedFpDriver}
               onValueChange={(val) => {
@@ -1108,7 +1118,7 @@ export default function FaceKioskPage() {
                 detectFpHardware();
               }}
             >
-              <SelectTrigger className="h-7 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 w-32 md:w-36">
+              <SelectTrigger className="h-7 text-xs border-zinc-800 bg-zinc-950 text-zinc-300 w-32">
                 <SelectValue placeholder="Driver" />
               </SelectTrigger>
               <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
@@ -1129,7 +1139,7 @@ export default function FaceKioskPage() {
             title="Flip Camera (Front / Rear / External)"
           >
             <SwitchCamera className="h-3.5 w-3.5 text-cyan-400" />
-            <span className="hidden lg:inline">Flip Camera</span>
+            <span className="hidden sm:inline text-xs">Flip</span>
           </Button>
 
           {/* Refresh / Sync Button */}
@@ -1142,7 +1152,7 @@ export default function FaceKioskPage() {
             title="Reload Face Descriptors, Fingerprint Templates & Hardware"
           >
             <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
-            <span className="hidden lg:inline">Sync</span>
+            <span className="hidden lg:inline text-xs">Sync</span>
           </Button>
 
           {/* Sound Toggle */}
@@ -1155,18 +1165,18 @@ export default function FaceKioskPage() {
           </button>
 
           {/* Today's Tally */}
-          <Badge className="bg-primary/10 text-primary border-primary/20 font-bold">
+          <Badge className="bg-primary/10 text-primary border-primary/20 font-bold text-xs">
             {todayCount} Today
           </Badge>
         </div>
       </div>
 
       {/* Main Dual-Biometric Workspace */}
-      <div className="flex-1 min-h-0 flex flex-col justify-between p-3 sm:p-4 overflow-y-auto custom-scrollbar">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-7xl mx-auto w-full my-auto items-stretch">
-          {/* Left: Video Feed with Real-Time Vigilance Face HUD (lg:col-span-8) */}
-          <div className="lg:col-span-8 flex flex-col">
-            <div className="relative w-full aspect-video bg-zinc-900 rounded-3xl overflow-hidden border-2 border-zinc-800 shadow-2xl">
+      <div className="flex-1 min-h-0 flex flex-col justify-between p-2 sm:p-4 overflow-y-auto custom-scrollbar">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 max-w-7xl mx-auto w-full my-auto items-stretch">
+          {/* Video Feed with Real-Time Vigilance Face HUD */}
+          <div className={cn('flex flex-col transition-all', showMobileFpDock ? 'lg:col-span-8' : 'col-span-1 lg:col-span-8')}>
+            <div className="relative w-full aspect-video max-h-[50vh] sm:max-h-[66vh] bg-zinc-900 rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-zinc-800 shadow-2xl mx-auto">
               {/* Live Camera Stream */}
               <video
                 ref={videoRef}
@@ -1233,6 +1243,10 @@ export default function FaceKioskPage() {
 
               {/* Floating Camera Flip & Mirror Controls */}
               <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+                <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/75 border border-zinc-700/70 text-[10px] font-mono text-zinc-300 backdrop-blur-md">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  {facingMode === 'environment' ? 'Back Camera' : 'Webcam'}
+                </div>
                 <button
                   type="button"
                   onClick={handleFlipCamera}
@@ -1240,7 +1254,7 @@ export default function FaceKioskPage() {
                   title="Switch between front, back, or external camera"
                 >
                   <SwitchCamera className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>Flip Camera</span>
+                  <span>Flip</span>
                 </button>
                 <button
                   type="button"
@@ -1252,10 +1266,25 @@ export default function FaceKioskPage() {
                 </button>
               </div>
             </div>
+
+            {/* Mobile-only toggle to view Optical Fingerprint Dock on demand */}
+            <div className="flex lg:hidden justify-center mt-2">
+              <button
+                type="button"
+                onClick={() => setShowMobileFpDock(!showMobileFpDock)}
+                className="text-[11px] text-zinc-500 hover:text-zinc-300 flex items-center gap-1 py-1 px-2.5 rounded-md hover:bg-zinc-900 transition-colors"
+              >
+                <Fingerprint className="h-3 w-3 text-purple-400" />
+                <span>{showMobileFpDock ? 'Hide Fingerprint Dock' : 'Show Fingerprint Dock'}</span>
+              </button>
+            </div>
           </div>
 
-          {/* Right: Biometric Fingerprint Sensor Touch Dock (lg:col-span-4) */}
-          <div className="lg:col-span-4 flex flex-col justify-between bg-zinc-900/60 border-2 border-zinc-800/80 rounded-3xl p-5 shadow-2xl backdrop-blur-md relative overflow-hidden min-h-[300px]">
+          {/* Right: Biometric Fingerprint Sensor Touch Dock (Desktop or on-demand on mobile) */}
+          <div className={cn(
+            'flex-col justify-between bg-zinc-900/60 border-2 border-zinc-800/80 rounded-3xl p-5 shadow-2xl backdrop-blur-md relative overflow-hidden min-h-[280px]',
+            showMobileFpDock ? 'flex col-span-1 lg:col-span-4' : 'hidden lg:flex lg:col-span-4'
+          )}>
             {/* Top header of dock */}
             <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
               <div className="flex items-center gap-2">
