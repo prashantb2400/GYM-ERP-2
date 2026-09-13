@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { generateInvoiceHTML } from '@/lib/pdf/invoice-template';
-import { InvoiceData, InvoiceItem } from '@/lib/pdf/types';
+import { InvoiceData, InvoiceItem, InvoiceFitnessBlueprint } from '@/lib/pdf/types';
 import { numberToIndianWords } from '@/lib/utils/number-to-words';
+import { getDietChoiceLabel, getFitnessLevelLabel } from '@/lib/fitness/plan-generator';
+import { getBMICategory } from '@/lib/utils/format';
+
 
 export async function GET(
   request: Request,
@@ -93,6 +96,73 @@ export async function GET(
     const amountPaid = Number(invoice.amount_paid) || 0;
     const amountDue = Number(invoice.amount_due) || 0;
 
+    // Fetch member's diet and exercise charts if available
+    let dietChart: any = null;
+    let exerciseChart: any = null;
+    const memberObj = invoice.members;
+
+    if (memberObj?.diet_chart_id) {
+      const { data: dc } = await supabaseAdmin
+        .from('diet_charts')
+        .select('*')
+        .eq('id', memberObj.diet_chart_id)
+        .maybeSingle();
+      dietChart = dc;
+    }
+
+    if (memberObj?.exercise_chart_id) {
+      const { data: ec } = await supabaseAdmin
+        .from('exercise_charts')
+        .select('*')
+        .eq('id', memberObj.exercise_chart_id)
+        .maybeSingle();
+      exerciseChart = ec;
+    }
+
+    // Build Fitness Blueprint if chart or fitness goals exist
+    let fitnessBlueprint: InvoiceFitnessBlueprint | undefined = undefined;
+    if (dietChart || exerciseChart || memberObj?.fitness_level || memberObj?.bmi || (memberObj?.health_goals && memberObj.health_goals.length > 0)) {
+      const dietChoice = dietChart?.diet_choice || 'vegetarian';
+      const dietChoiceLabel = getDietChoiceLabel(dietChoice);
+      const fitnessLevel = exerciseChart?.fitness_level || memberObj?.fitness_level || 'beginner';
+      const fitnessLevelLabel = getFitnessLevelLabel(fitnessLevel);
+
+      const mealsArr = Array.isArray(dietChart?.meals) ? dietChart.meals : [];
+      const mealsSummary = mealsArr.map((m: any) => ({
+        name: m.meal_name || m.name || 'Meal',
+        time: m.time,
+        highlight: Array.isArray(m.items) ? m.items.map((i: any) => typeof i === 'string' ? i : i.name).slice(0, 2).join(', ') : '',
+      }));
+
+      const daysArr = Array.isArray(exerciseChart?.days) ? exerciseChart.days : [];
+      const workoutDaysSummary = daysArr.map((d: any) => ({
+        day: d.day || 'Training Day',
+        focus: Array.isArray(d.exercises) ? d.exercises.map((e: any) => e.name).slice(0, 2).join(', ') : (d.focus || 'Active Training'),
+      }));
+
+      const safeBmi = Number(memberObj?.bmi) || 0;
+      const primaryGoal = Array.isArray(memberObj?.health_goals) && memberObj.health_goals.length > 0
+        ? memberObj.health_goals[0]
+        : 'Fitness & Health';
+
+      fitnessBlueprint = {
+        dietName: dietChart?.name || `${memberObj?.name || 'Member'}'s Nutrition Plan`,
+        dietChoice,
+        dietChoiceLabel,
+        targetCalories: dietChart?.target_calories || (safeBmi >= 25 ? 1950 : 2250),
+        targetProtein: dietChart?.total_protein || (safeBmi >= 25 ? 135 : 125),
+        mealsSummary: mealsSummary.length > 0 ? mealsSummary : undefined,
+        workoutName: exerciseChart?.name || `${memberObj?.name || 'Member'}'s Training Protocol`,
+        fitnessLevel,
+        fitnessLevelLabel,
+        daysPerWeek: exerciseChart?.days_per_week || (daysArr.length > 0 ? daysArr.length : (fitnessLevel === 'advanced' ? 5 : (fitnessLevel === 'intermediate' ? 4 : 3))),
+        targetGoal: primaryGoal,
+        bmi: safeBmi > 0 ? safeBmi : null,
+        bmiCategory: getBMICategory(safeBmi),
+        workoutDaysSummary: workoutDaysSummary.length > 0 ? workoutDaysSummary : undefined,
+      };
+    }
+
     // Map to standard template data
     const templateData: InvoiceData = {
       gym: {
@@ -129,7 +199,9 @@ export async function GET(
       cashierName: 'Front Desk Cashier',
       status: invoice.status === 'paid' || amountDue <= 0 ? 'PAID' : (amountDue > 0 ? 'PENDING' : 'PAID'),
       amountInWords: numberToIndianWords(totalAmount),
+      fitnessBlueprint,
     };
+
 
     const html = generateInvoiceHTML(templateData);
 

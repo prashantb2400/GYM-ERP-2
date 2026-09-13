@@ -18,7 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Zap, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { calculateGST, formatCurrency } from '@/lib/utils/format';
+import { calculateGST, formatCurrency, toSafeUUID } from '@/lib/utils/format';
 import Link from 'next/link';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
@@ -175,7 +175,7 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
         phone: phone.trim(),
         whatsapp_phone: whatsappPhone || phone.trim(),
         status: 'active',
-        current_plan_id: selectedPlanId,
+        current_plan_id: toSafeUUID(selectedPlanId),
         plan_start_date: startDate,
         plan_end_date: endDate,
         admission_date: startDate,

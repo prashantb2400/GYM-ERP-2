@@ -45,7 +45,26 @@ export interface InvoiceData {
   cashierName?: string;
   status: 'PAID' | 'PENDING' | 'OVERDUE' | 'CANCELLED' | 'REFUNDED';
   amountInWords?: string;
+  fitnessBlueprint?: InvoiceFitnessBlueprint;
 }
+
+export interface InvoiceFitnessBlueprint {
+  dietName?: string;
+  dietChoice?: string;
+  dietChoiceLabel?: string;
+  targetCalories?: number;
+  targetProtein?: string | number;
+  mealsSummary?: { name: string; time?: string; highlight: string }[];
+  workoutName?: string;
+  fitnessLevel?: string;
+  fitnessLevelLabel?: string;
+  daysPerWeek?: number;
+  targetGoal?: string;
+  bmi?: number | null;
+  bmiCategory?: string;
+  workoutDaysSummary?: { day: string; focus: string }[];
+}
+
 
 export interface DietFoodItem {
   name: string;

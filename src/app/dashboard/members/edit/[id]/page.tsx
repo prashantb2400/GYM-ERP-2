@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, ArrowLeft, Save, Camera, Upload, User, ScanFace, Fingerprint } from 'lucide-react';
 import { toast } from 'sonner';
 import { INDIAN_STATES, BLOOD_GROUPS, GENDER_OPTIONS, FITNESS_LEVELS, MEMBER_STATUSES } from '@/lib/utils/constants';
+import { toSafeUUID } from '@/lib/utils/format';
 import { CameraCaptureModal } from '@/components/shared/CameraCaptureModal';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
@@ -230,10 +231,10 @@ export default function EditMemberPage() {
           pin: pin.trim() || null,
           photo_url: finalPhotoUrl,
           status: status || 'active',
-          current_plan_id: selectedPlanId || null,
+          current_plan_id: toSafeUUID(selectedPlanId),
           plan_start_date: planStartDate || null,
           plan_end_date: planEndDate || null,
-          trainer_id: trainerId === 'none' || !trainerId ? null : trainerId,
+          trainer_id: toSafeUUID(trainerId),
           bmi,
           height_cm: heightCm ? Number(heightCm) : null,
           weight_kg: weightKg ? Number(weightKg) : null,

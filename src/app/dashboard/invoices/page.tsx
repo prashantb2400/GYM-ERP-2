@@ -18,6 +18,7 @@ import {
   User,
   BadgeCent,
   CheckCircle,
+  Activity,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,8 +32,20 @@ import { SpotlightCard, GradientText, GlowingBadge, BorderBeam, NumberTicker } f
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 type InvoiceWithMembers = Invoice & {
-  members?: { phone?: string | null; whatsapp_phone?: string | null; name?: string; member_code?: string | null } | null;
+  members?: {
+    id?: string;
+    phone?: string | null;
+    whatsapp_phone?: string | null;
+    name?: string;
+    member_code?: string | null;
+    bmi?: number | null;
+    fitness_level?: string | null;
+    health_goals?: string[] | null;
+    diet_charts?: any | null;
+    exercise_charts?: any | null;
+  } | null;
 };
+
 
 export default function InvoicesPage() {
   const supabase = createClient();
@@ -80,7 +93,7 @@ export default function InvoicesPage() {
       setLoading(true);
       let query = supabase
         .from('invoices')
-        .select('*, members(phone, whatsapp_phone)')
+        .select('*, members(id, name, phone, whatsapp_phone, member_code, bmi, fitness_level, health_goals, diet_charts(id, name, description, target_calories), exercise_charts(id, name, description, days))')
         .eq('gym_id', user.gymId)
         .order('issued_at', { ascending: false });
 
@@ -566,6 +579,51 @@ export default function InvoicesPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Included Member Fitness Blueprint (Nutrition & Workout) */}
+                {(selectedInvoice.members?.diet_charts || selectedInvoice.members?.exercise_charts || selectedInvoice.line_items?.some((it: any) => it.description?.toLowerCase().includes('blueprint'))) && (
+                  <div className="border border-indigo-200 bg-gradient-to-r from-indigo-50/70 to-purple-50/70 rounded-lg p-3 text-xs space-y-2 text-zinc-700 mt-4">
+                    <div className="flex items-center justify-between border-b border-indigo-200/60 pb-1.5">
+                      <div className="flex items-center gap-1.5 font-bold text-indigo-900 text-[11px] uppercase tracking-wide">
+                        <Activity className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>Included Member Blueprint: Nutrition &amp; Workout Program</span>
+                      </div>
+                      <span className="text-[9px] bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">
+                        Complimentary Benefit
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-[11px]">
+                      <div className="bg-white/90 border border-indigo-100 rounded p-2.5 space-y-1 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-zinc-900">
+                            {selectedInvoice.members?.diet_charts?.name || 'Personalized Nutrition Blueprint'}
+                          </span>
+                          <span className="text-[9px] bg-emerald-100 text-emerald-800 font-semibold px-1.5 py-0.5 rounded">
+                            {selectedInvoice.members?.diet_charts?.target_calories ? `${selectedInvoice.members.diet_charts.target_calories} kcal` : 'Calibrated'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 leading-snug">
+                          {selectedInvoice.members?.diet_charts?.description || 'Custom macronutrient distribution tailored to member BMI & fitness targets.'}
+                        </p>
+                      </div>
+
+                      <div className="bg-white/90 border border-indigo-100 rounded p-2.5 space-y-1 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-zinc-900">
+                            {selectedInvoice.members?.exercise_charts?.name || 'Structured Training Protocol'}
+                          </span>
+                          <span className="text-[9px] bg-blue-100 text-blue-800 font-semibold px-1.5 py-0.5 rounded capitalize">
+                            {selectedInvoice.members?.fitness_level || 'Active'} Split
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 leading-snug">
+                          {selectedInvoice.members?.exercise_charts?.description || 'Periodized multi-day movement schedule tailored to member goal & level.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Invoice Footer Terms */}
                 <div className="border-t border-zinc-200 pt-6 text-[10px] text-zinc-400 text-center space-y-1">

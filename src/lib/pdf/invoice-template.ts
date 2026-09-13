@@ -30,6 +30,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     cashierName,
     status,
     amountInWords,
+    fitnessBlueprint,
   } = data;
 
   const resolvedGymName = (gym.name?.trim() && gym.name !== 'Gym Center')
@@ -530,6 +531,153 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       padding-top: 6px;
     }
 
+    /* Included Member Fitness Blueprint Section */
+    .blueprint-section {
+      margin-top: 22px;
+      margin-bottom: 8px;
+      border: 1.5px solid #c7d2fe;
+      background: linear-gradient(180deg, #fbfcfe 0%, #f5f3ff 100%);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .blueprint-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e0e7ff;
+    }
+
+    .blueprint-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #3730a3;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+    }
+
+    .blueprint-badge {
+      font-size: 9px;
+      font-weight: 700;
+      color: #4338ca;
+      background: #e0e7ff;
+      border: 1px solid #c7d2fe;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .blueprint-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .blueprint-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .blueprint-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .blueprint-card-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .blueprint-card-subtitle {
+      font-size: 9.5px;
+      color: #64748b;
+      margin-top: 1px;
+    }
+
+    .diet-tag {
+      font-size: 9px;
+      font-weight: 700;
+      color: #166534;
+      background: #dcfce7;
+      border: 1px solid #bbf7d0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .workout-tag {
+      font-size: 9px;
+      font-weight: 700;
+      color: #1e40af;
+      background: #dbeafe;
+      border: 1px solid #bfdbfe;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .blueprint-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      background: #f8fafc;
+      border: 1px solid #f1f5f9;
+      border-radius: 4px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .blueprint-stat .stat-label {
+      display: block;
+      font-size: 8.5px;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .blueprint-stat .stat-value {
+      font-size: 11px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .blueprint-schedule {
+      font-size: 9.5px;
+      color: #334155;
+      line-height: 1.4;
+      border-top: 1px dashed #e2e8f0;
+      padding-top: 6px;
+    }
+
+    .blueprint-schedule-item {
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .blueprint-footnote {
+      margin-top: 8px;
+      font-size: 9px;
+      color: #64748b;
+      text-align: center;
+    }
+
     /* Footer / Terms */
     .footer {
       display: flex;
@@ -772,6 +920,91 @@ export function generateInvoiceHTML(data: InvoiceData): string {
         </table>
       </div>
     </div>
+
+    <!-- Included Member Fitness & Nutrition Blueprint -->
+    ${fitnessBlueprint ? `
+    <div class="blueprint-section">
+      <div class="blueprint-header">
+        <div class="blueprint-title">
+          <span>⚡ INCLUDED MEMBER BLUEPRINT: PERSONALIZED NUTRITION &amp; WORKOUT PROGRAM</span>
+        </div>
+        <span class="blueprint-badge">MEMBER COMPLIMENTARY BENEFIT</span>
+      </div>
+
+      <div class="blueprint-grid">
+        <!-- Nutrition Protocol Card -->
+        <div class="blueprint-card">
+          <div class="blueprint-card-header">
+            <div>
+              <div class="blueprint-card-title">${escapeHtml(fitnessBlueprint.dietName || 'Personalized Nutrition Protocol')}</div>
+              <div class="blueprint-card-subtitle">Macronutrient Split &amp; Daily Schedule</div>
+            </div>
+            <span class="diet-tag">${escapeHtml(fitnessBlueprint.dietChoiceLabel || 'Personalized Nutrition')}</span>
+          </div>
+          <div class="blueprint-stats">
+            <div class="blueprint-stat">
+              <span class="stat-label">Target Energy</span>
+              <span class="stat-value">${fitnessBlueprint.targetCalories ? `${fitnessBlueprint.targetCalories} kcal` : 'Calibrated'}</span>
+            </div>
+            <div class="blueprint-stat">
+              <span class="stat-label">Daily Protein</span>
+              <span class="stat-value">${fitnessBlueprint.targetProtein ? `${fitnessBlueprint.targetProtein}g` : 'Optimal'}</span>
+            </div>
+            <div class="blueprint-stat">
+              <span class="stat-label">Diet Pattern</span>
+              <span class="stat-value" style="font-size: 10px; text-transform: capitalize;">${escapeHtml(fitnessBlueprint.dietChoice || 'Vegetarian')}</span>
+            </div>
+          </div>
+          ${fitnessBlueprint.mealsSummary && fitnessBlueprint.mealsSummary.length > 0 ? `
+          <div class="blueprint-schedule">
+            ${fitnessBlueprint.mealsSummary.slice(0, 4).map(m => `
+              <div class="blueprint-schedule-item">
+                <strong>${escapeHtml(m.name)}:</strong> ${escapeHtml(m.highlight)}
+              </div>
+            `).join('')}
+          </div>
+          ` : ''}
+        </div>
+
+        <!-- Workout Protocol Card -->
+        <div class="blueprint-card">
+          <div class="blueprint-card-header">
+            <div>
+              <div class="blueprint-card-title">${escapeHtml(fitnessBlueprint.workoutName || 'Tailored Workout Protocol')}</div>
+              <div class="blueprint-card-subtitle">Periodized Strength &amp; Conditioning</div>
+            </div>
+            <span class="workout-tag">${escapeHtml(fitnessBlueprint.fitnessLevelLabel || 'Active Training')}</span>
+          </div>
+          <div class="blueprint-stats">
+            <div class="blueprint-stat">
+              <span class="stat-label">Frequency</span>
+              <span class="stat-value">${fitnessBlueprint.daysPerWeek ? `${fitnessBlueprint.daysPerWeek} Days/Wk` : '3-4 Days'}</span>
+            </div>
+            <div class="blueprint-stat">
+              <span class="stat-label">Target Goal</span>
+              <span class="stat-value" style="font-size: 10.5px;">${escapeHtml(fitnessBlueprint.targetGoal || 'General Fitness')}</span>
+            </div>
+            <div class="blueprint-stat">
+              <span class="stat-label">BMI Category</span>
+              <span class="stat-value" style="font-size: 10.5px;">${escapeHtml(fitnessBlueprint.bmiCategory || 'Optimal')}</span>
+            </div>
+          </div>
+          ${fitnessBlueprint.workoutDaysSummary && fitnessBlueprint.workoutDaysSummary.length > 0 ? `
+          <div class="blueprint-schedule">
+            ${fitnessBlueprint.workoutDaysSummary.slice(0, 4).map(d => `
+              <div class="blueprint-schedule-item">
+                <strong>${escapeHtml(d.day)}:</strong> ${escapeHtml(d.focus)}
+              </div>
+            `).join('')}
+          </div>
+          ` : ''}
+        </div>
+      </div>
+      <div class="blueprint-footnote">
+        ✦ Full meal-by-meal timetable and exercise progression available in your <strong>Member App Portal</strong>.
+      </div>
+    </div>
+    ` : ''}
 
     <!-- Footer -->
     <div class="footer">

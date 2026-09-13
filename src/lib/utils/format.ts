@@ -119,3 +119,24 @@ export function calculateGST(subtotal: number, discountAmount: number = 0): { cg
     total: taxableAmount + cgst + sgst,
   };
 }
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Universal UUID Sanitizer
+ * Ensures no invalid sentinel values like "none", "null", or malformed IDs reach PostgreSQL UUID columns.
+ */
+export function toSafeUUID(val: unknown): string | null {
+  if (!val || typeof val !== 'string') return null;
+  const trimmed = val.trim();
+  if (
+    !trimmed ||
+    trimmed.toLowerCase() === 'none' ||
+    trimmed.toLowerCase() === 'null' ||
+    trimmed.toLowerCase() === 'undefined'
+  ) {
+    return null;
+  }
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
+

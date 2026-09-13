@@ -38,7 +38,16 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { INDIAN_STATES, BLOOD_GROUPS, GENDER_OPTIONS, FITNESS_LEVELS, PAYMENT_MODES, KYC_DOC_TYPES } from '@/lib/utils/constants';
-import { calculateGST } from '@/lib/utils/format';
+import { calculateGST, toSafeUUID } from '@/lib/utils/format';
+import {
+  generateDietPlan,
+  generateExercisePlan,
+  getDietChoiceLabel,
+  getFitnessLevelLabel,
+  DietChoice,
+  FitnessLevel,
+  calculateNutritionTargets,
+} from '@/lib/fitness/plan-generator';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
 import { useBranch } from '@/hooks/useBranch';
@@ -96,6 +105,8 @@ export default function AddMemberPage() {
   // Post-Registration Action States
   const [createdMember, setCreatedMember] = useState<any | null>(null);
   const [createdInvoice, setCreatedInvoice] = useState<any | null>(null);
+  const [createdDietChart, setCreatedDietChart] = useState<any | null>(null);
+  const [createdExerciseChart, setCreatedExerciseChart] = useState<any | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [faceEnrollOpen, setFaceEnrollOpen] = useState(false);
   const [fingerprintEnrollOpen, setFingerprintEnrollOpen] = useState(false);
@@ -135,11 +146,14 @@ export default function AddMemberPage() {
     setHealthGoals([]);
     setMedicalConditions('');
     setTimingSlot('');
+    setDietChoice('vegetarian');
     setKycType('');
     setKycFile(null);
     setKycPreview(null);
     setCreatedMember(null);
     setCreatedInvoice(null);
+    setCreatedDietChart(null);
+    setCreatedExerciseChart(null);
     setFaceEnrolledSuccess(false);
     setFingerprintEnrolledSuccess(false);
     setFingerprintEnrollOpen(false);
@@ -202,6 +216,7 @@ export default function AddMemberPage() {
   const [heightCm, setHeightCm] = useState('');
   const [weightKg, setWeightKg] = useState('');
   const [fitnessLevel, setFitnessLevel] = useState<'beginner' | 'intermediate' | 'advanced' | ''>('');
+  const [dietChoice, setDietChoice] = useState<DietChoice>('vegetarian');
   const [healthGoals, setHealthGoals] = useState<string[]>([]);
   const [medicalConditions, setMedicalConditions] = useState('');
   const [timingSlot, setTimingSlot] = useState('');
@@ -470,8 +485,78 @@ export default function AddMemberPage() {
         bmi = Math.round((Number(weightKg) / (heightM * heightM)) * 10) / 10;
       }
 
-      // 5. Insert member record
-      const branchToAssign = memberBranchId || user.branchId || branches[0]?.id || null;
+      // 5. Generate automated tailored Diet Chart & Exercise Chart for the member
+      let createdDietId: string | null = null;
+      let createdExerciseId: string | null = null;
+      let dietChartRecord: any = null;
+      let exerciseChartRecord: any = null;
+
+      try {
+        const generatedDiet = generateDietPlan({
+          memberName: name.trim(),
+          dietChoice: dietChoice || 'vegetarian',
+          bmi,
+          healthGoals,
+          gymId: user.gymId,
+          userId: user.id,
+        });
+
+        const { data: insertedDiet, error: dietInsertError } = await supabase
+          .from('diet_charts')
+          .insert({
+            gym_id: user.gymId,
+            name: generatedDiet.name,
+            description: generatedDiet.description,
+            meals: generatedDiet.meals,
+            target_calories: generatedDiet.target_calories,
+            is_template: false,
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (!dietInsertError && insertedDiet) {
+          createdDietId = insertedDiet.id;
+          dietChartRecord = insertedDiet;
+        }
+      } catch (dietErr) {
+        console.warn('Diet chart auto-creation warning (non-fatal):', dietErr);
+      }
+
+      try {
+        const generatedExercise = generateExercisePlan({
+          memberName: name.trim(),
+          fitnessLevel: (fitnessLevel as FitnessLevel) || 'beginner',
+          bmi,
+          healthGoals,
+          gymId: user.gymId,
+          userId: user.id,
+        });
+
+        const { data: insertedExercise, error: exInsertError } = await supabase
+          .from('exercise_charts')
+          .insert({
+            gym_id: user.gymId,
+            name: generatedExercise.name,
+            description: generatedExercise.description,
+            days: generatedExercise.days,
+            is_template: false,
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (!exInsertError && insertedExercise) {
+          createdExerciseId = insertedExercise.id;
+          exerciseChartRecord = insertedExercise;
+        }
+      } catch (exErr) {
+        console.warn('Exercise chart auto-creation warning (non-fatal):', exErr);
+      }
+
+      // 6. Insert member record with sanitized UUIDs
+      const rawBranch = memberBranchId || user.branchId || branches[0]?.id || null;
+      const branchToAssign = toSafeUUID(rawBranch);
       const admFeeNumber = Number(admissionFee) || 0;
 
       const memberPayload: any = {
@@ -492,13 +577,15 @@ export default function AddMemberPage() {
         pin: pin.trim() || null,
         photo_url: photoUrl,
         emergency_contact: { name: emergencyName, relation: emergencyRelation, phone: emergencyPhone },
-        current_plan_id: selectedPlanId,
+        current_plan_id: toSafeUUID(selectedPlanId),
         plan_start_date: planStartDate,
         plan_end_date: planEndDate,
         admission_date: new Date().toISOString().split('T')[0],
         admission_fee: admFeeNumber,
         status: 'active',
-        trainer_id: trainerId || null,
+        trainer_id: toSafeUUID(trainerId),
+        diet_chart_id: toSafeUUID(createdDietId),
+        exercise_chart_id: toSafeUUID(createdExerciseId),
         bmi,
         height_cm: heightCm ? Number(heightCm) : null,
         weight_kg: weightKg ? Number(weightKg) : null,
@@ -536,7 +623,7 @@ export default function AddMemberPage() {
         throw new Error(memberError?.message || 'Failed to create member row');
       }
 
-      // 6. Generate Invoice record
+      // 7. Generate Invoice record
       const { data: invNumber } = await supabase.rpc('generate_invoice_number', {
         p_gym_id: user.gymId,
       });
@@ -558,6 +645,16 @@ export default function AddMemberPage() {
           amount: admFeeNumber,
         });
       }
+
+      // Add complimentary fitness & nutrition blueprint line item
+      const dietLabel = getDietChoiceLabel(dietChoice);
+      const levelLabel = getFitnessLevelLabel(fitnessLevel || 'beginner').split(' ')[0];
+      lineItems.push({
+        description: `Included Member Blueprint: ${dietLabel} & ${levelLabel} Training Program`,
+        qty: 1,
+        rate: 0,
+        amount: 0,
+      });
 
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
@@ -586,7 +683,7 @@ export default function AddMemberPage() {
 
       if (invoiceError) throw invoiceError;
 
-      // 7. Write outstanding dues to due_records if amountDue > 0
+      // 8. Write outstanding dues to due_records if amountDue > 0
       if (amountDue > 0) {
         await supabase.from('due_records').insert({
           gym_id: user.gymId,
@@ -599,7 +696,7 @@ export default function AddMemberPage() {
         });
       }
 
-      // 8. Write KYC document row
+      // 9. Write KYC document row
       if (kycUrl && kycType) {
         await supabase.from('kyc_documents').insert({
           gym_id: user.gymId,
@@ -616,6 +713,8 @@ export default function AddMemberPage() {
         branch_name: branches.find(b => b.id === branchToAssign)?.name || 'Main Branch',
       });
       setCreatedInvoice(invoiceData);
+      setCreatedDietChart(dietChartRecord);
+      setCreatedExerciseChart(exerciseChartRecord);
       setSuccessModalOpen(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -1401,6 +1500,34 @@ export default function AddMemberPage() {
                 {/* Fitness info */}
                 <div className="space-y-4">
                   <div className="grid gap-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="dietChoice" className="text-zinc-300 text-sm font-medium">Dietary Preference</Label>
+                      <Badge variant="outline" className="text-[9px] text-emerald-400 border-emerald-500/30">
+                        Auto-Generates Diet Chart
+                      </Badge>
+                    </div>
+                    <Select value={dietChoice} onValueChange={(v: any) => setDietChoice(v)}>
+                      <SelectTrigger id="dietChoice" className="border-zinc-800 bg-zinc-950 text-zinc-100">
+                        <SelectValue placeholder="Select diet preference" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                        <SelectItem value="vegetarian" className="focus:bg-zinc-800 focus:text-white">
+                          🥬 Pure Vegetarian (Veg)
+                        </SelectItem>
+                        <SelectItem value="non_vegetarian" className="focus:bg-zinc-800 focus:text-white">
+                          🍗 Non-Vegetarian (Eggs, Chicken, Fish)
+                        </SelectItem>
+                        <SelectItem value="eggetarian" className="focus:bg-zinc-800 focus:text-white">
+                          🥚 Eggetarian (Vegetarian + Eggs)
+                        </SelectItem>
+                        <SelectItem value="vegan" className="focus:bg-zinc-800 focus:text-white">
+                          🌱 100% Plant-Based (Vegan)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
                     <Label htmlFor="level" className="text-zinc-300 text-sm">Fitness Level</Label>
                     <Select value={fitnessLevel} onValueChange={(v: any) => setFitnessLevel(v)}>
                       <SelectTrigger id="level" className="border-zinc-800 bg-zinc-950 text-zinc-100 capitalize">
@@ -1430,6 +1557,29 @@ export default function AddMemberPage() {
                           </Label>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Automated Blueprint Live Indicator */}
+                  <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-1.5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                        <span className="text-xs font-bold text-purple-200">
+                          Automated Member Welcome Blueprint
+                        </span>
+                      </div>
+                      <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 text-[9px]">
+                        Included
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                      Based on <strong className="text-zinc-200">{getDietChoiceLabel(dietChoice)}</strong> and <strong className="text-zinc-200">{getFitnessLevelLabel(fitnessLevel || 'beginner').split(' ')[0]}</strong>, a custom nutrition plan and training schedule will be generated and printed on the invoice.
+                    </p>
+                    <div className="flex items-center gap-2 pt-1 text-[10px] text-purple-300 font-mono">
+                      <span>• ~{calculateNutritionTargets(liveBmi, healthGoals).targetCalories} kcal</span>
+                      <span>• ~{calculateNutritionTargets(liveBmi, healthGoals).targetProtein}g protein</span>
+                      <span>• {fitnessLevel === 'advanced' ? '5-Day' : (fitnessLevel === 'intermediate' ? '4-Day' : '3-Day')} workout split</span>
                     </div>
                   </div>
 
@@ -1623,12 +1773,24 @@ export default function AddMemberPage() {
                       {liveBmi ? `${liveBmi} (${getBmiCategory(liveBmi).label})` : 'Not recorded'}
                     </span>
                   </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Diet Preference</span>
+                    <span className="font-medium text-emerald-400">{getDietChoiceLabel(dietChoice)}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Fitness Level</span>
+                    <span className="font-medium text-purple-300">{getFitnessLevelLabel(fitnessLevel || 'beginner').split(' ')[0]} Split</span>
+                  </div>
                   {timingSlot && (
                     <div className="flex justify-between text-zinc-400">
                       <span>Timing Slot</span>
                       <span className="font-medium text-zinc-200">{timingSlot}</span>
                     </div>
                   )}
+                  <div className="flex justify-between text-zinc-400 pt-1 border-t border-zinc-800/60">
+                    <span>Welcome Benefit</span>
+                    <span className="font-medium text-indigo-300">⚡ Auto Diet &amp; Workout Blueprint</span>
+                  </div>
                 </div>
 
                 {/* KYC & Branch review */}
@@ -1781,6 +1943,22 @@ export default function AddMemberPage() {
                 <span>₹{createdInvoice?.amount_due || amountDue}</span>
               </div>
             )}
+            {createdDietChart && (
+              <div className="flex justify-between items-center text-xs border-t border-zinc-800/60 pt-2">
+                <span className="text-zinc-400">Assigned Diet:</span>
+                <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/30">
+                  {getDietChoiceLabel(dietChoice)} • {createdDietChart.target_calories} kcal
+                </Badge>
+              </div>
+            )}
+            {createdExerciseChart && (
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-zinc-400">Assigned Workout:</span>
+                <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-500/30">
+                  {getFitnessLevelLabel(fitnessLevel || 'beginner').split(' ')[0]} Split ({createdExerciseChart.days?.length || 3} Days)
+                </Badge>
+              </div>
+            )}
           </div>
 
           {/* Counter Actions with Precautions */}
@@ -1798,7 +1976,7 @@ export default function AddMemberPage() {
                   <Badge variant="outline" className="text-[9px] text-green-400 border-green-500/30">Tax Invoice</Badge>
                 </div>
                 <p className="text-[11px] text-zinc-400">
-                  Generate official printed receipt for customer payment records.
+                  Includes member's tailored nutrition &amp; workout blueprint.
                 </p>
               </div>
               <Button
@@ -1814,6 +1992,44 @@ export default function AddMemberPage() {
                 Print Receipt
               </Button>
             </div>
+
+            {/* Action 1b: View & Print Individual Blueprint PDFs */}
+            {(createdDietChart || createdExerciseChart) && (
+              <div className="flex items-center justify-between p-3 rounded-xl border border-indigo-900/40 bg-indigo-950/20 hover:bg-indigo-950/30 transition-colors">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-indigo-400" />
+                    <span className="text-xs font-bold text-zinc-200">Diet &amp; Workout Blueprint</span>
+                    <Badge variant="outline" className="text-[9px] text-indigo-300 border-indigo-500/30">Generated</Badge>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    Standalone printable meal chart and training schedule.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                  {createdDietChart?.id && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(`/api/diet/${createdDietChart.id}/pdf`, '_blank')}
+                      className="border-indigo-700/60 hover:bg-indigo-900/40 text-indigo-300 text-xs h-8 px-2.5"
+                    >
+                      Diet PDF
+                    </Button>
+                  )}
+                  {createdExerciseChart?.id && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(`/api/exercise/${createdExerciseChart.id}/pdf`, '_blank')}
+                      className="border-indigo-700/60 hover:bg-indigo-900/40 text-indigo-300 text-xs h-8 px-2.5"
+                    >
+                      Workout PDF
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Action 2: Biometric Fingerprint */}
             <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors">
