@@ -23,12 +23,21 @@ import {
   Clock,
   Zap,
   Copy,
+  ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ExerciseDay, Exercise } from '@/types/database';
@@ -504,6 +513,22 @@ export default function ExercisePlansPage() {
     setDays(updated);
   };
 
+  // Add an empty exercise row directly into the day
+  const handleAddEmptyExercise = (dayIdx: number) => {
+    const updated = [...days];
+    if (!updated[dayIdx]) return;
+    const exercisesList = [...(updated[dayIdx].exercises || [])];
+    exercisesList.push({
+      name: '',
+      sets: 3,
+      reps: '10-12',
+      rest_seconds: 60,
+      notes: '',
+    });
+    updated[dayIdx].exercises = exercisesList;
+    setDays(updated);
+  };
+
   // Add a new workout day
   const handleAddDayCard = (presetLabel?: string) => {
     const defaultLabel = presetLabel || `Day ${days.length + 1}: Training`;
@@ -859,462 +884,450 @@ export default function ExercisePlansPage() {
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* Modern, Uncluttered Workout Plan Builder Modal */}
+      {/* Modern, Clean & Uncluttered Workout Plan Builder Studio Modal */}
       {/* ------------------------------------------------------------- */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-4xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-5xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl">
           {/* Modal Header */}
-          <DialogHeader className="p-5 border-b border-zinc-800 shrink-0 bg-zinc-900/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-lg font-bold text-zinc-100 flex items-center gap-2">
-                  <Dumbbell className="h-5 w-5 text-purple-400" />
-                  {workoutId ? 'Modify Workout Chart' : 'Design High-Performance Workout Plan'}
-                </DialogTitle>
-                <DialogDescription className="text-zinc-400 text-xs mt-0.5">
-                  Compose split days, pick 1-click muscle group exercises, and customize sets, reps & rest limits.
-                </DialogDescription>
+          <DialogHeader className="p-4 sm:p-5 border-b border-zinc-800 shrink-0 bg-zinc-900/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-purple-950/60 border border-purple-800/40 flex items-center justify-center text-purple-400 shrink-0">
+                  <Dumbbell className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-lg font-bold text-zinc-100 flex items-center gap-2">
+                    {workoutId ? 'Edit Workout Plan' : 'Workout Plan Builder Studio'}
+                  </DialogTitle>
+                  <DialogDescription className="text-zinc-400 text-xs mt-0.5">
+                    Compose split routines, fine-tune volume & sets, and pick 1-click popular fitness movements.
+                  </DialogDescription>
+                </div>
               </div>
 
-              {/* Volume summary badge */}
-              <div className="hidden sm:flex items-center gap-3 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg text-xs">
-                <div className="text-right">
-                  <div className="text-[10px] text-zinc-500 uppercase font-semibold">Volume Overview</div>
-                  <div className="text-zinc-200 font-bold">
-                    <span className="text-purple-400">{workoutSummary.totalDays}</span> Days •{' '}
-                    <span className="text-cyan-400">{workoutSummary.totalExercises}</span> Total Exercises
-                  </div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {/* 1-Click Templates Dropdown */}
+                {!workoutId && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs border-purple-800/60 bg-purple-950/30 text-purple-200 hover:bg-purple-900/40 hover:text-white gap-1.5 cursor-pointer"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                        <span>Load Preset Split</span>
+                        <ChevronDown className="h-3 w-3 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-80 bg-zinc-950 border-zinc-800 text-zinc-200 p-1.5 shadow-2xl z-50">
+                      <DropdownMenuLabel className="text-[11px] font-semibold text-zinc-400 px-2 py-1">
+                        1-Click Workout Split Templates
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-zinc-800" />
+                      {PRESET_WORKOUT_TEMPLATES.map((tmpl) => (
+                        <DropdownMenuItem
+                          key={tmpl.id}
+                          onClick={() => handleApplyTemplate(tmpl)}
+                          className="flex flex-col items-start gap-1 p-2 rounded-lg cursor-pointer hover:bg-purple-950/40 focus:bg-purple-950/40"
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-semibold text-xs text-zinc-100">{tmpl.name}</span>
+                            <Badge variant="outline" className="text-[10px] border-purple-800/60 text-purple-300 py-0 px-1.5">
+                              {tmpl.splitBadge}
+                            </Badge>
+                          </div>
+                          <p className="text-[10px] text-zinc-400 line-clamp-1">{tmpl.description}</p>
+                          <div className="text-[10px] text-zinc-500 font-mono">
+                            {tmpl.days.length} Training Days ({tmpl.days.map((d) => d.day.split(':')[0]).join(', ')})
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {/* Volume Summary Badge */}
+                <div className="flex items-center gap-2 bg-zinc-900/90 border border-zinc-800 px-3 py-1 rounded-xl text-xs">
+                  <span className="text-zinc-400 text-[11px]">Volume:</span>
+                  <span className="font-mono font-bold text-purple-400">{workoutSummary.totalDays}</span>
+                  <span className="text-zinc-500 text-[10px]">Days</span>
+                  <span className="text-zinc-600">•</span>
+                  <span className="font-mono font-bold text-cyan-400">{workoutSummary.totalExercises}</span>
+                  <span className="text-zinc-500 text-[10px]">Exercises</span>
                 </div>
               </div>
             </div>
           </DialogHeader>
 
           {/* Modal Body - Scrollable */}
-          <form onSubmit={handleSaveWorkout} className="flex-1 overflow-y-auto p-5 space-y-6">
-            {/* 1-Click Templates Bar */}
-            {!workoutId && (
-              <div className="bg-purple-950/20 border border-purple-900/30 p-3.5 rounded-xl space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-300">
-                  <Sparkles className="h-3.5 w-3.5 text-purple-400" />
-                  <span>1-Click Pre-Built Workout Split Templates (Click to Auto-Fill):</span>
+          <form onSubmit={handleSaveWorkout} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            {/* Plan Metadata Bar - Compact & Clean */}
+            <div className="bg-zinc-900/40 border border-zinc-800/70 rounded-xl p-3 sm:p-4 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                <div className="sm:col-span-8 space-y-1">
+                  <Label htmlFor="workoutName" className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                    Routine Name *
+                  </Label>
+                  <Input
+                    id="workoutName"
+                    placeholder="e.g. 5-Day Hypertrophy PPL or Strength Circuit"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="bg-zinc-900 border-zinc-800 text-xs h-8 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                  />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-                  {PRESET_WORKOUT_TEMPLATES.map((tmpl) => (
-                    <button
-                      key={tmpl.id}
-                      type="button"
-                      onClick={() => handleApplyTemplate(tmpl)}
-                      className="text-left p-2.5 rounded-lg border border-purple-900/40 bg-zinc-900/80 hover:bg-purple-900/20 hover:border-purple-500/50 transition-all group"
-                    >
-                      <div className="text-[11px] font-bold text-zinc-200 group-hover:text-purple-300 truncate">
-                        {tmpl.name}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-1">
-                        <span>{tmpl.splitBadge}</span>
-                        <span className="text-purple-400 font-semibold">{tmpl.days.length} Days</span>
-                      </div>
-                    </button>
-                  ))}
+
+                <div className="sm:col-span-4 space-y-1">
+                  <Label htmlFor="workoutIsTemplate" className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                    Visibility / Type
+                  </Label>
+                  <div className="flex items-center h-8 px-3 rounded-md bg-zinc-900 border border-zinc-800 text-xs text-zinc-300">
+                    <span className="text-[11px] text-purple-300 font-medium">
+                      {isTemplate ? '⚡ Template Blueprint' : 'Custom Member Plan'}
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Plan Metadata Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="workoutName" className="text-xs font-semibold text-zinc-300">
-                  Workout Routine Name *
-                </Label>
-                <Input
-                  id="workoutName"
-                  placeholder="e.g. 5-Day Hypertrophy PPL or Strength Circuit"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="bg-zinc-900 border-zinc-800 text-xs h-9 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="workoutLevel" className="text-xs font-semibold text-zinc-300">
-                  Target Fitness Level
-                </Label>
-                <Input
-                  id="workoutLevel"
-                  placeholder="e.g. Intermediate / Advanced"
-                  className="bg-zinc-900 border-zinc-800 text-xs h-9 text-zinc-100 placeholder:text-zinc-600"
-                />
-              </div>
-
-              <div className="sm:col-span-3 space-y-1.5">
-                <Label htmlFor="desc" className="text-xs text-zinc-400">
-                  Workout Description / Instructions
+              <div className="space-y-1">
+                <Label htmlFor="desc" className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                  Coaching Notes / Instructions (Optional)
                 </Label>
                 <Input
                   id="desc"
                   placeholder="e.g. Focus on explosive concentric reps and 3-second negative eccentric tempo."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="bg-zinc-900 border-zinc-800 text-xs h-9 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                  className="bg-zinc-900 border-zinc-800 text-xs h-8 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
                 />
               </div>
             </div>
 
-            {/* -------------------------------------------------------- */}
-            {/* Workout Days Composer - Clean Tabbed Architecture        */}
-            {/* -------------------------------------------------------- */}
-            <div className="space-y-4">
-              {/* Header with Preset Quick Adders */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+            {/* Workout Days Navigation & Schedule */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2 border-b border-zinc-800/80 pb-2.5">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-purple-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                  <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
                     Training Routine Schedule ({days.length} {days.length === 1 ? 'Day' : 'Days'})
-                  </h3>
+                  </span>
                 </div>
 
-                <div className="flex items-center flex-wrap gap-1.5">
-                  <span className="text-[10px] text-zinc-500 font-medium mr-1">Add Preset:</span>
-                  {['Mon Push', 'Tue Pull', 'Wed Legs', 'Thu Upper', 'Fri Lower', 'Sat Cardio'].map((preset) => (
+                {/* Quick Add Day Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
-                      key={preset}
                       type="button"
-                      variant="outline"
                       size="sm"
-                      onClick={() => handleAddDayCard(preset)}
-                      className="h-7 text-[11px] px-2.5 border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 transition-colors"
+                      className="h-7 text-xs px-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium gap-1 shadow-sm cursor-pointer"
                     >
-                      + {preset}
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Day</span>
+                      <ChevronDown className="h-3 w-3 opacity-70" />
                     </Button>
-                  ))}
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => handleAddDayCard()}
-                    className="h-7 text-[11px] px-3 bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-sm transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Custom Day
-                  </Button>
-                </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800 text-zinc-200 p-1 text-xs z-50">
+                    {['Monday: Push', 'Tuesday: Pull', 'Wednesday: Legs', 'Thursday: Upper Body', 'Friday: Lower Body', 'Saturday: Core & Cardio', 'Sunday: Active Recovery'].map((dayPreset) => (
+                      <DropdownMenuItem
+                        key={dayPreset}
+                        onClick={() => handleAddDayCard(dayPreset)}
+                        className="cursor-pointer hover:bg-zinc-900 focus:bg-zinc-900 text-xs"
+                      >
+                        + {dayPreset}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator className="bg-zinc-800" />
+                    <DropdownMenuItem
+                      onClick={() => handleAddDayCard()}
+                      className="cursor-pointer text-purple-300 hover:bg-purple-950/40 focus:bg-purple-950/40 font-semibold text-xs"
+                    >
+                      + Custom Training Day
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
-              {days.length === 0 ? (
-                <div className="text-center py-12 border border-dashed border-zinc-800 rounded-2xl bg-zinc-950/40 p-6 space-y-3">
-                  <div className="h-10 w-10 mx-auto rounded-full bg-purple-950/40 border border-purple-800/40 flex items-center justify-center text-purple-400">
-                    <Dumbbell className="h-5 w-5" />
-                  </div>
-                  <h4 className="text-sm font-semibold text-zinc-200">No Training Days in this Split</h4>
-                  <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-                    Click any preset above (Mon Push, Tue Pull, Wed Legs) or load a pre-built split from the top bar.
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => handleAddDayCard('Day 1: Full Body')}
-                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add First Training Day
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Horizontal Day Tabs Navigator */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-zinc-800">
-                    {days.map((d, idx) => {
-                      const isActive = (activeDayIndex >= days.length ? 0 : activeDayIndex) === idx;
-                      const exCount = (d.exercises || []).length;
-
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setActiveDayIndex(idx)}
-                          className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all border shrink-0 ${
-                            isActive
-                              ? 'bg-purple-600 border-purple-500 text-white font-semibold shadow-md shadow-purple-950/40'
-                              : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-200'
-                          }`}
-                        >
-                          <span className="font-mono text-[10px] opacity-80">Day {idx + 1}</span>
-                          <span>{d.day || `Day ${idx + 1}`}</span>
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                              isActive ? 'bg-purple-700/80 text-purple-100' : 'bg-zinc-800 text-zinc-400'
-                            }`}
-                          >
-                            {exCount} {exCount === 1 ? 'exercise' : 'exercises'}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Active Day Focus Card */}
-                  {(() => {
-                    const safeIdx = Math.min(Math.max(0, activeDayIndex), days.length - 1);
-                    const activeDay = days[safeIdx];
-                    if (!activeDay) return null;
-
-                    const exCount = (activeDay.exercises || []).length;
+              {/* Horizontal Day Pill Tabs */}
+              {days.length > 0 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-zinc-800">
+                  {days.map((d, idx) => {
+                    const isActive = (activeDayIndex >= days.length ? 0 : activeDayIndex) === idx;
+                    const exCount = (d.exercises || []).length;
 
                     return (
-                      <div className="border border-zinc-800 bg-zinc-900/30 rounded-2xl overflow-hidden shadow-lg shadow-black/20 space-y-0">
-                        {/* Day Header Bar */}
-                        <div className="p-4 bg-zinc-950/70 border-b border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 flex-wrap flex-1">
-                            <span className="bg-purple-600/20 text-purple-300 border border-purple-500/30 text-[11px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider font-mono">
-                              Day #{safeIdx + 1}
-                            </span>
-                            <Input
-                              value={activeDay.day}
-                              onChange={(e) => handleUpdateDayName(safeIdx, e.target.value)}
-                              placeholder="e.g. Monday: Push (Chest & Triceps)"
-                              className="h-8 text-xs font-semibold bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-purple-500 max-w-sm"
-                            />
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActiveDayIndex(idx)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all border shrink-0 cursor-pointer ${
+                          isActive
+                            ? 'bg-purple-600 border-purple-500 text-white font-semibold shadow-md shadow-purple-950/40'
+                            : 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+                        }`}
+                      >
+                        <span className="font-mono text-[10px] opacity-75">#{idx + 1}</span>
+                        <span>{d.day || `Day ${idx + 1}`}</span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                            isActive ? 'bg-purple-700/80 text-purple-100' : 'bg-zinc-800 text-zinc-400'
+                          }`}
+                        >
+                          {exCount} ex
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Active Day Focus Stage */}
+            {(() => {
+              const safeIdx = Math.min(Math.max(0, activeDayIndex), days.length - 1);
+              const activeDay = days[safeIdx];
+              if (!activeDay) {
+                return (
+                  <div className="text-center py-10 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/40 p-6 space-y-2">
+                    <Dumbbell className="h-8 w-8 mx-auto text-purple-400 opacity-60" />
+                    <p className="text-sm font-semibold text-zinc-300">No Training Days in this Split</p>
+                    <p className="text-xs text-zinc-500">Add a training day or load a 1-click preset template above.</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleAddDayCard('Day 1: Full Body')}
+                      className="bg-purple-600 hover:bg-purple-500 text-white text-xs mt-2"
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Day 1
+                    </Button>
+                  </div>
+                );
+              }
+
+              const exCount = (activeDay.exercises || []).length;
+
+              return (
+                <div className="border border-zinc-800 bg-zinc-900/30 rounded-xl overflow-hidden shadow-lg space-y-0">
+                  {/* Active Day Header */}
+                  <div className="p-3 sm:p-3.5 bg-zinc-950/80 border-b border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 flex-wrap flex-1">
+                      <span className="bg-purple-600/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider font-mono">
+                        Day #{safeIdx + 1}
+                      </span>
+                      <Input
+                        value={activeDay.day}
+                        onChange={(e) => handleUpdateDayName(safeIdx, e.target.value)}
+                        placeholder="Day Name (e.g. Monday: Push)"
+                        className="h-8 text-xs font-semibold bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-purple-500 max-w-xs"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 justify-between sm:justify-end">
+                      <div className="text-xs font-mono bg-zinc-900/90 border border-zinc-800 px-2.5 py-1 rounded-lg text-purple-300">
+                        <span className="font-bold">{exCount}</span> {exCount === 1 ? 'Exercise' : 'Exercises'}
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDuplicateDay(safeIdx)}
+                        className="h-7 px-2 text-xs text-zinc-400 hover:text-purple-300 hover:bg-zinc-800 cursor-pointer"
+                        title="Duplicate Day"
+                      >
+                        <Copy className="h-3.5 w-3.5 mr-1" /> Duplicate
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveDayCard(safeIdx)}
+                        className="h-7 px-2 text-xs text-zinc-400 hover:text-red-400 hover:bg-red-950/20 cursor-pointer"
+                        title="Delete Day"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Exercises Table */}
+                  <div className="p-3 sm:p-4 space-y-3">
+                    {(activeDay.exercises || []).length === 0 ? (
+                      <div className="text-center py-6 border border-dashed border-zinc-800/80 rounded-xl bg-zinc-950/30 p-4">
+                        <p className="text-xs text-zinc-400 font-medium">No exercises planned for this day yet.</p>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                          Click movements from the library below or click &quot;Add Exercise&quot; to type manually.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[650px] space-y-1.5">
+                          {/* Table Header */}
+                          <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-bold text-zinc-500 px-2.5 py-1 tracking-wider border-b border-zinc-800/60">
+                            <div className="col-span-4">Movement / Exercise</div>
+                            <div className="col-span-2">Sets</div>
+                            <div className="col-span-2">Reps</div>
+                            <div className="col-span-1">Rest (s)</div>
+                            <div className="col-span-2">Form Coaching Notes</div>
+                            <div className="col-span-1 text-center">Action</div>
                           </div>
 
-                          <div className="flex items-center justify-between sm:justify-end gap-3">
-                            <span className="text-xs font-mono bg-zinc-900/80 border border-zinc-800 px-3 py-1 rounded-lg text-purple-300 font-medium">
-                              {exCount} planned {exCount === 1 ? 'exercise' : 'exercises'}
-                            </span>
-
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDuplicateDay(safeIdx)}
-                              className="h-8 px-2.5 text-xs text-zinc-400 hover:text-purple-300 hover:bg-zinc-800"
-                              title="Duplicate Routine Day"
+                          {/* Table Rows */}
+                          {activeDay.exercises.map((ex, exIdx) => (
+                            <div
+                              key={exIdx}
+                              className="grid grid-cols-12 gap-2 items-center bg-zinc-950/60 px-2.5 py-1.5 rounded-lg border border-zinc-800/60 hover:border-zinc-700/80 transition-colors"
                             >
-                              <Copy className="h-3.5 w-3.5 mr-1" /> Duplicate
-                            </Button>
-
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveDayCard(safeIdx)}
-                              className="h-8 px-2.5 text-xs text-zinc-400 hover:text-red-400 hover:bg-red-950/20"
-                              title="Delete Routine Day"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Exercises in Active Day */}
-                        <div className="p-4 space-y-4">
-                          {(activeDay.exercises || []).length === 0 ? (
-                            <div className="text-center py-6 border border-dashed border-zinc-800/80 rounded-xl bg-zinc-950/20 text-zinc-500 text-xs">
-                              No exercises planned for this day yet. Click movements below or add custom exercises.
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-bold text-zinc-500 px-2 tracking-wider">
-                                <div className="col-span-4">Exercise Name</div>
-                                <div className="col-span-2">Sets</div>
-                                <div className="col-span-2">Reps</div>
-                                <div className="col-span-1">Rest (s)</div>
-                                <div className="col-span-2">Form Coaching Notes</div>
-                                <div className="col-span-1 text-center">Action</div>
-                              </div>
-
-                              {activeDay.exercises.map((ex, exIdx) => (
-                                <div
-                                  key={exIdx}
-                                  className="grid grid-cols-12 gap-2 items-center bg-zinc-950/50 p-2 rounded-xl border border-zinc-800/70 hover:border-zinc-700 transition-colors"
-                                >
-                                  <div className="col-span-4">
-                                    <Input
-                                      value={ex.name}
-                                      onChange={(e) =>
-                                        handleUpdateExercise(safeIdx, exIdx, 'name', e.target.value)
-                                      }
-                                      placeholder="Exercise name"
-                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-100 focus:border-purple-500"
-                                    />
-                                  </div>
-                                  <div className="col-span-2">
-                                    <Input
-                                      type="number"
-                                      value={ex.sets || ''}
-                                      onChange={(e) =>
-                                        handleUpdateExercise(safeIdx, exIdx, 'sets', e.target.value)
-                                      }
-                                      placeholder="4"
-                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-purple-400 font-mono font-bold focus:border-purple-500"
-                                    />
-                                  </div>
-                                  <div className="col-span-2">
-                                    <Input
-                                      value={ex.reps}
-                                      onChange={(e) =>
-                                        handleUpdateExercise(safeIdx, exIdx, 'reps', e.target.value)
-                                      }
-                                      placeholder="8-12"
-                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-200 font-mono focus:border-purple-500"
-                                    />
-                                  </div>
-                                  <div className="col-span-1">
-                                    <Input
-                                      type="number"
-                                      value={ex.rest_seconds || ''}
-                                      onChange={(e) =>
-                                        handleUpdateExercise(safeIdx, exIdx, 'rest_seconds', e.target.value)
-                                      }
-                                      placeholder="60"
-                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-400 font-mono focus:border-purple-500"
-                                    />
-                                  </div>
-                                  <div className="col-span-2">
-                                    <Input
-                                      value={ex.notes || ''}
-                                      onChange={(e) =>
-                                        handleUpdateExercise(safeIdx, exIdx, 'notes', e.target.value)
-                                      }
-                                      placeholder="e.g. Strict tempo"
-                                      className="h-8 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-300 focus:border-purple-500"
-                                    />
-                                  </div>
-                                  <div className="col-span-1 flex justify-center">
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleRemoveExercise(safeIdx, exIdx)}
-                                      className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Quick Custom Exercise Add Row */}
-                          <div className="pt-2 border-t border-zinc-800/60">
-                            <div className="text-[11px] font-semibold text-zinc-400 mb-2">
-                              + Add Custom Exercise to {activeDay.day || `Day ${safeIdx + 1}`}:
-                            </div>
-                            <div className="grid grid-cols-12 gap-2 items-center bg-zinc-950/60 p-2.5 rounded-xl border border-dashed border-zinc-800">
                               <div className="col-span-4">
                                 <Input
-                                  value={manualExName}
-                                  onChange={(e) => setManualExName(e.target.value)}
-                                  placeholder="e.g. Pec Deck Flyes"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 text-zinc-100"
+                                  value={ex.name}
+                                  onChange={(e) =>
+                                    handleUpdateExercise(safeIdx, exIdx, 'name', e.target.value)
+                                  }
+                                  placeholder="e.g. Barbell Flat Bench Press"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
                                 />
                               </div>
                               <div className="col-span-2">
                                 <Input
                                   type="number"
-                                  value={manualExSets}
-                                  onChange={(e) => setManualExSets(e.target.value)}
-                                  placeholder="Sets (3)"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 font-mono text-purple-400 font-bold"
+                                  value={ex.sets || ''}
+                                  onChange={(e) =>
+                                    handleUpdateExercise(safeIdx, exIdx, 'sets', e.target.value)
+                                  }
+                                  placeholder="3"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-purple-400 font-mono font-bold focus:border-purple-500"
                                 />
                               </div>
                               <div className="col-span-2">
                                 <Input
-                                  value={manualExReps}
-                                  onChange={(e) => setManualExReps(e.target.value)}
-                                  placeholder="Reps (10-12)"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 font-mono text-zinc-200"
+                                  value={ex.reps}
+                                  onChange={(e) =>
+                                    handleUpdateExercise(safeIdx, exIdx, 'reps', e.target.value)
+                                  }
+                                  placeholder="10-12"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-200 font-mono focus:border-purple-500"
                                 />
                               </div>
                               <div className="col-span-1">
                                 <Input
                                   type="number"
-                                  value={manualExRest}
-                                  onChange={(e) => setManualExRest(e.target.value)}
-                                  placeholder="Rest (s)"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 font-mono text-zinc-400"
+                                  value={ex.rest_seconds || ''}
+                                  onChange={(e) =>
+                                    handleUpdateExercise(safeIdx, exIdx, 'rest_seconds', e.target.value)
+                                  }
+                                  placeholder="60"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-400 font-mono focus:border-purple-500"
                                 />
                               </div>
                               <div className="col-span-2">
                                 <Input
-                                  value={manualExNotes}
-                                  onChange={(e) => setManualExNotes(e.target.value)}
-                                  placeholder="Coaching notes"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800 text-zinc-300"
+                                  value={ex.notes || ''}
+                                  onChange={(e) =>
+                                    handleUpdateExercise(safeIdx, exIdx, 'notes', e.target.value)
+                                  }
+                                  placeholder="e.g. Full stretch"
+                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-300 placeholder:text-zinc-600 focus:border-purple-500"
                                 />
                               </div>
                               <div className="col-span-1 flex justify-center">
                                 <Button
                                   type="button"
-                                  size="sm"
-                                  onClick={handleAddManualExercise}
-                                  className="h-8 px-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveExercise(safeIdx, exIdx)}
+                                  className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg cursor-pointer"
+                                  title="Remove Exercise"
                                 >
-                                  Add
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
                             </div>
-                          </div>
-
-                          {/* Filtered Movement Palette */}
-                          <div className="pt-2 border-t border-zinc-800/60 space-y-2.5">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-zinc-300">Exercise Movement Library</span>
-                                <span className="text-[10px] text-zinc-500">
-                                  (1-Click to add into {activeDay.day || 'Day'})
-                                </span>
-                              </div>
-
-                              {/* Muscle Group Filter Tabs */}
-                              <div className="flex items-center gap-1 flex-wrap">
-                                {['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'].map((grp) => (
-                                  <button
-                                    key={grp}
-                                    type="button"
-                                    onClick={() => setSelectedMuscleFilter(grp)}
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors ${
-                                      selectedMuscleFilter === grp
-                                        ? 'bg-purple-600 text-white font-semibold'
-                                        : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800'
-                                    }`}
-                                  >
-                                    {grp}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-                              {filteredQuickChips.map((ex, idx) => (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => handleAddQuickExercise(ex)}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-950 border border-zinc-800/80 hover:border-purple-500/60 hover:bg-purple-950/20 text-zinc-300 transition-all hover:scale-[1.02] active:scale-95"
-                                >
-                                  <span>{ex.name}</span>
-                                  <span className="text-[10px] text-purple-400 font-mono font-semibold">
-                                    ({ex.sets}x{ex.reps})
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                          ))}
                         </div>
                       </div>
-                    );
-                  })()}
+                    )}
+
+                    {/* Inline Add Exercise Button */}
+                    <div className="pt-1 flex items-center justify-between">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddEmptyExercise(safeIdx)}
+                        className="h-7 text-xs border-dashed border-zinc-700 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-300 hover:text-white gap-1.5 cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5 text-purple-400" />
+                        <span>Add Exercise</span>
+                      </Button>
+
+                      <div className="text-[11px] text-zinc-500 font-mono">
+                        Session Total: <span className="text-purple-400 font-semibold">{exCount} {exCount === 1 ? 'movement' : 'movements'}</span>
+                      </div>
+                    </div>
+
+                    {/* Compact 1-Click Popular Movement Library */}
+                    <div className="pt-3 border-t border-zinc-800/70 space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                          <span className="text-xs font-semibold text-zinc-300">Quick-Add Exercise Movements</span>
+                          <span className="text-[10px] text-zinc-500">(1-click to append)</span>
+                        </div>
+
+                        {/* Muscle Group Filter Pills */}
+                        <div className="flex items-center gap-1 overflow-x-auto">
+                          {['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'].map((grp) => (
+                            <button
+                              key={grp}
+                              type="button"
+                              onClick={() => setSelectedMuscleFilter(grp)}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer ${
+                                selectedMuscleFilter === grp
+                                  ? 'bg-purple-600 text-white font-semibold'
+                                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800'
+                              }`}
+                            >
+                              {grp}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+                        {filteredQuickChips.map((ex, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleAddQuickExercise(ex)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-zinc-950 border border-zinc-800/80 hover:border-purple-500/60 hover:bg-purple-950/30 text-zinc-300 hover:text-white transition-all cursor-pointer active:scale-95"
+                          >
+                            <span>{ex.name}</span>
+                            <span className="text-[10px] text-purple-400 font-mono font-semibold">
+                              ({ex.sets}x{ex.reps})
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+              );
+            })()}
           </form>
 
           {/* Sticky Modal Footer */}
-          <DialogFooter className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-4 text-xs text-zinc-400">
+          <DialogFooter className="p-3.5 sm:p-4 border-t border-zinc-800 shrink-0 bg-zinc-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 text-xs text-zinc-400 flex-wrap">
               <span>
-                Total Routine Days: <strong className="text-purple-400">{workoutSummary.totalDays}</strong>
+                Total Routine Days: <strong className="text-purple-400 font-mono">{workoutSummary.totalDays}</strong>
               </span>
+              <span>•</span>
               <span>
-                Total Exercises: <strong className="text-cyan-400">{workoutSummary.totalExercises}</strong>
+                Total Exercises: <strong className="text-cyan-400 font-mono">{workoutSummary.totalExercises}</strong>
               </span>
             </div>
 
@@ -1323,7 +1336,7 @@ export default function ExercisePlansPage() {
                 type="button"
                 variant="ghost"
                 onClick={() => setOpenModal(false)}
-                className="text-zinc-400 hover:bg-zinc-900 text-xs"
+                className="text-zinc-400 hover:bg-zinc-900 text-xs cursor-pointer"
               >
                 Cancel
               </Button>
@@ -1331,7 +1344,7 @@ export default function ExercisePlansPage() {
                 type="button"
                 onClick={handleSaveWorkout}
                 disabled={saving}
-                className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2 px-4 shadow-lg shadow-purple-900/30"
+                className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold gap-2 px-4 shadow-lg shadow-purple-900/30 cursor-pointer"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Save className="h-4 w-4" />}
                 {workoutId ? 'Update Workout Plan' : 'Save Workout Plan'}
