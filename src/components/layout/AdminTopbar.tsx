@@ -126,26 +126,26 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card/60 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-20 transition-colors duration-200">
+    <header className="h-16 border-b border-border/70 bg-card/60 backdrop-blur-md flex items-center justify-between px-5 sticky top-0 z-20">
       {/* Left side info */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3.5">
         {onMenuClick && (
           <Button
             variant="ghost"
             size="icon"
             onClick={onMenuClick}
             aria-label="Open navigation menu"
-            className="lg:hidden text-muted-foreground hover:text-foreground"
+            className="lg:hidden text-muted-foreground hover:text-foreground h-8 w-8"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4.5 w-4.5" />
           </Button>
         )}
-        <div>
-          <h1 className="text-md font-semibold text-foreground tracking-tight">
+        <div className="flex flex-col">
+          <h1 className="text-sm font-semibold text-foreground tracking-tight leading-tight">
             {gym?.name || 'Gym Admin'}
           </h1>
           {gym?.business_name && (
-            <p className="text-xs text-muted-foreground hidden sm:block">
+            <p className="text-[11px] text-muted-foreground hidden sm:block leading-tight mt-0.5">
               {gym.business_name}
             </p>
           )}
@@ -154,55 +154,59 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
         {/* Branch Selector for Owner, or Branch Badge for Staff */}
         {isOwner && branches.length > 0 ? (
           <div className="hidden sm:flex items-center gap-1.5 ml-2">
-            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
             <Select
               value={selectedBranchId || 'all'}
               onValueChange={(val) => setSelectedBranchId(val === 'all' ? null : val)}
             >
-              <SelectTrigger className="h-8 text-xs bg-secondary/50 border-border/60 w-[160px]">
-                <SelectValue placeholder="All Branches" />
+              <SelectTrigger className="h-7.5 text-xs bg-muted/40 hover:bg-muted/60 border-border/60 w-[150px] rounded-md transition-colors">
+                <div className="flex items-center gap-1.5 truncate">
+                  <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <SelectValue placeholder="All Branches" />
+                </div>
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">🌐 All Branches</SelectItem>
+              <SelectContent className="border-border/80 bg-popover">
+                <SelectItem value="all">All Branches</SelectItem>
                 {branches.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
-                    📍 {b.name}
+                    {b.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         ) : selectedBranch ? (
-          <Badge variant="outline" className="hidden sm:inline-flex text-[10px] bg-secondary/40 text-muted-foreground border-border/60 ml-2">
-            📍 {selectedBranch.name}
+          <Badge variant="outline" className="hidden sm:inline-flex text-[11px] bg-muted/40 text-muted-foreground border-border/60 ml-2 font-normal">
+            <Building2 className="h-3 w-3 mr-1 text-muted-foreground" />
+            {selectedBranch.name}
           </Badge>
         ) : null}
       </div>
 
       {/* Center global search shortcut bar (clickable) */}
       <button
+        type="button"
         onClick={() => setCmdOpen(true)}
         aria-label="Search dashboard"
-        className="hidden md:flex items-center gap-2.5 bg-secondary/40 hover:bg-secondary/70 border border-border/80 px-3 py-1.5 rounded-lg text-xs text-muted-foreground w-64 text-left transition-colors cursor-pointer"
+        className="hidden md:flex items-center gap-2 bg-muted/30 hover:bg-muted/60 active:scale-[0.98] border border-border/60 hover:border-border/80 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground w-64 text-left transition-[background-color,border-color,color] duration-150 ease-out cursor-pointer"
       >
-        <Search className="h-3.5 w-3.5 shrink-0" />
-        <span className="flex-1">Search everything...</span>
-        <kbd className="inline-flex h-4.5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1 font-mono text-[9px] font-medium opacity-100">
+        <Search className="h-3.5 w-3.5 shrink-0 opacity-70" />
+        <span className="flex-1 text-[12px]">Search shortcuts...</span>
+        <kbd className="inline-flex h-4 select-none items-center gap-0.5 rounded border border-border/70 bg-background/80 px-1 font-mono text-[10px] font-medium text-muted-foreground">
           ⌘K
         </kbd>
       </button>
 
       {/* Right side controls */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2.5">
         {/* Mobile Search Button */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCmdOpen(true)}
           aria-label="Open search dialog"
-          className="md:hidden text-muted-foreground hover:text-foreground"
+          className="md:hidden text-muted-foreground hover:text-foreground h-8 w-8"
         >
-          <Search className="h-5 w-5" />
+          <Search className="h-4 w-4" />
         </Button>
 
         {/* Theme Toggle Button */}
@@ -211,20 +215,20 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           size="icon"
           onClick={toggleTheme}
           aria-label="Toggle color theme"
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground h-8 w-8"
           title="Toggle Theme"
         >
           {theme === 'dark' ? (
-            <Sun className="h-4.5 w-4.5" />
+            <Sun className="h-4 w-4" />
           ) : (
-            <Moon className="h-4.5 w-4.5" />
+            <Moon className="h-4 w-4" />
           )}
         </Button>
 
         {/* System Online connection indicator */}
-        <div className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full text-xs font-semibold text-green-500">
-          <Wifi className="h-3.5 w-3.5 animate-pulse" />
-          <span className="hidden sm:inline">Online</span>
+        <div className="hidden sm:flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[11px] font-medium text-emerald-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          <span>Online</span>
         </div>
 
         {/* Notifications Popover */}
@@ -234,32 +238,45 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
               variant="ghost"
               size="icon"
               aria-label="View notifications"
-              className="text-muted-foreground hover:text-foreground relative"
+              className="text-muted-foreground hover:text-foreground h-8 w-8 relative"
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-4 w-4" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-purple-500 rounded-full animate-pulse" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 bg-zinc-900 border-zinc-800 text-white p-0 overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-800/80 px-4 py-3 bg-zinc-900/60">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">Live Alerts</span>
+          <PopoverContent align="end" className="w-80 bg-popover border-border/80 p-0 overflow-hidden shadow-lg rounded-xl">
+            <div className="flex items-center justify-between border-b border-border/70 px-4 py-3 bg-muted/20">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-foreground">Alerts</span>
+                {unreadCount > 0 && (
+                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-mono">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </div>
               {unreadCount > 0 && (
-                <button onClick={handleMarkAllRead} className="text-[10px] text-purple-400 hover:underline font-semibold">
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
+                >
                   Mark all as read
                 </button>
               )}
             </div>
-            <div className="divide-y divide-zinc-800/50 max-h-[300px] overflow-y-auto">
+            <div className="divide-y divide-border/50 max-h-[300px] overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="text-center py-8 text-xs text-zinc-500">No pending alerts captured today.</div>
+                <div className="text-center py-8 text-xs text-muted-foreground">
+                  No pending alerts.
+                </div>
               ) : (
                 notifications.map((n) => (
-                  <div key={n.id} className="p-3 hover:bg-zinc-800/30 transition-colors">
-                    <div className="font-bold text-xs text-zinc-200">{n.title}</div>
-                    <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{n.description}</p>
-                    <span className="text-[9px] text-zinc-500 block mt-1">
+                  <div key={n.id} className="p-3 hover:bg-muted/40 transition-colors duration-120">
+                    <div className="font-medium text-xs text-foreground">{n.title}</div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{n.description}</p>
+                    <span className="text-[10px] font-mono text-muted-foreground/70 block mt-1">
                       {n.time ? new Date(n.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                   </div>
@@ -269,19 +286,19 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           </PopoverContent>
         </Popover>
 
-        <div className="h-6 w-[1px] bg-border" />
+        <div className="h-4 w-[1px] bg-border/80 mx-1" />
 
         {/* User profile widget */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <div className="text-right hidden sm:block">
-            <div className="text-sm font-medium text-foreground">{user?.name || 'User'}</div>
-            <div className="text-xs text-muted-foreground">{getRoleLabel(user?.role)}</div>
+            <div className="text-xs font-medium text-foreground leading-tight">{user?.name || 'User'}</div>
+            <div className="text-[11px] text-muted-foreground leading-tight mt-0.5">{getRoleLabel(user?.role)}</div>
           </div>
-          <Avatar className="h-9 w-9 border border-border bg-muted">
+          <Avatar className="h-8 w-8 border border-border/80 bg-muted/60">
             {user?.photoUrl ? (
               <AvatarImage src={user.photoUrl} alt={user.name || 'Avatar'} />
             ) : null}
-            <AvatarFallback className="text-xs font-bold bg-purple-900 text-purple-200">
+            <AvatarFallback className="text-[11px] font-medium bg-muted text-muted-foreground">
               {user?.name?.trim() ? getInitials(user.name) : 'GY'}
             </AvatarFallback>
           </Avatar>

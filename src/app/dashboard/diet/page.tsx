@@ -938,21 +938,23 @@ export default function DietChartsPage() {
       {/* ------------------------------------------------------------- */}
       {/* Modern, Clean & Uncluttered Diet Plan Builder Studio Modal   */}
       {/* ------------------------------------------------------------- */}
+      {/* Complete Diet Builder Studio Dialog */}
+      {/* ------------------------------------------------------------- */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-5xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="bg-card border-border/80 text-foreground max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl">
           {/* Modal Header */}
-          <DialogHeader className="p-4 sm:p-5 border-b border-zinc-800 shrink-0 bg-zinc-900/50">
+          <DialogHeader className="p-4 sm:p-5 border-b border-border/70 shrink-0 bg-muted/20">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-purple-950/60 border border-purple-800/40 flex items-center justify-center text-purple-400 shrink-0">
-                  <Apple className="h-5 w-5" />
+                <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <Apple className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base sm:text-lg font-bold text-zinc-100 flex items-center gap-2">
-                    {dietId ? 'Edit Diet Plan' : 'Diet Plan Builder Studio'}
+                  <DialogTitle className="text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
+                    {dietId ? 'Edit Diet Plan' : 'Diet Plan Studio'}
                   </DialogTitle>
-                  <DialogDescription className="text-zinc-400 text-xs mt-0.5">
-                    Compose meals, customize portion macros, and track live caloric targets.
+                  <DialogDescription className="text-muted-foreground text-xs mt-0.5">
+                    Compose meals, fine-tune macro splits, and calculate target daily caloric intake.
                   </DialogDescription>
                 </div>
               </div>
@@ -966,32 +968,32 @@ export default function DietChartsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-8 text-xs border-purple-800/60 bg-purple-950/30 text-purple-200 hover:bg-purple-900/40 hover:text-white gap-1.5 cursor-pointer"
+                        className="h-8 text-xs border-border/80 bg-muted/30 hover:bg-muted/60 text-foreground gap-1.5 cursor-pointer active:scale-[0.97] transition-all"
                       >
-                        <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
                         <span>Load Template</span>
                         <ChevronDown className="h-3 w-3 opacity-60" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-80 bg-zinc-950 border-zinc-800 text-zinc-200 p-1.5 shadow-2xl z-50">
-                      <DropdownMenuLabel className="text-[11px] font-semibold text-zinc-400 px-2 py-1">
-                        1-Click Diet Templates
+                    <DropdownMenuContent align="end" className="w-80 bg-popover border-border/80 text-foreground p-1.5 shadow-xl z-50 rounded-xl">
+                      <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">
+                        Preset Diet Templates
                       </DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-zinc-800" />
+                      <DropdownMenuSeparator className="bg-border/60" />
                       {PRESET_DIET_TEMPLATES.map((tmpl) => (
                         <DropdownMenuItem
                           key={tmpl.id}
                           onClick={() => handleApplyTemplate(tmpl)}
-                          className="flex flex-col items-start gap-1 p-2 rounded-lg cursor-pointer hover:bg-purple-950/40 focus:bg-purple-950/40"
+                          className="flex flex-col items-start gap-1 p-2 rounded-lg cursor-pointer hover:bg-muted/60 focus:bg-muted/60"
                         >
                           <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-xs text-zinc-100">{tmpl.name}</span>
-                            <Badge variant="outline" className="text-[10px] border-purple-800/60 text-purple-300 py-0 px-1.5">
+                            <span className="font-semibold text-xs text-foreground">{tmpl.name}</span>
+                            <Badge variant="outline" className="text-[10px] font-mono border-border/80 text-muted-foreground py-0 px-1.5">
                               {tmpl.targetCalories} kcal
                             </Badge>
                           </div>
-                          <p className="text-[10px] text-zinc-400 line-clamp-1">{tmpl.description}</p>
-                          <div className="text-[10px] text-zinc-500 font-mono">
+                          <p className="text-[11px] text-muted-foreground line-clamp-1">{tmpl.description}</p>
+                          <div className="text-[10px] text-muted-foreground/70 font-mono">
                             {tmpl.meals.length} Meals ({tmpl.meals.map((m) => m.meal_name).join(', ')})
                           </div>
                         </DropdownMenuItem>
@@ -1001,13 +1003,13 @@ export default function DietChartsPage() {
                 )}
 
                 {/* Macro Target Badge */}
-                <div className="flex items-center gap-2 bg-zinc-900/90 border border-zinc-800 px-3 py-1 rounded-xl text-xs">
-                  <span className="text-zinc-400 text-[11px]">Total:</span>
-                  <span className="font-mono font-bold text-amber-400">{nutritionSummary.totalCalories}</span>
-                  <span className="text-zinc-500 text-[10px]">kcal</span>
-                  <span className="text-zinc-600">•</span>
-                  <span className="font-mono font-bold text-emerald-400">{nutritionSummary.totalProtein}g</span>
-                  <span className="text-zinc-500 text-[10px]">pro</span>
+                <div className="flex items-center gap-2 bg-muted/40 border border-border/70 px-3 py-1 rounded-lg text-xs font-mono">
+                  <span className="text-muted-foreground text-[11px]">Total:</span>
+                  <span className="font-bold text-foreground">{nutritionSummary.totalCalories}</span>
+                  <span className="text-muted-foreground text-[10px]">kcal</span>
+                  <span className="text-muted-foreground/50">•</span>
+                  <span className="font-bold text-foreground">{nutritionSummary.totalProtein}g</span>
+                  <span className="text-muted-foreground text-[10px]">protein</span>
                 </div>
               </div>
             </div>
@@ -1016,10 +1018,10 @@ export default function DietChartsPage() {
           {/* Modal Body - Scrollable */}
           <form onSubmit={handleSaveDiet} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
             {/* Plan Metadata Bar - Compact & Clean */}
-            <div className="bg-zinc-900/40 border border-zinc-800/70 rounded-xl p-3 sm:p-4 space-y-3">
+            <div className="bg-muted/20 border border-border/70 rounded-xl p-3.5 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                 <div className="sm:col-span-8 space-y-1">
-                  <Label htmlFor="dietName" className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                  <Label htmlFor="dietName" className="text-[11px] font-mono font-medium text-muted-foreground uppercase tracking-wider">
                     Plan Name *
                   </Label>
                   <Input
@@ -1028,12 +1030,12 @@ export default function DietChartsPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="bg-zinc-900 border-zinc-800 text-xs h-8 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                    className="bg-background border-border/80 text-xs h-8.5 text-foreground placeholder:text-muted-foreground/60 focus-visible:border-primary"
                   />
                 </div>
 
                 <div className="sm:col-span-4 space-y-1">
-                  <Label htmlFor="targetCals" className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                  <Label htmlFor="targetCals" className="text-[11px] font-mono font-medium text-muted-foreground uppercase tracking-wider">
                     Target Calories
                   </Label>
                   <div className="relative">
@@ -1043,9 +1045,9 @@ export default function DietChartsPage() {
                       placeholder="e.g. 1800"
                       value={targetCalories}
                       onChange={(e) => setTargetCalories(e.target.value)}
-                      className="bg-zinc-900 border-zinc-800 text-xs h-8 pr-12 text-zinc-100 placeholder:text-zinc-600 font-mono focus:border-purple-500"
+                      className="bg-background border-border/80 text-xs h-8.5 pr-12 text-foreground placeholder:text-muted-foreground/60 font-mono focus-visible:border-primary"
                     />
-                    <span className="absolute right-2.5 top-2 text-[10px] text-zinc-500 font-mono pointer-events-none">
+                    <span className="absolute right-2.5 top-2.5 text-[10px] text-muted-foreground font-mono pointer-events-none">
                       kcal
                     </span>
                   </div>
@@ -1053,7 +1055,7 @@ export default function DietChartsPage() {
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="desc" className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                <Label htmlFor="desc" className="text-[11px] font-mono font-medium text-muted-foreground uppercase tracking-wider">
                   Coaching Notes / Instructions (Optional)
                 </Label>
                 <Input
@@ -1061,18 +1063,18 @@ export default function DietChartsPage() {
                   placeholder="e.g. Drink 3.5L water daily. Have post-workout shake within 45 mins of training."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="bg-zinc-900 border-zinc-800 text-xs h-8 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                  className="bg-background border-border/80 text-xs h-8.5 text-foreground placeholder:text-muted-foreground/60 focus-visible:border-primary"
                 />
               </div>
             </div>
 
             {/* Meals Navigation & Schedule */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2 border-b border-zinc-800/80 pb-2.5">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2 border-b border-border/70 pb-2">
                 <div className="flex items-center gap-2">
-                  <Utensils className="h-4 w-4 text-purple-400" />
-                  <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
-                    Daily Meals Schedule ({meals.length})
+                  <Utensils className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-foreground tracking-tight">
+                    Meals Schedule ({meals.length})
                   </span>
                 </div>
 
@@ -1081,28 +1083,29 @@ export default function DietChartsPage() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       type="button"
+                      variant="outline"
                       size="sm"
-                      className="h-7 text-xs px-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium gap-1 shadow-sm cursor-pointer"
+                      className="h-7 text-xs px-2.5 border-border/80 hover:bg-muted/50 text-foreground font-medium gap-1 cursor-pointer active:scale-[0.97]"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       <span>Add Meal</span>
-                      <ChevronDown className="h-3 w-3 opacity-70" />
+                      <ChevronDown className="h-3 w-3 opacity-60" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800 text-zinc-200 p-1 text-xs z-50">
+                  <DropdownMenuContent align="end" className="bg-popover border-border/80 text-foreground p-1 text-xs z-50 rounded-lg">
                     {['Breakfast', 'Mid-Morning Snack', 'Lunch', 'Evening Snack', 'Dinner', 'Pre-Workout', 'Post-Workout'].map((mPreset) => (
                       <DropdownMenuItem
                         key={mPreset}
                         onClick={() => handleAddMealCard(mPreset)}
-                        className="cursor-pointer hover:bg-zinc-900 focus:bg-zinc-900 text-xs"
+                        className="cursor-pointer hover:bg-muted/60 focus:bg-muted/60 text-xs"
                       >
                         + {mPreset}
                       </DropdownMenuItem>
                     ))}
-                    <DropdownMenuSeparator className="bg-zinc-800" />
+                    <DropdownMenuSeparator className="bg-border/60" />
                     <DropdownMenuItem
                       onClick={() => handleAddMealCard()}
-                      className="cursor-pointer text-purple-300 hover:bg-purple-950/40 focus:bg-purple-950/40 font-semibold text-xs"
+                      className="cursor-pointer text-primary hover:bg-primary/10 focus:bg-primary/10 font-semibold text-xs"
                     >
                       + Custom Meal
                     </DropdownMenuItem>
@@ -1112,7 +1115,7 @@ export default function DietChartsPage() {
 
               {/* Horizontal Meal Tabs */}
               {meals.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-zinc-800">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                   {meals.map((m, idx) => {
                     const isActive = (activeMealIndex >= meals.length ? 0 : activeMealIndex) === idx;
                     const mCals = (m.items || []).reduce((s, it) => s + (Number(it.calories) || 0), 0);
@@ -1123,20 +1126,20 @@ export default function DietChartsPage() {
                         key={idx}
                         type="button"
                         onClick={() => setActiveMealIndex(idx)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all border shrink-0 cursor-pointer ${
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-[background-color,border-color,transform] duration-150 ease-out border shrink-0 cursor-pointer active:scale-[0.98] ${
                           isActive
-                            ? 'bg-purple-600 border-purple-500 text-white font-semibold shadow-md shadow-purple-950/40'
-                            : 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+                            ? 'bg-muted border-border font-semibold text-foreground shadow-xs'
+                            : 'bg-muted/30 border-border/60 text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                         }`}
                       >
-                        <span className="font-mono text-[10px] opacity-75">#{idx + 1}</span>
+                        <span className="font-mono text-[10px] opacity-60">#{idx + 1}</span>
                         <span>{m.meal_name || `Meal ${idx + 1}`}</span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                            isActive ? 'bg-purple-700/80 text-purple-100' : 'bg-zinc-800 text-zinc-400'
+                          className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                            isActive ? 'bg-background text-foreground' : 'bg-muted/60 text-muted-foreground'
                           }`}
                         >
-                          {mCals} kcal • {mPro}g pro
+                          {mCals} kcal • {mPro}g
                         </span>
                       </button>
                     );
@@ -1151,15 +1154,15 @@ export default function DietChartsPage() {
               const activeMeal = meals[safeIdx];
               if (!activeMeal) {
                 return (
-                  <div className="text-center py-10 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/40 p-6 space-y-2">
-                    <Utensils className="h-8 w-8 mx-auto text-purple-400 opacity-60" />
-                    <p className="text-sm font-semibold text-zinc-300">No Meals in this Plan</p>
-                    <p className="text-xs text-zinc-500">Add a meal or load a 1-click template to get started.</p>
+                  <div className="text-center py-10 border border-dashed border-border/80 rounded-xl bg-muted/10 p-6 space-y-2">
+                    <Utensils className="h-6 w-6 mx-auto text-muted-foreground opacity-60" />
+                    <p className="text-xs font-semibold text-foreground">No Meals in this Plan</p>
+                    <p className="text-[11px] text-muted-foreground">Add a meal or load a template above.</p>
                     <Button
                       type="button"
                       size="sm"
                       onClick={() => handleAddMealCard('Breakfast')}
-                      className="bg-purple-600 hover:bg-purple-500 text-white text-xs mt-2"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs mt-2 active:scale-[0.97]"
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" /> Add Breakfast
                     </Button>
@@ -1182,36 +1185,36 @@ export default function DietChartsPage() {
                   : QUICK_FOODS.filter((f) => f.category === foodCategory);
 
               return (
-                <div className="border border-zinc-800 bg-zinc-900/30 rounded-xl overflow-hidden shadow-lg space-y-0">
+                <div className="border border-border/70 bg-card/60 rounded-xl overflow-hidden shadow-xs space-y-0">
                   {/* Active Meal Header */}
-                  <div className="p-3 sm:p-3.5 bg-zinc-950/80 border-b border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="p-3 bg-muted/20 border-b border-border/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2.5 flex-wrap">
-                      <span className="bg-purple-600/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider font-mono">
+                      <Badge variant="outline" className="text-[10px] font-mono border-border/80">
                         Meal #{safeIdx + 1}
-                      </span>
+                      </Badge>
                       <Input
                         value={activeMeal.meal_name}
                         onChange={(e) => handleUpdateMealMeta(safeIdx, 'meal_name', e.target.value)}
                         placeholder="Meal Name (e.g. Breakfast)"
-                        className="h-8 text-xs font-semibold bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-purple-500 w-44"
+                        className="h-7.5 text-xs font-semibold bg-background border-border/80 text-foreground w-44"
                       />
-                      <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-md px-2 h-8">
-                        <Clock className="h-3.5 w-3.5 text-zinc-500" />
+                      <div className="flex items-center gap-1.5 bg-background border border-border/80 rounded-md px-2 h-7.5">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
                         <input
                           value={activeMeal.time}
                           onChange={(e) => handleUpdateMealMeta(safeIdx, 'time', e.target.value)}
                           placeholder="08:00 AM"
-                          className="text-xs bg-transparent border-none text-zinc-200 focus:outline-none w-20 font-mono"
+                          className="text-xs bg-transparent border-none text-foreground focus:outline-none w-20 font-mono"
                         />
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 justify-between sm:justify-end">
-                      <div className="text-xs font-mono bg-zinc-900/90 border border-zinc-800 px-2.5 py-1 rounded-lg">
-                        <span className="text-amber-400 font-bold">{activeMealCals}</span>{' '}
-                        <span className="text-zinc-500 text-[10px]">kcal</span> •{' '}
-                        <span className="text-emerald-400 font-bold">{activeMealPro}g</span>{' '}
-                        <span className="text-zinc-500 text-[10px]">pro</span>
+                      <div className="text-xs font-mono bg-muted/40 border border-border/70 px-2.5 py-0.5 rounded-md text-foreground">
+                        <span className="font-bold">{activeMealCals}</span>{' '}
+                        <span className="text-muted-foreground text-[10px]">kcal</span> •{' '}
+                        <span className="font-bold">{activeMealPro}g</span>{' '}
+                        <span className="text-muted-foreground text-[10px]">pro</span>
                       </div>
 
                       <Button
@@ -1219,7 +1222,7 @@ export default function DietChartsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDuplicateMeal(safeIdx)}
-                        className="h-7 px-2 text-xs text-zinc-400 hover:text-purple-300 hover:bg-zinc-800"
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground active:scale-[0.97]"
                         title="Duplicate Meal"
                       >
                         <Copy className="h-3.5 w-3.5 mr-1" /> Duplicate
@@ -1230,7 +1233,7 @@ export default function DietChartsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveMealCard(safeIdx)}
-                        className="h-7 px-2 text-xs text-zinc-400 hover:text-red-400 hover:bg-red-950/20"
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive active:scale-[0.97]"
                         title="Delete Meal"
                       >
                         <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
@@ -1241,9 +1244,9 @@ export default function DietChartsPage() {
                   {/* Food Items Table */}
                   <div className="p-3 sm:p-4 space-y-3">
                     {(activeMeal.items || []).length === 0 ? (
-                      <div className="text-center py-6 border border-dashed border-zinc-800/80 rounded-xl bg-zinc-950/30 p-4">
-                        <p className="text-xs text-zinc-400 font-medium">No foods in this meal yet.</p>
-                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                      <div className="text-center py-6 border border-dashed border-border/80 rounded-xl bg-muted/10 p-4">
+                        <p className="text-xs text-foreground font-medium">No foods in this meal yet.</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
                           Click items from the popular palette below or click &quot;Add Food Item&quot; to type manually.
                         </p>
                       </div>
@@ -1251,7 +1254,7 @@ export default function DietChartsPage() {
                       <div className="overflow-x-auto">
                         <div className="min-w-[550px] space-y-1.5">
                           {/* Table Header */}
-                          <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-bold text-zinc-500 px-2.5 py-1 tracking-wider border-b border-zinc-800/60">
+                          <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-mono font-semibold text-muted-foreground px-2.5 py-1 tracking-wider border-b border-border/60">
                             <div className="col-span-5">Food Item</div>
                             <div className="col-span-3">Portion / Quantity</div>
                             <div className="col-span-2">Calories (kcal)</div>
@@ -1263,7 +1266,7 @@ export default function DietChartsPage() {
                           {activeMeal.items.map((item, itemIdx) => (
                             <div
                               key={itemIdx}
-                              className="grid grid-cols-12 gap-2 items-center bg-zinc-950/60 px-2.5 py-1.5 rounded-lg border border-zinc-800/60 hover:border-zinc-700/80 transition-colors"
+                              className="grid grid-cols-12 gap-2 items-center bg-muted/20 px-2.5 py-1.5 rounded-lg border border-border/60 hover:border-border transition-colors"
                             >
                               <div className="col-span-5">
                                 <Input
@@ -1272,7 +1275,7 @@ export default function DietChartsPage() {
                                     handleUpdateItem(safeIdx, itemIdx, 'name', e.target.value)
                                   }
                                   placeholder="e.g. Boiled Egg Whites"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                                  className="h-7.5 text-xs bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 focus-visible:border-primary"
                                 />
                               </div>
                               <div className="col-span-3">
@@ -1282,7 +1285,7 @@ export default function DietChartsPage() {
                                     handleUpdateItem(safeIdx, itemIdx, 'qty', e.target.value)
                                   }
                                   placeholder="e.g. 4 whites (140g)"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-300 placeholder:text-zinc-600 focus:border-purple-500"
+                                  className="h-7.5 text-xs bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 focus-visible:border-primary"
                                 />
                               </div>
                               <div className="col-span-2">
@@ -1293,7 +1296,7 @@ export default function DietChartsPage() {
                                     handleUpdateItem(safeIdx, itemIdx, 'calories', e.target.value)
                                   }
                                   placeholder="0"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-amber-400 font-mono font-bold focus:border-purple-500"
+                                  className="h-7.5 text-xs bg-background border-border/70 text-foreground font-mono font-medium focus-visible:border-primary"
                                 />
                               </div>
                               <div className="col-span-1">
@@ -1304,7 +1307,7 @@ export default function DietChartsPage() {
                                     handleUpdateItem(safeIdx, itemIdx, 'protein', e.target.value)
                                   }
                                   placeholder="0"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-emerald-400 font-mono font-bold focus:border-purple-500"
+                                  className="h-7.5 text-xs bg-background border-border/70 text-foreground font-mono font-medium focus-visible:border-primary"
                                 />
                               </div>
                               <div className="col-span-1 flex justify-center">
@@ -1313,7 +1316,7 @@ export default function DietChartsPage() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleRemoveItem(safeIdx, itemIdx)}
-                                  className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg cursor-pointer"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-muted rounded-md cursor-pointer active:scale-95"
                                   title="Remove Item"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -1332,24 +1335,24 @@ export default function DietChartsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleAddEmptyItem(safeIdx)}
-                        className="h-7 text-xs border-dashed border-zinc-700 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-300 hover:text-white gap-1.5 cursor-pointer"
+                        className="h-7 text-xs border-dashed border-border/80 bg-muted/20 hover:bg-muted/50 text-foreground gap-1.5 cursor-pointer active:scale-[0.97]"
                       >
-                        <Plus className="h-3.5 w-3.5 text-purple-400" />
+                        <Plus className="h-3 w-3" />
                         <span>Add Food Item</span>
                       </Button>
 
-                      <div className="text-[11px] text-zinc-500 font-mono">
-                        Meal Total: <span className="text-amber-400 font-semibold">{activeMealCals} kcal</span> • <span className="text-emerald-400 font-semibold">{activeMealPro}g pro</span>
+                      <div className="text-[11px] text-muted-foreground font-mono">
+                        Meal Total: <span className="text-foreground font-semibold">{activeMealCals} kcal</span> • <span className="text-foreground font-semibold">{activeMealPro}g pro</span>
                       </div>
                     </div>
 
                     {/* Compact 1-Click Popular Food Palette */}
-                    <div className="pt-3 border-t border-zinc-800/70 space-y-2">
+                    <div className="pt-3 border-t border-border/70 space-y-2">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
-                          <Sparkles className="h-3.5 w-3.5 text-purple-400" />
-                          <span className="text-xs font-semibold text-zinc-300">Quick-Add Popular Foods</span>
-                          <span className="text-[10px] text-zinc-500">(1-click to append)</span>
+                          <Sparkles className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-xs font-semibold text-foreground">Quick-Add Popular Foods</span>
+                          <span className="text-[10px] text-muted-foreground">(1-click to append)</span>
                         </div>
 
                         {/* Category Filter Pills */}
@@ -1365,10 +1368,10 @@ export default function DietChartsPage() {
                               key={cat.key}
                               type="button"
                               onClick={() => setFoodCategory(cat.key as any)}
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors cursor-pointer active:scale-95 ${
                                 foodCategory === cat.key
-                                  ? 'bg-purple-600 text-white font-semibold'
-                                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800'
+                                  ? 'bg-primary text-primary-foreground font-semibold'
+                                  : 'bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground border border-border/60'
                               }`}
                             >
                               {cat.label}
@@ -1383,11 +1386,11 @@ export default function DietChartsPage() {
                             key={idx}
                             type="button"
                             onClick={() => handleAddQuickFood(food)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-zinc-950 border border-zinc-800/80 hover:border-purple-500/60 hover:bg-purple-950/30 text-zinc-300 hover:text-white transition-all cursor-pointer active:scale-95"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-muted/30 border border-border/70 hover:border-border hover:bg-muted/60 text-foreground transition-all cursor-pointer active:scale-95"
                           >
                             <span>{food.icon}</span>
                             <span>{food.name}</span>
-                            <span className="text-[10px] text-amber-400/90 font-mono">
+                            <span className="text-[10px] text-muted-foreground font-mono">
                               ({food.calories} kcal)
                             </span>
                           </button>
@@ -1401,26 +1404,26 @@ export default function DietChartsPage() {
           </form>
 
           {/* Sticky Modal Footer */}
-          <DialogFooter className="p-3.5 sm:p-4 border-t border-zinc-800 shrink-0 bg-zinc-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3 text-xs text-zinc-400 flex-wrap">
+          <DialogFooter className="p-3.5 sm:p-4 border-t border-border/70 shrink-0 bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
               <span>
-                Total Calories: <strong className="text-amber-400 font-mono">{nutritionSummary.totalCalories}</strong> kcal
+                Total Calories: <strong className="text-foreground font-mono">{nutritionSummary.totalCalories}</strong> kcal
               </span>
               <span>•</span>
               <span>
-                Total Protein: <strong className="text-emerald-400 font-mono">{nutritionSummary.totalProtein}</strong>g
+                Total Protein: <strong className="text-foreground font-mono">{nutritionSummary.totalProtein}</strong>g
               </span>
               {nutritionSummary.target > 0 && (
                 <>
                   <span>•</span>
                   <Badge
                     variant="outline"
-                    className={`text-[10px] py-0 px-2 ${
+                    className={`text-[10px] py-0 px-2 font-mono ${
                       Math.abs(nutritionSummary.diff) <= 100
-                        ? 'border-emerald-500/40 text-emerald-400 bg-emerald-950/20'
+                        ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
                         : nutritionSummary.diff > 100
-                        ? 'border-amber-500/40 text-amber-400 bg-amber-950/20'
-                        : 'border-blue-500/40 text-blue-400 bg-blue-950/20'
+                        ? 'border-amber-500/40 text-amber-400 bg-amber-500/10'
+                        : 'border-blue-500/40 text-blue-400 bg-blue-500/10'
                     }`}
                   >
                     {nutritionSummary.diff === 0
@@ -1438,7 +1441,7 @@ export default function DietChartsPage() {
                 type="button"
                 variant="ghost"
                 onClick={() => setOpenModal(false)}
-                className="text-zinc-400 hover:bg-zinc-900 text-xs h-8"
+                className="text-muted-foreground hover:text-foreground text-xs h-8 active:scale-[0.97]"
               >
                 Cancel
               </Button>
@@ -1446,9 +1449,9 @@ export default function DietChartsPage() {
                 type="button"
                 onClick={handleSaveDiet}
                 disabled={saving}
-                className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-1.5 px-4 h-8 shadow-lg shadow-purple-900/30"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold gap-1.5 px-4 h-8 shadow-xs active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out"
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Save className="h-4 w-4" />}
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 {dietId ? 'Update Plan' : 'Save Plan'}
               </Button>
             </div>

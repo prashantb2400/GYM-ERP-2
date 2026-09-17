@@ -887,20 +887,20 @@ export default function ExercisePlansPage() {
       {/* Modern, Clean & Uncluttered Workout Plan Builder Studio Modal */}
       {/* ------------------------------------------------------------- */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-5xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="bg-card border-border/80 text-foreground max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl">
           {/* Modal Header */}
-          <DialogHeader className="p-4 sm:p-5 border-b border-zinc-800 shrink-0 bg-zinc-900/50">
+          <DialogHeader className="p-4 sm:p-5 border-b border-border/70 shrink-0 bg-muted/20">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-purple-950/60 border border-purple-800/40 flex items-center justify-center text-purple-400 shrink-0">
-                  <Dumbbell className="h-5 w-5" />
+                <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <Dumbbell className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base sm:text-lg font-bold text-zinc-100 flex items-center gap-2">
-                    {workoutId ? 'Edit Workout Plan' : 'Workout Plan Builder Studio'}
+                  <DialogTitle className="text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
+                    {workoutId ? 'Edit Workout Plan' : 'Workout Routine Studio'}
                   </DialogTitle>
-                  <DialogDescription className="text-zinc-400 text-xs mt-0.5">
-                    Compose split routines, fine-tune volume & sets, and pick 1-click popular fitness movements.
+                  <DialogDescription className="text-muted-foreground text-xs mt-0.5">
+                    Compose split routines, fine-tune volume & sets, and select exercises.
                   </DialogDescription>
                 </div>
               </div>
@@ -914,32 +914,32 @@ export default function ExercisePlansPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-8 text-xs border-purple-800/60 bg-purple-950/30 text-purple-200 hover:bg-purple-900/40 hover:text-white gap-1.5 cursor-pointer"
+                        className="h-8 text-xs border-border/80 bg-muted/30 hover:bg-muted/60 text-foreground gap-1.5 cursor-pointer active:scale-[0.97] transition-all"
                       >
-                        <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
                         <span>Load Preset Split</span>
                         <ChevronDown className="h-3 w-3 opacity-60" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-80 bg-zinc-950 border-zinc-800 text-zinc-200 p-1.5 shadow-2xl z-50">
-                      <DropdownMenuLabel className="text-[11px] font-semibold text-zinc-400 px-2 py-1">
-                        1-Click Workout Split Templates
+                    <DropdownMenuContent align="end" className="w-80 bg-popover border-border/80 text-foreground p-1.5 shadow-xl z-50 rounded-xl">
+                      <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">
+                        Workout Split Blueprints
                       </DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-zinc-800" />
+                      <DropdownMenuSeparator className="bg-border/60" />
                       {PRESET_WORKOUT_TEMPLATES.map((tmpl) => (
                         <DropdownMenuItem
                           key={tmpl.id}
                           onClick={() => handleApplyTemplate(tmpl)}
-                          className="flex flex-col items-start gap-1 p-2 rounded-lg cursor-pointer hover:bg-purple-950/40 focus:bg-purple-950/40"
+                          className="flex flex-col items-start gap-1 p-2 rounded-lg cursor-pointer hover:bg-muted/60 focus:bg-muted/60"
                         >
                           <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-xs text-zinc-100">{tmpl.name}</span>
-                            <Badge variant="outline" className="text-[10px] border-purple-800/60 text-purple-300 py-0 px-1.5">
+                            <span className="font-semibold text-xs text-foreground">{tmpl.name}</span>
+                            <Badge variant="outline" className="text-[10px] font-mono border-border/80 text-muted-foreground py-0 px-1.5">
                               {tmpl.splitBadge}
                             </Badge>
                           </div>
-                          <p className="text-[10px] text-zinc-400 line-clamp-1">{tmpl.description}</p>
-                          <div className="text-[10px] text-zinc-500 font-mono">
+                          <p className="text-[11px] text-muted-foreground line-clamp-1">{tmpl.description}</p>
+                          <div className="text-[10px] text-muted-foreground/70 font-mono">
                             {tmpl.days.length} Training Days ({tmpl.days.map((d) => d.day.split(':')[0]).join(', ')})
                           </div>
                         </DropdownMenuItem>
@@ -949,13 +949,13 @@ export default function ExercisePlansPage() {
                 )}
 
                 {/* Volume Summary Badge */}
-                <div className="flex items-center gap-2 bg-zinc-900/90 border border-zinc-800 px-3 py-1 rounded-xl text-xs">
-                  <span className="text-zinc-400 text-[11px]">Volume:</span>
-                  <span className="font-mono font-bold text-purple-400">{workoutSummary.totalDays}</span>
-                  <span className="text-zinc-500 text-[10px]">Days</span>
-                  <span className="text-zinc-600">•</span>
-                  <span className="font-mono font-bold text-cyan-400">{workoutSummary.totalExercises}</span>
-                  <span className="text-zinc-500 text-[10px]">Exercises</span>
+                <div className="flex items-center gap-2 bg-muted/40 border border-border/70 px-3 py-1 rounded-lg text-xs font-mono">
+                  <span className="text-muted-foreground text-[11px]">Volume:</span>
+                  <span className="font-bold text-foreground">{workoutSummary.totalDays}</span>
+                  <span className="text-muted-foreground text-[10px]">days</span>
+                  <span className="text-muted-foreground/50">•</span>
+                  <span className="font-bold text-foreground">{workoutSummary.totalExercises}</span>
+                  <span className="text-muted-foreground text-[10px]">exercises</span>
                 </div>
               </div>
             </div>
@@ -964,10 +964,10 @@ export default function ExercisePlansPage() {
           {/* Modal Body - Scrollable */}
           <form onSubmit={handleSaveWorkout} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
             {/* Plan Metadata Bar - Compact & Clean */}
-            <div className="bg-zinc-900/40 border border-zinc-800/70 rounded-xl p-3 sm:p-4 space-y-3">
+            <div className="bg-muted/20 border border-border/70 rounded-xl p-3.5 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                 <div className="sm:col-span-8 space-y-1">
-                  <Label htmlFor="workoutName" className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                  <Label htmlFor="workoutName" className="text-[11px] font-mono font-medium text-muted-foreground uppercase tracking-wider">
                     Routine Name *
                   </Label>
                   <Input
@@ -976,24 +976,24 @@ export default function ExercisePlansPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="bg-zinc-900 border-zinc-800 text-xs h-8 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                    className="bg-background border-border/80 text-xs h-8.5 text-foreground placeholder:text-muted-foreground/60 focus-visible:border-primary"
                   />
                 </div>
 
                 <div className="sm:col-span-4 space-y-1">
-                  <Label htmlFor="workoutIsTemplate" className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                  <Label htmlFor="workoutIsTemplate" className="text-[11px] font-mono font-medium text-muted-foreground uppercase tracking-wider">
                     Visibility / Type
                   </Label>
-                  <div className="flex items-center h-8 px-3 rounded-md bg-zinc-900 border border-zinc-800 text-xs text-zinc-300">
-                    <span className="text-[11px] text-purple-300 font-medium">
-                      {isTemplate ? '⚡ Template Blueprint' : 'Custom Member Plan'}
+                  <div className="flex items-center h-8.5 px-3 rounded-md bg-background border border-border/80 text-xs text-foreground font-mono">
+                    <span className="text-primary font-medium">
+                      {isTemplate ? 'Template Blueprint' : 'Custom Member Plan'}
                     </span>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="desc" className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                <Label htmlFor="desc" className="text-[11px] font-mono font-medium text-muted-foreground uppercase tracking-wider">
                   Coaching Notes / Instructions (Optional)
                 </Label>
                 <Input
@@ -1001,18 +1001,18 @@ export default function ExercisePlansPage() {
                   placeholder="e.g. Focus on explosive concentric reps and 3-second negative eccentric tempo."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="bg-zinc-900 border-zinc-800 text-xs h-8 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                  className="bg-background border-border/80 text-xs h-8.5 text-foreground placeholder:text-muted-foreground/60 focus-visible:border-primary"
                 />
               </div>
             </div>
 
             {/* Workout Days Navigation & Schedule */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2 border-b border-zinc-800/80 pb-2.5">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2 border-b border-border/70 pb-2">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-purple-400" />
-                  <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
-                    Training Routine Schedule ({days.length} {days.length === 1 ? 'Day' : 'Days'})
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-foreground tracking-tight">
+                    Training Schedule ({days.length} {days.length === 1 ? 'Day' : 'Days'})
                   </span>
                 </div>
 
@@ -1021,28 +1021,29 @@ export default function ExercisePlansPage() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       type="button"
+                      variant="outline"
                       size="sm"
-                      className="h-7 text-xs px-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium gap-1 shadow-sm cursor-pointer"
+                      className="h-7 text-xs px-2.5 border-border/80 hover:bg-muted/50 text-foreground font-medium gap-1 cursor-pointer active:scale-[0.97]"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       <span>Add Day</span>
-                      <ChevronDown className="h-3 w-3 opacity-70" />
+                      <ChevronDown className="h-3 w-3 opacity-60" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800 text-zinc-200 p-1 text-xs z-50">
+                  <DropdownMenuContent align="end" className="bg-popover border-border/80 text-foreground p-1 text-xs z-50 rounded-lg">
                     {['Monday: Push', 'Tuesday: Pull', 'Wednesday: Legs', 'Thursday: Upper Body', 'Friday: Lower Body', 'Saturday: Core & Cardio', 'Sunday: Active Recovery'].map((dayPreset) => (
                       <DropdownMenuItem
                         key={dayPreset}
                         onClick={() => handleAddDayCard(dayPreset)}
-                        className="cursor-pointer hover:bg-zinc-900 focus:bg-zinc-900 text-xs"
+                        className="cursor-pointer hover:bg-muted/60 focus:bg-muted/60 text-xs"
                       >
                         + {dayPreset}
                       </DropdownMenuItem>
                     ))}
-                    <DropdownMenuSeparator className="bg-zinc-800" />
+                    <DropdownMenuSeparator className="bg-border/60" />
                     <DropdownMenuItem
                       onClick={() => handleAddDayCard()}
-                      className="cursor-pointer text-purple-300 hover:bg-purple-950/40 focus:bg-purple-950/40 font-semibold text-xs"
+                      className="cursor-pointer text-primary hover:bg-primary/10 focus:bg-primary/10 font-semibold text-xs"
                     >
                       + Custom Training Day
                     </DropdownMenuItem>
@@ -1052,7 +1053,7 @@ export default function ExercisePlansPage() {
 
               {/* Horizontal Day Pill Tabs */}
               {days.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-zinc-800">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                   {days.map((d, idx) => {
                     const isActive = (activeDayIndex >= days.length ? 0 : activeDayIndex) === idx;
                     const exCount = (d.exercises || []).length;
@@ -1062,17 +1063,17 @@ export default function ExercisePlansPage() {
                         key={idx}
                         type="button"
                         onClick={() => setActiveDayIndex(idx)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all border shrink-0 cursor-pointer ${
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-[background-color,border-color,transform] duration-150 ease-out border shrink-0 cursor-pointer active:scale-[0.98] ${
                           isActive
-                            ? 'bg-purple-600 border-purple-500 text-white font-semibold shadow-md shadow-purple-950/40'
-                            : 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+                            ? 'bg-muted border-border font-semibold text-foreground shadow-xs'
+                            : 'bg-muted/30 border-border/60 text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                         }`}
                       >
-                        <span className="font-mono text-[10px] opacity-75">#{idx + 1}</span>
+                        <span className="font-mono text-[10px] opacity-60">#{idx + 1}</span>
                         <span>{d.day || `Day ${idx + 1}`}</span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                            isActive ? 'bg-purple-700/80 text-purple-100' : 'bg-zinc-800 text-zinc-400'
+                          className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                            isActive ? 'bg-background text-foreground' : 'bg-muted/60 text-muted-foreground'
                           }`}
                         >
                           {exCount} ex
@@ -1090,15 +1091,15 @@ export default function ExercisePlansPage() {
               const activeDay = days[safeIdx];
               if (!activeDay) {
                 return (
-                  <div className="text-center py-10 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/40 p-6 space-y-2">
-                    <Dumbbell className="h-8 w-8 mx-auto text-purple-400 opacity-60" />
-                    <p className="text-sm font-semibold text-zinc-300">No Training Days in this Split</p>
-                    <p className="text-xs text-zinc-500">Add a training day or load a 1-click preset template above.</p>
+                  <div className="text-center py-10 border border-dashed border-border/80 rounded-xl bg-muted/10 p-6 space-y-2">
+                    <Dumbbell className="h-6 w-6 mx-auto text-muted-foreground opacity-60" />
+                    <p className="text-xs font-semibold text-foreground">No Training Days in this Split</p>
+                    <p className="text-[11px] text-muted-foreground">Add a training day or load a preset template above.</p>
                     <Button
                       type="button"
                       size="sm"
                       onClick={() => handleAddDayCard('Day 1: Full Body')}
-                      className="bg-purple-600 hover:bg-purple-500 text-white text-xs mt-2"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs mt-2 active:scale-[0.97]"
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" /> Add Day 1
                     </Button>
@@ -1109,24 +1110,24 @@ export default function ExercisePlansPage() {
               const exCount = (activeDay.exercises || []).length;
 
               return (
-                <div className="border border-zinc-800 bg-zinc-900/30 rounded-xl overflow-hidden shadow-lg space-y-0">
+                <div className="border border-border/70 bg-card/60 rounded-xl overflow-hidden shadow-xs space-y-0">
                   {/* Active Day Header */}
-                  <div className="p-3 sm:p-3.5 bg-zinc-950/80 border-b border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="p-3 bg-muted/20 border-b border-border/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2.5 flex-wrap flex-1">
-                      <span className="bg-purple-600/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider font-mono">
+                      <Badge variant="outline" className="text-[10px] font-mono border-border/80">
                         Day #{safeIdx + 1}
-                      </span>
+                      </Badge>
                       <Input
                         value={activeDay.day}
                         onChange={(e) => handleUpdateDayName(safeIdx, e.target.value)}
                         placeholder="Day Name (e.g. Monday: Push)"
-                        className="h-8 text-xs font-semibold bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-purple-500 max-w-xs"
+                        className="h-7.5 text-xs font-semibold bg-background border-border/80 text-foreground max-w-xs"
                       />
                     </div>
 
                     <div className="flex items-center gap-2 justify-between sm:justify-end">
-                      <div className="text-xs font-mono bg-zinc-900/90 border border-zinc-800 px-2.5 py-1 rounded-lg text-purple-300">
-                        <span className="font-bold">{exCount}</span> {exCount === 1 ? 'Exercise' : 'Exercises'}
+                      <div className="text-xs font-mono bg-muted/40 border border-border/70 px-2.5 py-0.5 rounded-md text-foreground">
+                        <span className="font-bold">{exCount}</span> {exCount === 1 ? 'movement' : 'movements'}
                       </div>
 
                       <Button
@@ -1134,7 +1135,7 @@ export default function ExercisePlansPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDuplicateDay(safeIdx)}
-                        className="h-7 px-2 text-xs text-zinc-400 hover:text-purple-300 hover:bg-zinc-800 cursor-pointer"
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground active:scale-[0.97]"
                         title="Duplicate Day"
                       >
                         <Copy className="h-3.5 w-3.5 mr-1" /> Duplicate
@@ -1145,7 +1146,7 @@ export default function ExercisePlansPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveDayCard(safeIdx)}
-                        className="h-7 px-2 text-xs text-zinc-400 hover:text-red-400 hover:bg-red-950/20 cursor-pointer"
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive active:scale-[0.97]"
                         title="Delete Day"
                       >
                         <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
@@ -1156,9 +1157,9 @@ export default function ExercisePlansPage() {
                   {/* Exercises Table */}
                   <div className="p-3 sm:p-4 space-y-3">
                     {(activeDay.exercises || []).length === 0 ? (
-                      <div className="text-center py-6 border border-dashed border-zinc-800/80 rounded-xl bg-zinc-950/30 p-4">
-                        <p className="text-xs text-zinc-400 font-medium">No exercises planned for this day yet.</p>
-                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                      <div className="text-center py-6 border border-dashed border-border/80 rounded-xl bg-muted/10 p-4">
+                        <p className="text-xs text-foreground font-medium">No exercises planned for this day yet.</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
                           Click movements from the library below or click &quot;Add Exercise&quot; to type manually.
                         </p>
                       </div>
@@ -1166,7 +1167,7 @@ export default function ExercisePlansPage() {
                       <div className="overflow-x-auto">
                         <div className="min-w-[650px] space-y-1.5">
                           {/* Table Header */}
-                          <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-bold text-zinc-500 px-2.5 py-1 tracking-wider border-b border-zinc-800/60">
+                          <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-mono font-semibold text-muted-foreground px-2.5 py-1 tracking-wider border-b border-border/60">
                             <div className="col-span-4">Movement / Exercise</div>
                             <div className="col-span-2">Sets</div>
                             <div className="col-span-2">Reps</div>
@@ -1179,7 +1180,7 @@ export default function ExercisePlansPage() {
                           {activeDay.exercises.map((ex, exIdx) => (
                             <div
                               key={exIdx}
-                              className="grid grid-cols-12 gap-2 items-center bg-zinc-950/60 px-2.5 py-1.5 rounded-lg border border-zinc-800/60 hover:border-zinc-700/80 transition-colors"
+                              className="grid grid-cols-12 gap-2 items-center bg-muted/20 px-2.5 py-1.5 rounded-lg border border-border/60 hover:border-border transition-colors"
                             >
                               <div className="col-span-4">
                                 <Input
@@ -1188,7 +1189,7 @@ export default function ExercisePlansPage() {
                                     handleUpdateExercise(safeIdx, exIdx, 'name', e.target.value)
                                   }
                                   placeholder="e.g. Barbell Flat Bench Press"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500"
+                                  className="h-7.5 text-xs bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 focus-visible:border-primary"
                                 />
                               </div>
                               <div className="col-span-2">
@@ -1199,7 +1200,7 @@ export default function ExercisePlansPage() {
                                     handleUpdateExercise(safeIdx, exIdx, 'sets', e.target.value)
                                   }
                                   placeholder="3"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-purple-400 font-mono font-bold focus:border-purple-500"
+                                  className="h-7.5 text-xs bg-background border-border/70 text-foreground font-mono font-medium focus-visible:border-primary"
                                 />
                               </div>
                               <div className="col-span-2">
@@ -1209,7 +1210,7 @@ export default function ExercisePlansPage() {
                                     handleUpdateExercise(safeIdx, exIdx, 'reps', e.target.value)
                                   }
                                   placeholder="10-12"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-200 font-mono focus:border-purple-500"
+                                  className="h-7.5 text-xs bg-background border-border/70 text-foreground font-mono focus-visible:border-primary"
                                 />
                               </div>
                               <div className="col-span-1">
@@ -1220,7 +1221,7 @@ export default function ExercisePlansPage() {
                                     handleUpdateExercise(safeIdx, exIdx, 'rest_seconds', e.target.value)
                                   }
                                   placeholder="60"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-400 font-mono focus:border-purple-500"
+                                  className="h-7.5 text-xs bg-background border-border/70 text-muted-foreground font-mono focus-visible:border-primary"
                                 />
                               </div>
                               <div className="col-span-2">
@@ -1230,7 +1231,7 @@ export default function ExercisePlansPage() {
                                     handleUpdateExercise(safeIdx, exIdx, 'notes', e.target.value)
                                   }
                                   placeholder="e.g. Full stretch"
-                                  className="h-8 text-xs bg-zinc-900 border-zinc-800/80 text-zinc-300 placeholder:text-zinc-600 focus:border-purple-500"
+                                  className="h-7.5 text-xs bg-background border-border/70 text-foreground placeholder:text-muted-foreground/60 focus-visible:border-primary"
                                 />
                               </div>
                               <div className="col-span-1 flex justify-center">
@@ -1239,7 +1240,7 @@ export default function ExercisePlansPage() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleRemoveExercise(safeIdx, exIdx)}
-                                  className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg cursor-pointer"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-muted rounded-md cursor-pointer active:scale-95"
                                   title="Remove Exercise"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -1258,24 +1259,24 @@ export default function ExercisePlansPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleAddEmptyExercise(safeIdx)}
-                        className="h-7 text-xs border-dashed border-zinc-700 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-300 hover:text-white gap-1.5 cursor-pointer"
+                        className="h-7 text-xs border-dashed border-border/80 bg-muted/20 hover:bg-muted/50 text-foreground gap-1.5 cursor-pointer active:scale-[0.97]"
                       >
-                        <Plus className="h-3.5 w-3.5 text-purple-400" />
+                        <Plus className="h-3 w-3" />
                         <span>Add Exercise</span>
                       </Button>
 
-                      <div className="text-[11px] text-zinc-500 font-mono">
-                        Session Total: <span className="text-purple-400 font-semibold">{exCount} {exCount === 1 ? 'movement' : 'movements'}</span>
+                      <div className="text-[11px] text-muted-foreground font-mono">
+                        Session Total: <span className="text-foreground font-semibold">{exCount} {exCount === 1 ? 'movement' : 'movements'}</span>
                       </div>
                     </div>
 
                     {/* Compact 1-Click Popular Movement Library */}
-                    <div className="pt-3 border-t border-zinc-800/70 space-y-2">
+                    <div className="pt-3 border-t border-border/70 space-y-2">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
-                          <Sparkles className="h-3.5 w-3.5 text-purple-400" />
-                          <span className="text-xs font-semibold text-zinc-300">Quick-Add Exercise Movements</span>
-                          <span className="text-[10px] text-zinc-500">(1-click to append)</span>
+                          <Sparkles className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-xs font-semibold text-foreground">Quick-Add Exercise Movements</span>
+                          <span className="text-[10px] text-muted-foreground">(1-click to append)</span>
                         </div>
 
                         {/* Muscle Group Filter Pills */}
@@ -1285,10 +1286,10 @@ export default function ExercisePlansPage() {
                               key={grp}
                               type="button"
                               onClick={() => setSelectedMuscleFilter(grp)}
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors cursor-pointer active:scale-95 ${
                                 selectedMuscleFilter === grp
-                                  ? 'bg-purple-600 text-white font-semibold'
-                                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800'
+                                  ? 'bg-primary text-primary-foreground font-semibold'
+                                  : 'bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground border border-border/60'
                               }`}
                             >
                               {grp}
@@ -1303,10 +1304,10 @@ export default function ExercisePlansPage() {
                             key={idx}
                             type="button"
                             onClick={() => handleAddQuickExercise(ex)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-zinc-950 border border-zinc-800/80 hover:border-purple-500/60 hover:bg-purple-950/30 text-zinc-300 hover:text-white transition-all cursor-pointer active:scale-95"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-muted/30 border border-border/70 hover:border-border hover:bg-muted/60 text-foreground transition-all cursor-pointer active:scale-95"
                           >
                             <span>{ex.name}</span>
-                            <span className="text-[10px] text-purple-400 font-mono font-semibold">
+                            <span className="text-[10px] text-muted-foreground font-mono">
                               ({ex.sets}x{ex.reps})
                             </span>
                           </button>
@@ -1320,14 +1321,14 @@ export default function ExercisePlansPage() {
           </form>
 
           {/* Sticky Modal Footer */}
-          <DialogFooter className="p-3.5 sm:p-4 border-t border-zinc-800 shrink-0 bg-zinc-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3 text-xs text-zinc-400 flex-wrap">
+          <DialogFooter className="p-3.5 sm:p-4 border-t border-border/70 shrink-0 bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
               <span>
-                Total Routine Days: <strong className="text-purple-400 font-mono">{workoutSummary.totalDays}</strong>
+                Total Routine Days: <strong className="text-foreground font-mono">{workoutSummary.totalDays}</strong>
               </span>
               <span>•</span>
               <span>
-                Total Exercises: <strong className="text-cyan-400 font-mono">{workoutSummary.totalExercises}</strong>
+                Total Exercises: <strong className="text-foreground font-mono">{workoutSummary.totalExercises}</strong>
               </span>
             </div>
 
@@ -1336,7 +1337,7 @@ export default function ExercisePlansPage() {
                 type="button"
                 variant="ghost"
                 onClick={() => setOpenModal(false)}
-                className="text-zinc-400 hover:bg-zinc-900 text-xs cursor-pointer"
+                className="text-muted-foreground hover:text-foreground text-xs h-8 active:scale-[0.97]"
               >
                 Cancel
               </Button>
@@ -1344,9 +1345,9 @@ export default function ExercisePlansPage() {
                 type="button"
                 onClick={handleSaveWorkout}
                 disabled={saving}
-                className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold gap-2 px-4 shadow-lg shadow-purple-900/30 cursor-pointer"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold gap-1.5 px-4 h-8 shadow-xs active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out"
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Save className="h-4 w-4" />}
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 {workoutId ? 'Update Workout Plan' : 'Save Workout Plan'}
               </Button>
             </div>

@@ -21,9 +21,12 @@ import {
   Dumbbell,
   Apple,
   Receipt,
+  Zap,
+  ArrowUpRight,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils/format';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -34,21 +37,13 @@ const AttendanceOverviewChart = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-full flex items-center justify-center text-xs text-zinc-500">
-        <Loader2 className="h-5 w-5 animate-spin text-zinc-600 mr-2" />
+      <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
         Loading analytics...
       </div>
     ),
   }
 );
-import { NumberTicker } from '@/components/magicui/number-ticker';
-import { SpotlightCard } from '@/components/magicui/spotlight-card';
-import { BorderBeam } from '@/components/magicui/border-beam';
-import { GlowCard } from '@/components/magicui/glow-card';
-import { GlowingBadge } from '@/components/magicui/glowing-badge';
-import { AnimatedList } from '@/components/magicui/animated-list';
-import { GradientText } from '@/components/magicui/gradient-text';
-import { GridPattern } from '@/components/magicui/grid-pattern';
 import { QuickAddMember } from '@/components/shared/QuickAddMember';
 import { GymReadinessChecklist } from '@/components/dashboard/GymReadinessChecklist';
 
@@ -318,16 +313,14 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in relative min-h-screen">
-      <GridPattern className="absolute inset-0 opacity-20 -z-10" />
-
+    <div className="space-y-6">
       {stats.activeMembers === 0 && !demoSeeded && isOwner && (
-        <div className="mb-6 rounded-xl border border-purple-500/30 bg-purple-950/20 p-4 flex items-center justify-between gap-4">
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="text-2xl">🎯</div>
+            <div className="text-xl">🎯</div>
             <div>
-              <p className="font-semibold text-purple-200 text-sm">See GymERP in action</p>
-              <p className="text-xs text-zinc-400 mt-0.5">Load sample data — 5 members, plans, invoices & attendance — to explore all features</p>
+              <p className="font-semibold text-foreground text-xs sm:text-sm">See GymERP in action</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Load sample data — 5 members, plans, invoices & attendance — to explore all features</p>
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -335,7 +328,7 @@ export default function DashboardHome() {
               onClick={handleSeedDemo}
               disabled={seeding}
               size="sm"
-              className="bg-purple-600 hover:bg-purple-500 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
             >
               {seeding ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
               {seeding ? 'Loading...' : 'Load Demo Data'}
@@ -344,7 +337,7 @@ export default function DashboardHome() {
               variant="ghost"
               size="sm"
               onClick={() => setDemoSeeded(true)}
-              className="text-zinc-500 hover:text-zinc-300"
+              className="text-muted-foreground hover:text-foreground text-xs"
             >
               Dismiss
             </Button>
@@ -353,38 +346,47 @@ export default function DashboardHome() {
       )}
 
       {/* Welcome header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <GradientText className="text-3xl font-bold tracking-tight">Welcome Back, {user?.name}!</GradientText>
-          <p className="text-zinc-500 text-sm mt-1">Here is a quick summary of what is happening at {gym?.name} today.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Welcome back, {user?.name || 'Admin'}
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Operational snapshot for {gym?.name || 'your gym'} today.
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!isTrainer && (
             <Button 
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm gap-2"
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs gap-1.5 shadow-xs active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out"
               onClick={() => setQuickAddOpen(true)}
             >
-              ⚡ Quick Add
+              <Zap className="h-3.5 w-3.5" />
+              Quick Add
             </Button>
           )}
           {!isTrainer && (
             <Link href="/dashboard/members/add">
-              <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 gap-2">
-                <UserPlus className="h-4 w-4" /> Add New Member
+              <Button variant="outline" size="sm" className="text-xs border-border/80 hover:bg-muted/50 gap-1.5 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out">
+                <UserPlus className="h-3.5 w-3.5" />
+                Add Member
               </Button>
             </Link>
           )}
           {isTrainer && (
             <Link href="/dashboard/exercise">
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm gap-2">
-                <Dumbbell className="h-4 w-4" /> Workout Plans
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs gap-1.5 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out">
+                <Dumbbell className="h-3.5 w-3.5" />
+                Workout Plans
               </Button>
             </Link>
           )}
           {isTrainer && (
             <Link href="/dashboard/diet">
-              <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 gap-2">
-                <Apple className="h-4 w-4" /> Diet Charts
+              <Button variant="outline" size="sm" className="text-xs border-border/80 hover:bg-muted/50 gap-1.5 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out">
+                <Apple className="h-3.5 w-3.5" />
+                Diet Charts
               </Button>
             </Link>
           )}
@@ -402,236 +404,237 @@ export default function DashboardHome() {
         />
       )}
 
-      {/* Today's Snapshot */}
-      <div className="grid grid-cols-3 gap-3 mb-2">
-        <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 flex items-center gap-3">
-          {isTrainer ? (
-            <>
-              <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                <Dumbbell className="h-4 w-4 text-orange-400" />
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500">Active Routines</p>
-                <p className="text-sm font-bold text-zinc-100"><NumberTicker value={stats.exercisePlans} /></p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <IndianRupee className="h-4 w-4 text-green-400" />
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500">Today's Collections</p>
-                <p className="text-sm font-bold text-zinc-100">₹<NumberTicker value={todayStats.revenue} /></p>
-              </div>
-            </>
-          )}
-        </div>
-        <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <CalendarCheck className="h-4 w-4 text-blue-400" />
-          </div>
+      {/* Today's Operational Snapshot Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl bg-card/70 border border-border/70 p-3.5 flex items-center justify-between shadow-2xs">
           <div>
-            <p className="text-xs text-zinc-500">Check-ins Today</p>
-            <p className="text-sm font-bold text-zinc-100"><NumberTicker value={todayStats.checkins} /></p>
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-medium">
+              {isTrainer ? 'Active Routines' : "Today's Collections"}
+            </p>
+            <p className="text-xl font-bold font-mono tracking-tight text-foreground tabular-nums mt-0.5">
+              {isTrainer ? stats.exercisePlans : formatCurrency(todayStats.revenue)}
+            </p>
+          </div>
+          <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+            {isTrainer ? <Dumbbell className="h-4 w-4" /> : <IndianRupee className="h-4 w-4" />}
           </div>
         </div>
-        <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-            <UserPlus className="h-4 w-4 text-purple-400" />
-          </div>
+        <div className="rounded-xl bg-card/70 border border-border/70 p-3.5 flex items-center justify-between shadow-2xs">
           <div>
-            <p className="text-xs text-zinc-500">New Today</p>
-            <p className="text-sm font-bold text-zinc-100"><NumberTicker value={todayStats.newMembers} /></p>
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-medium">
+              Check-ins Today
+            </p>
+            <p className="text-xl font-bold font-mono tracking-tight text-foreground tabular-nums mt-0.5">
+              {todayStats.checkins}
+            </p>
+          </div>
+          <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+            <CalendarCheck className="h-4 w-4" />
+          </div>
+        </div>
+        <div className="rounded-xl bg-card/70 border border-border/70 p-3.5 flex items-center justify-between shadow-2xs">
+          <div>
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground font-medium">
+              New Members Today
+            </p>
+            <p className="text-xl font-bold font-mono tracking-tight text-foreground tabular-nums mt-0.5">
+              {todayStats.newMembers}
+            </p>
+          </div>
+          <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+            <UserPlus className="h-4 w-4" />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-stagger">
-        <SpotlightCard>
-          <Card className="border-zinc-800 bg-zinc-900/40">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                {isTrainer ? 'Active Trainees' : 'Active Members'}
-              </CardTitle>
-              <Users className="h-4 w-4 text-purple-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                <NumberTicker value={stats.activeMembers} />
-              </div>
-              <p className="text-xs text-zinc-500 mt-1">Currently active profiles</p>
-            </CardContent>
-          </Card>
-        </SpotlightCard>
+      {/* Primary KPI Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border/70 bg-card/70 backdrop-blur-xs">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+              {isTrainer ? 'Active Trainees' : 'Active Members'}
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground/70" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+              {stats.activeMembers}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">Currently enrolled profiles</p>
+          </CardContent>
+        </Card>
 
         {isTrainer ? (
-          <SpotlightCard>
-            <Link href="/dashboard/exercise" className="block">
-              <Card className="border-zinc-800 bg-zinc-900/40">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Workout Routines</CardTitle>
-                  <Dumbbell className="h-4 w-4 text-purple-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    <NumberTicker value={stats.exercisePlans} />
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-1">Active exercise routines</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </SpotlightCard>
-        ) : isOwner ? (
-          <SpotlightCard>
-            <Card className="border-zinc-800 bg-zinc-900/40">
+          <Link href="/dashboard/exercise" className="block group">
+            <Card className="border-border/70 bg-card/70 backdrop-blur-xs group-hover:border-border transition-colors">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Monthly Revenue</CardTitle>
-                <IndianRupee className="h-4 w-4 text-purple-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  <NumberTicker value={stats.monthlyRevenue} prefix="₹" />
-                </div>
-                <p className="text-xs text-zinc-500 mt-1">Invoices issued this month</p>
-              </CardContent>
-            </Card>
-          </SpotlightCard>
-        ) : (
-          <SpotlightCard>
-            <Card className="border-zinc-800 bg-zinc-900/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Today's Collections</CardTitle>
-                <IndianRupee className="h-4 w-4 text-green-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  <NumberTicker value={todayStats.revenue} prefix="₹" />
-                </div>
-                <p className="text-xs text-zinc-500 mt-1">Desk payment collections</p>
-              </CardContent>
-            </Card>
-          </SpotlightCard>
-        )}
-
-        {isTrainer ? (
-          <SpotlightCard>
-            <Link href="/dashboard/diet" className="block">
-              <Card className="border-zinc-800 bg-zinc-900/40">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Diet Charts</CardTitle>
-                  <Apple className="h-4 w-4 text-green-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    <NumberTicker value={stats.dietPlans} />
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-1">Nutrition & meal charts</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </SpotlightCard>
-        ) : (
-          <SpotlightCard>
-            <Link href="/dashboard/due" className="block">
-              <Card className="border-zinc-800 bg-zinc-900/40">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Dues Outstanding</CardTitle>
-                  <CalendarDays className="h-4 w-4 text-purple-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    <NumberTicker value={stats.duesOutstanding} prefix="₹" />
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-1">Pending payments to collect</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </SpotlightCard>
-        )}
-
-        <SpotlightCard>
-          <Link href={isTrainer ? "/dashboard/attendance" : "/dashboard/members?filter=expiring"} className="block">
-            <Card className="border-zinc-800 bg-zinc-900/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  {isTrainer ? 'Floor Check-ins' : 'Expiring Soon'}
+                <CardTitle className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Workout Routines
                 </CardTitle>
-                <Clock className="h-4 w-4 text-purple-400" />
+                <Dumbbell className="h-4 w-4 text-muted-foreground/70 group-hover:text-primary transition-colors" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  <NumberTicker value={isTrainer ? todayStats.checkins : stats.expiringSoon} />
+                <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                  {stats.exercisePlans}
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">
-                  {isTrainer ? "Today's check-ins" : 'Plans ending in next 7 days'}
-                </p>
-                <p className="text-xs text-zinc-500 mt-1">Click to view →</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Active exercise routines</p>
               </CardContent>
             </Card>
           </Link>
-        </SpotlightCard>
+        ) : isOwner ? (
+          <Card className="border-border/70 bg-card/70 backdrop-blur-xs">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                Monthly Revenue
+              </CardTitle>
+              <IndianRupee className="h-4 w-4 text-emerald-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                {formatCurrency(stats.monthlyRevenue)}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">Invoices issued this month</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-border/70 bg-card/70 backdrop-blur-xs">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                Today's Collections
+              </CardTitle>
+              <IndianRupee className="h-4 w-4 text-emerald-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                {formatCurrency(todayStats.revenue)}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">Desk payment collections</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {isTrainer ? (
+          <Link href="/dashboard/diet" className="block group">
+            <Card className="border-border/70 bg-card/70 backdrop-blur-xs group-hover:border-border transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Diet Charts
+                </CardTitle>
+                <Apple className="h-4 w-4 text-muted-foreground/70 group-hover:text-emerald-400 transition-colors" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                  {stats.dietPlans}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">Nutrition & meal charts</p>
+              </CardContent>
+            </Card>
+          </Link>
+        ) : (
+          <Link href="/dashboard/due" className="block group">
+            <Card className="border-border/70 bg-card/70 backdrop-blur-xs group-hover:border-border transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Dues Outstanding
+                </CardTitle>
+                <CalendarDays className="h-4 w-4 text-muted-foreground/70 group-hover:text-amber-400 transition-colors" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                  {formatCurrency(stats.duesOutstanding)}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">Pending payments to collect</p>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        <Link href={isTrainer ? "/dashboard/attendance" : "/dashboard/members?filter=expiring"} className="block group">
+          <Card className="border-border/70 bg-card/70 backdrop-blur-xs group-hover:border-border transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                {isTrainer ? 'Floor Check-ins' : 'Expiring Soon'}
+              </CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground/70 group-hover:text-primary transition-colors" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                {isTrainer ? todayStats.checkins : stats.expiringSoon}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {isTrainer ? "Today's check-ins" : 'Plans ending in 7 days'}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Grid: Live Ticker & Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Live Attendance Ticker */}
-        <Card className="border-zinc-800 bg-zinc-900/40 lg:col-span-1 flex flex-col">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-purple-400" />
-              <CardTitle className="text-lg font-bold">Live Check-ins</CardTitle>
+        <Card className="border-border/70 bg-card/70 backdrop-blur-xs lg:col-span-1 flex flex-col">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-semibold text-foreground">Live Check-ins</CardTitle>
+              </div>
+              <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Live
+              </span>
             </div>
-            <CardDescription className="text-zinc-500 text-xs">Real-time attendance tracking ticker</CardDescription>
+            <CardDescription className="text-muted-foreground text-[11px]">Real-time attendance stream</CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto max-h-[350px] space-y-4">
+          <CardContent className="flex-1 overflow-y-auto max-h-[340px] space-y-3">
             {ticker.length === 0 ? (
-              <div className="text-center text-zinc-600 text-sm py-12">No attendance logged yet today.</div>
+              <div className="text-center text-muted-foreground text-xs py-12">No attendance logged yet today.</div>
             ) : (
-              <AnimatedList>
+              <div className="divide-y divide-border/60">
                 {ticker.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between border-b border-zinc-800/40 pb-3 last:border-0 last:pb-0">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-300 font-bold border border-purple-800/40">
-                      {(entry.member_name || 'Member').slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-zinc-200">{entry.member_name || 'Member'}</div>
-                      <div className="text-[10px] text-zinc-500 mt-0.5 uppercase flex items-center gap-1.5">
-                        <GlowingBadge variant="active" pulse={false}>{entry.method || 'check-in'}</GlowingBadge>
+                  <div key={entry.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-muted/70 border border-border/80 flex items-center justify-center text-xs font-mono font-medium text-foreground">
+                        {(entry.member_name || 'Member').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium text-foreground">{entry.member_name || 'Member'}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-[10px] font-mono uppercase px-1.5 py-0 border-border/70">
+                            {entry.method || 'check-in'}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right">
+                      <span className="text-[11px] font-mono text-muted-foreground">
+                        {entry.check_in_time ? (formatDateTime(entry.check_in_time).split(',')[1] || formatDateTime(entry.check_in_time)) : ''}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs font-semibold text-zinc-400">
-                      {entry.check_in_time ? (formatDateTime(entry.check_in_time).split(',')[1] || formatDateTime(entry.check_in_time)) : ''}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              </AnimatedList>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Charts */}
-        <Card className="border-zinc-800 bg-zinc-900/40 lg:col-span-2">
-          <CardHeader>
+        {/* Attendance Velocity Chart */}
+        <Card className="border-border/70 bg-card/70 backdrop-blur-xs lg:col-span-2">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-purple-400" />
-                <CardTitle className="text-lg font-bold">Attendance Velocity</CardTitle>
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-semibold text-foreground">Attendance Velocity</CardTitle>
               </div>
             </div>
-            <CardDescription className="text-zinc-500 text-xs">Member check-in frequencies for the last 7 active days</CardDescription>
+            <CardDescription className="text-muted-foreground text-[11px]">Member check-in frequencies for the last 7 active days</CardDescription>
           </CardHeader>
-          <CardContent className="h-[280px] relative">
-            <BorderBeam />
+          <CardContent className="h-[280px]">
             {!mounted || chartData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-zinc-500 pb-8">
-                <CalendarDays className="h-10 w-10 mb-3 opacity-30" />
-                <p className="text-sm font-medium">No check-ins yet this week</p>
-                <p className="text-xs mt-1">Members will appear here once they check in</p>
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground pb-8">
+                <CalendarDays className="h-8 w-8 mb-2 opacity-40" />
+                <p className="text-xs font-medium">No check-ins yet this week</p>
+                <p className="text-[11px] mt-0.5">Members will appear here once they check in</p>
               </div>
             ) : (
               <AttendanceOverviewChart chartData={chartData} />
@@ -641,122 +644,151 @@ export default function DashboardHome() {
       </div>
 
       {/* Quick Action Bento Grid */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-bold text-zinc-200">Management Shortcuts</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-stagger">
-          <Link href="/dashboard/members" className="block">
-            <GlowCard className="group flex items-start gap-4" glowColor="purple">
-              <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                <Users className="h-5 w-5" />
+      <div className="space-y-3">
+        <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+          Management Shortcuts
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Link href="/dashboard/members" className="block group">
+            <div className="rounded-xl border border-border/70 bg-card/70 hover:border-border hover:bg-card/90 active:scale-[0.98] transition-[border-color,background-color,transform] duration-150 ease-out p-4 flex items-start gap-3.5 h-full">
+              <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0 group-hover:scale-105 transition-transform duration-150 ease-out">
+                <Users className="h-4.5 w-4.5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-zinc-100">
-                  {isTrainer ? 'Trainee List' : 'Member List'}
-                </h4>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Search profiles, view logs, check details.</p>
+                <div className="flex items-center gap-1">
+                  <h4 className="text-xs font-semibold text-foreground">
+                    {isTrainer ? 'Trainee List' : 'Member List'}
+                  </h4>
+                  <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Search profiles, view logs, check details.</p>
               </div>
-            </GlowCard>
+            </div>
           </Link>
 
           {isTrainer ? (
-            <Link href="/dashboard/exercise" className="block">
-              <GlowCard className="group flex items-start gap-4" glowColor="purple">
-                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                  <Dumbbell className="h-5 w-5" />
+            <Link href="/dashboard/exercise" className="block group">
+              <div className="rounded-xl border border-border/70 bg-card/70 hover:border-border hover:bg-card/90 active:scale-[0.98] transition-[border-color,background-color,transform] duration-150 ease-out p-4 flex items-start gap-3.5 h-full">
+                <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0 group-hover:scale-105 transition-transform duration-150 ease-out">
+                  <Dumbbell className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-100">Workout Routines</h4>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Assign exercise splits, sets, and reps.</p>
+                  <div className="flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-foreground">Workout Routines</h4>
+                    <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Assign exercise splits, sets, and reps.</p>
                 </div>
-              </GlowCard>
+              </div>
             </Link>
           ) : (
-            <Link href="/dashboard/invoices" className="block">
-              <GlowCard className="group flex items-start gap-4" glowColor="purple">
-                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                  <Receipt className="h-5 w-5" />
+            <Link href="/dashboard/invoices" className="block group">
+              <div className="rounded-xl border border-border/70 bg-card/70 hover:border-border hover:bg-card/90 active:scale-[0.98] transition-[border-color,background-color,transform] duration-150 ease-out p-4 flex items-start gap-3.5 h-full">
+                <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0 group-hover:scale-105 transition-transform duration-150 ease-out">
+                  <Receipt className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-100">Billing & Invoices</h4>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Print receipts, view payment history.</p>
+                  <div className="flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-foreground">Billing & Invoices</h4>
+                    <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Print receipts, view payment history.</p>
                 </div>
-              </GlowCard>
+              </div>
             </Link>
           )}
 
           {isTrainer ? (
-            <Link href="/dashboard/diet" className="block">
-              <GlowCard className="group flex items-start gap-4" glowColor="purple">
-                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                  <Apple className="h-5 w-5" />
+            <Link href="/dashboard/diet" className="block group">
+              <div className="rounded-xl border border-border/70 bg-card/70 hover:border-border hover:bg-card/90 active:scale-[0.98] transition-[border-color,background-color,transform] duration-150 ease-out p-4 flex items-start gap-3.5 h-full">
+                <div className="bg-emerald-500/10 p-2 rounded-lg text-emerald-400 shrink-0 group-hover:scale-105 transition-transform duration-150 ease-out">
+                  <Apple className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-100">Diet Charts</h4>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Customize daily macro and meal targets.</p>
+                  <div className="flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-foreground">Diet Charts</h4>
+                    <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Customize daily macro and meal targets.</p>
                 </div>
-              </GlowCard>
+              </div>
             </Link>
           ) : isReceptionist ? (
-            <Link href="/dashboard/due" className="block">
-              <GlowCard className="group flex items-start gap-4" glowColor="purple">
-                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                  <IndianRupee className="h-4 w-4" />
+            <Link href="/dashboard/due" className="block group">
+              <div className="rounded-xl border border-border/70 bg-card/70 hover:border-border hover:bg-card/90 active:scale-[0.98] transition-[border-color,background-color,transform] duration-150 ease-out p-4 flex items-start gap-3.5 h-full">
+                <div className="bg-amber-500/10 p-2 rounded-lg text-amber-400 shrink-0 group-hover:scale-105 transition-transform duration-150 ease-out">
+                  <IndianRupee className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-100">Due Collection</h4>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Collect fee dues, record desk receipts.</p>
+                  <div className="flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-foreground">Due Collection</h4>
+                    <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Collect fee dues, record desk receipts.</p>
                 </div>
-              </GlowCard>
+              </div>
             </Link>
           ) : (
-            <Link href="/dashboard/analytics" className="block">
-              <GlowCard className="group flex items-start gap-4" glowColor="purple">
-                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                  <TrendingUp className="h-5 w-5" />
+            <Link href="/dashboard/analytics" className="block group">
+              <div className="rounded-xl border border-border/70 bg-card/70 hover:border-border hover:bg-card/90 active:scale-[0.98] transition-[border-color,background-color,transform] duration-150 ease-out p-4 flex items-start gap-3.5 h-full">
+                <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0 group-hover:scale-105 transition-transform duration-150 ease-out">
+                  <TrendingUp className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-100">Analytics</h4>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Gross sales volume, profit margins, growth.</p>
+                  <div className="flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-foreground">Analytics</h4>
+                    <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Gross sales volume, profit margins, growth.</p>
                 </div>
-              </GlowCard>
+              </div>
             </Link>
           )}
 
           {isTrainer ? (
-            <Link href="/dashboard/attendance" className="block">
-              <GlowCard className="group flex items-start gap-4" glowColor="purple">
-                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                  <CalendarCheck className="h-5 w-5" />
+            <Link href="/dashboard/attendance" className="block group">
+              <div className="rounded-xl border border-border/70 bg-card/70 hover:border-border hover:bg-card/90 active:scale-[0.98] transition-[border-color,background-color,transform] duration-150 ease-out p-4 flex items-start gap-3.5 h-full">
+                <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0 group-hover:scale-105 transition-transform duration-150 ease-out">
+                  <CalendarCheck className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-100">Attendance</h4>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Track daily client gym check-ins.</p>
+                  <div className="flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-foreground">Attendance</h4>
+                    <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Track daily client gym check-ins.</p>
                 </div>
-              </GlowCard>
+              </div>
             </Link>
           ) : isReceptionist ? (
-            <Link href="/dashboard/attendance" className="block">
-              <GlowCard className="group flex items-start gap-4" glowColor="purple">
-                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                  <CalendarCheck className="h-5 w-5" />
+            <Link href="/dashboard/attendance" className="block group">
+              <div className="rounded-xl border border-border/70 bg-card/70 hover:border-border hover:bg-card/90 active:scale-[0.98] transition-[border-color,background-color,transform] duration-150 ease-out p-4 flex items-start gap-3.5 h-full">
+                <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0 group-hover:scale-105 transition-transform duration-150 ease-out">
+                  <CalendarCheck className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-100">Attendance</h4>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Verify member entries and manage kiosks.</p>
+                  <div className="flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-foreground">Attendance</h4>
+                    <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Verify member entries and manage kiosks.</p>
                 </div>
-              </GlowCard>
+              </div>
             </Link>
           ) : (
-            <Link href="/dashboard/settings" className="block">
-              <GlowCard className="group flex items-start gap-4" glowColor="purple">
-                <div className="bg-purple-600/10 p-2.5 rounded-lg text-purple-400 group-hover:scale-105 transition-transform">
-                  <FileText className="h-5 w-5" />
+            <Link href="/dashboard/settings" className="block group">
+              <div className="rounded-xl border border-border/70 bg-card/70 hover:border-border hover:bg-card/90 active:scale-[0.98] transition-[border-color,background-color,transform] duration-150 ease-out p-4 flex items-start gap-3.5 h-full">
+                <div className="bg-primary/10 p-2 rounded-lg text-primary shrink-0 group-hover:scale-105 transition-transform duration-150 ease-out">
+                  <FileText className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-100">Settings</h4>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">Operating hours, branches & integrations.</p>
+                  <div className="flex items-center gap-1">
+                    <h4 className="text-xs font-semibold text-foreground">Settings</h4>
+                    <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">Operating hours, branches & integrations.</p>
                 </div>
-              </GlowCard>
+              </div>
             </Link>
           )}
         </div>
