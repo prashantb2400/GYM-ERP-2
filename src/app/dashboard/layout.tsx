@@ -111,15 +111,18 @@ export default function AdminDashboardLayout({
   return (
     <ErrorBoundary>
       <BranchProvider>
-        <div className="flex h-screen overflow-hidden bg-zinc-950">
+        <div className="flex h-screen overflow-hidden bg-zinc-950 text-foreground relative selection:bg-primary selection:text-primary-foreground">
+          {/* Subtle Apple ambient diffuse depth glow */}
+          <div className="absolute top-0 right-1/4 w-[600px] h-[350px] bg-primary/[0.04] rounded-full blur-[140px] pointer-events-none -z-10" />
+
           {/* Desktop Sidebar (hidden on mobile) */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:block shrink-0">
             <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
           </div>
 
           {/* Mobile Drawer Sidebar */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetContent side="left" className="p-0 bg-zinc-900 border-zinc-800 w-[260px] text-white">
+            <SheetContent side="left" className="p-0 bg-zinc-900/95 backdrop-blur-2xl border-white/[0.1] w-[260px] text-white">
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <AdminSidebar collapsed={false} setCollapsed={() => {}} />
             </SheetContent>
@@ -128,7 +131,7 @@ export default function AdminDashboardLayout({
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
             <AdminTopbar onMenuClick={() => setMobileOpen(true)} />
-            <main className="flex-1 overflow-y-auto bg-zinc-950 p-6 lg:p-8 pb-12">
+            <main className="flex-1 overflow-y-auto p-5 sm:p-6 lg:p-8 pb-16">
               <ErrorBoundary>
                 {children}
               </ErrorBoundary>

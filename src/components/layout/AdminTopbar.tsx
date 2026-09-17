@@ -126,7 +126,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
   };
 
   return (
-    <header className="h-16 border-b border-border/70 bg-card/60 backdrop-blur-md flex items-center justify-between px-5 sticky top-0 z-20">
+    <header className="h-16 border-b border-white/[0.08] bg-zinc-950/60 backdrop-blur-xl flex items-center justify-between px-5 sm:px-6 sticky top-0 z-20">
       {/* Left side info */}
       <div className="flex items-center gap-3.5">
         {onMenuClick && (
@@ -135,7 +135,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
             size="icon"
             onClick={onMenuClick}
             aria-label="Open navigation menu"
-            className="lg:hidden text-muted-foreground hover:text-foreground h-8 w-8"
+            className="lg:hidden text-muted-foreground hover:text-foreground h-8 w-8 rounded-xl"
           >
             <Menu className="h-4.5 w-4.5" />
           </Button>
@@ -158,13 +158,13 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
               value={selectedBranchId || 'all'}
               onValueChange={(val) => setSelectedBranchId(val === 'all' ? null : val)}
             >
-              <SelectTrigger className="h-7.5 text-xs bg-muted/40 hover:bg-muted/60 border-border/60 w-[150px] rounded-md transition-colors">
+              <SelectTrigger className="h-7.5 text-xs bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] w-[150px] rounded-xl transition-colors">
                 <div className="flex items-center gap-1.5 truncate">
                   <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
                   <SelectValue placeholder="All Branches" />
                 </div>
               </SelectTrigger>
-              <SelectContent className="border-border/80 bg-popover">
+              <SelectContent className="border-white/[0.1] bg-zinc-900/95 backdrop-blur-xl rounded-xl shadow-2xl">
                 <SelectItem value="all">All Branches</SelectItem>
                 {branches.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
@@ -175,36 +175,36 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
             </Select>
           </div>
         ) : selectedBranch ? (
-          <Badge variant="outline" className="hidden sm:inline-flex text-[11px] bg-muted/40 text-muted-foreground border-border/60 ml-2 font-normal">
+          <Badge variant="outline" className="hidden sm:inline-flex text-[10px] bg-white/[0.04] text-muted-foreground border-white/[0.08] ml-2 font-normal rounded-full">
             <Building2 className="h-3 w-3 mr-1 text-muted-foreground" />
             {selectedBranch.name}
           </Badge>
         ) : null}
       </div>
 
-      {/* Center global search shortcut bar (clickable) */}
+      {/* Center global search shortcut bar (macOS Spotlight style) */}
       <button
         type="button"
         onClick={() => setCmdOpen(true)}
         aria-label="Search dashboard"
-        className="hidden md:flex items-center gap-2 bg-muted/30 hover:bg-muted/60 active:scale-[0.98] border border-border/60 hover:border-border/80 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground w-64 text-left transition-[background-color,border-color,color] duration-150 ease-out cursor-pointer"
+        className="hidden md:flex items-center gap-2.5 bg-white/[0.04] hover:bg-white/[0.08] active:scale-[0.98] border border-white/[0.08] hover:border-white/[0.15] px-3.5 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground w-64 text-left transition-[background-color,border-color,color,transform] duration-120 ease-out cursor-pointer shadow-2xs"
       >
         <Search className="h-3.5 w-3.5 shrink-0 opacity-70" />
         <span className="flex-1 text-[12px]">Search shortcuts...</span>
-        <kbd className="inline-flex h-4 select-none items-center gap-0.5 rounded border border-border/70 bg-background/80 px-1 font-mono text-[10px] font-medium text-muted-foreground">
+        <kbd className="inline-flex h-4.5 select-none items-center gap-0.5 rounded-full border border-white/[0.12] bg-white/[0.06] px-1.5 font-mono text-[10px] font-semibold text-muted-foreground">
           ⌘K
         </kbd>
       </button>
 
       {/* Right side controls */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2">
         {/* Mobile Search Button */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCmdOpen(true)}
           aria-label="Open search dialog"
-          className="md:hidden text-muted-foreground hover:text-foreground h-8 w-8"
+          className="md:hidden text-muted-foreground hover:text-foreground h-8 w-8 rounded-xl"
         >
           <Search className="h-4 w-4" />
         </Button>
@@ -215,7 +215,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           size="icon"
           onClick={toggleTheme}
           aria-label="Toggle color theme"
-          className="text-muted-foreground hover:text-foreground h-8 w-8"
+          className="text-muted-foreground hover:text-foreground h-8 w-8 rounded-xl active:scale-95"
           title="Toggle Theme"
         >
           {theme === 'dark' ? (
@@ -225,9 +225,12 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           )}
         </Button>
 
-        {/* System Online connection indicator */}
-        <div className="hidden sm:flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[11px] font-medium text-emerald-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+        {/* System Online connection indicator with Apple breathing dot */}
+        <div className="hidden sm:flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase text-emerald-400">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 duration-1000" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
           <span>Online</span>
         </div>
 
@@ -238,15 +241,15 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
               variant="ghost"
               size="icon"
               aria-label="View notifications"
-              className="text-muted-foreground hover:text-foreground h-8 w-8 relative"
+              className="text-muted-foreground hover:text-foreground h-8 w-8 rounded-xl relative active:scale-95"
             >
               <Bell className="h-4 w-4" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 bg-popover border-border/80 p-0 overflow-hidden shadow-lg rounded-xl">
+          <PopoverContent align="end" className="w-80 bg-zinc-900/90 backdrop-blur-2xl border border-white/[0.1] p-0 overflow-hidden shadow-2xl rounded-2xl">
             <div className="flex items-center justify-between border-b border-border/70 px-4 py-3 bg-muted/20">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-foreground">Alerts</span>

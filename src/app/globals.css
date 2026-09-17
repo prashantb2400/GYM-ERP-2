@@ -43,10 +43,12 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
-  /* Emil Kowalski custom curves */
+  /* Apple Design & Kowalski spring curves */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-apple-spring: cubic-bezier(0.25, 1, 0.35, 1);
+  --ease-apple-responsive: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {
@@ -210,6 +212,112 @@ tbody tr:hover td {
 }
 
 /* ==========================================
+   Apple Design Materials & Depth (WWDC HIG)
+   ========================================== */
+.apple-glass {
+  background: rgba(18, 18, 22, 0.70);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.apple-glass-card {
+  background: rgba(24, 24, 28, 0.60);
+  backdrop-filter: blur(16px) saturate(175%);
+  -webkit-backdrop-filter: blur(16px) saturate(175%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+.apple-glass-card:hover {
+  background: rgba(28, 28, 34, 0.75);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.apple-specular-top {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.apple-pill {
+  border-radius: 9999px;
+}
+
+.apple-segmented {
+  background: rgba(24, 24, 28, 0.50);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  padding: 3px;
+}
+
+/* ==========================================
+   Apple Optical Typography (WWDC 2020)
+   ========================================== */
+.apple-display {
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  font-weight: 700;
+  font-optical-sizing: auto;
+}
+
+.apple-headline {
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  font-weight: 600;
+  font-optical-sizing: auto;
+}
+
+.apple-subhead {
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.apple-caption {
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.apple-tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Light mode adjustments */
+:root:not(.dark) .apple-glass {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+:root:not(.dark) .apple-glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+:root:not(.dark) .apple-segmented {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* ==========================================
+   Accessibility: prefers-reduced-transparency
+   ========================================== */
+@media (prefers-reduced-transparency: reduce) {
+  .apple-glass,
+  .apple-glass-card,
+  .apple-segmented {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: var(--card) !important;
+    border-color: var(--border) !important;
+  }
+}
+
+/* ==========================================
    Accessibility: prefers-reduced-motion
    ========================================== */
 @media (prefers-reduced-motion: reduce) {
@@ -222,3 +330,4 @@ tbody tr:hover td {
     scroll-behavior: auto !important;
   }
 }
+

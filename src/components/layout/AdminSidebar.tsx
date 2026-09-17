@@ -68,36 +68,36 @@ export function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
   return (
     <aside
       className={cn(
-        'bg-zinc-950 border-r border-zinc-800/80 flex flex-col transition-[width] duration-200 ease-out relative z-30 h-screen select-none',
+        'bg-zinc-950/80 backdrop-blur-xl border-r border-white/[0.08] flex flex-col transition-[width] duration-200 ease-out relative z-30 h-screen select-none',
         collapsed ? 'w-16' : 'w-60'
       )}
     >
       {/* Brand Header */}
-      <div className="flex h-14 items-center justify-between px-3.5 border-b border-zinc-800/80">
+      <div className="flex h-14 items-center justify-between px-3.5 border-b border-white/[0.06]">
         {!collapsed && (
           <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-2xs">
+            <div className="h-7.5 w-7.5 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)]">
               <Dumbbell className="h-4 w-4" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-sm font-bold tracking-tight text-zinc-100">
+              <span className="text-sm font-semibold tracking-tight text-foreground">
                 GymERP
               </span>
-              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
+              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
                 v2
               </span>
             </div>
           </div>
         )}
         {collapsed && (
-          <div className="h-8 w-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center text-primary mx-auto">
+          <div className="h-8 w-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary mx-auto shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)]">
             <Dumbbell className="h-4 w-4" />
           </div>
         )}
       </div>
 
       {/* Navigation List */}
-      <nav className="flex-1 space-y-0.5 px-2 py-3 overflow-y-auto scrollbar-none">
+      <nav className="flex-1 space-y-1 px-2 py-3 overflow-y-auto scrollbar-none">
         {SIDEBAR_ITEMS.map((item) => {
           // If the item requires permission, check if user has it
           if (item.permission && !can(item.permission)) {
@@ -114,10 +114,10 @@ export function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-[background-color,color,border-color] duration-120 ease-out group relative active:scale-[0.98]',
+                'flex items-center gap-2.5 px-3 py-1.75 rounded-xl text-xs font-medium transition-[background-color,color,border-color,transform] duration-120 ease-out group relative active:scale-[0.98]',
                 isActive
-                  ? 'bg-zinc-850 text-zinc-100 border border-zinc-750/80 shadow-2xs font-semibold'
-                  : 'text-zinc-400 hover:bg-zinc-900/80 hover:text-zinc-200 border border-transparent'
+                  ? 'bg-white/[0.08] text-white border border-white/[0.1] shadow-2xs font-semibold'
+                  : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200 border border-transparent'
               )}
             >
               {IconComponent && (
@@ -128,9 +128,14 @@ export function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
                   )}
                 />
               )}
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              {!collapsed && (
+                <span className="truncate flex-1">{item.label}</span>
+              )}
+              {!collapsed && isActive && (
+                <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+              )}
               {collapsed && (
-                <div className="absolute left-14 bg-zinc-900 text-zinc-100 text-xs px-2.5 py-1 rounded-md border border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-xl z-50">
+                <div className="absolute left-14 bg-zinc-900/95 backdrop-blur-md text-zinc-100 text-xs px-2.5 py-1 rounded-lg border border-white/[0.1] opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-xl z-50">
                   {item.label}
                 </div>
               )}

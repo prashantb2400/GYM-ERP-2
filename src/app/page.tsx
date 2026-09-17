@@ -42,17 +42,17 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-background/70 backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            <div className="h-8.5 w-8.5 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)]">
               <Dumbbell className="h-4.5 w-4.5" />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-base font-semibold tracking-tight text-foreground">
                 GymERP
               </span>
-              <Badge variant="outline" className="hidden sm:inline-flex text-[10px] font-mono px-1.5 py-0 border-border/70 text-muted-foreground">
+              <Badge variant="outline" className="hidden sm:inline-flex text-[9px] font-mono px-2 py-0 border-white/[0.1] bg-white/[0.04] text-muted-foreground rounded-full">
                 v2.4
               </Badge>
             </div>
@@ -67,12 +67,12 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-2.5">
             <Link href="/staff/login">
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground active:scale-[0.97]">
+              <Button variant="ghost" size="pill-sm" className="text-xs text-muted-foreground hover:text-foreground active:scale-[0.97]">
                 Staff Login
               </Button>
             </Link>
             <Link href={isAuthenticated ? "/dashboard" : "/login"}>
-              <Button size="sm" className="text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out">
+              <Button size="pill-sm" className="text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out">
                 {isAuthenticated ? "Go to Dashboard" : "Owner Login"}
               </Button>
             </Link>
@@ -83,15 +83,18 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-20 pb-16 md:pt-28 md:pb-20 overflow-hidden">
         {/* Subtle radial ambient illumination */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-primary/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-primary/[0.08] rounded-full blur-[140px] pointer-events-none -z-10" />
 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-center relative">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border/80 bg-muted/40 text-muted-foreground text-xs font-medium mb-6">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/[0.1] bg-white/[0.04] backdrop-blur-md text-muted-foreground text-xs font-semibold mb-6 shadow-2xs">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 duration-1000" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
             <span>The Operating System for Modern Indian Gyms 🇮🇳</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground leading-[1.12] max-w-4xl mx-auto">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground leading-[1.12] max-w-4xl mx-auto apple-display">
             Complete control over memberships, billing & attendance.
           </h1>
 
@@ -101,46 +104,46 @@ export default function LandingPage() {
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center items-center">
             <Link href="/login" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto text-xs sm:text-sm font-medium bg-primary hover:bg-primary/90 text-primary-foreground px-6 shadow-xs active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out gap-2">
+              <Button size="pill" className="w-full sm:w-auto text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground px-7 shadow-[0_1px_2px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.22)] active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out gap-2 cursor-pointer">
                 Start Free Trial
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <a href="#features" className="w-full sm:w-auto">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto text-xs sm:text-sm border-border/80 hover:bg-muted/50 text-foreground px-6 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out">
+              <Button variant="outline" size="pill" className="w-full sm:w-auto text-xs sm:text-sm border-white/[0.1] bg-card/40 backdrop-blur-md hover:bg-white/[0.08] text-foreground px-7 active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out cursor-pointer">
                 Explore Features
               </Button>
             </a>
           </div>
 
           {/* Operational metrics strip */}
-          <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
-            <div className="rounded-xl border border-border/70 bg-card/60 p-4 text-center">
+          <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-3.5 max-w-3xl mx-auto">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md p-4 text-center shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
               <div className="font-mono text-xl sm:text-2xl font-bold text-foreground tabular-nums">100%</div>
-              <div className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5">GST Invoicing</div>
+              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5 font-semibold">GST Invoicing</div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/60 p-4 text-center">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md p-4 text-center shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
               <div className="font-mono text-xl sm:text-2xl font-bold text-foreground tabular-nums">&lt; 1s</div>
-              <div className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5">WhatsApp Dispatch</div>
+              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5 font-semibold">WhatsApp Dispatch</div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/60 p-4 text-center">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md p-4 text-center shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
               <div className="font-mono text-xl sm:text-2xl font-bold text-foreground tabular-nums">99.9%</div>
-              <div className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5">Kiosk Uptime</div>
+              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5 font-semibold">Kiosk Uptime</div>
             </div>
-            <div className="rounded-xl border border-border/70 bg-card/60 p-4 text-center">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md p-4 text-center shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
               <div className="font-mono text-xl sm:text-2xl font-bold text-foreground tabular-nums">RLS-4</div>
-              <div className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5">Branch Isolation</div>
+              <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5 font-semibold">Branch Isolation</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Platform Showcase: Authentic Dashboard Preview Card */}
-      <section id="preview" className="py-12 border-t border-border/60 bg-muted/20">
+      <section id="preview" className="py-14 border-t border-white/[0.08] bg-muted/10 relative">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-          <div className="rounded-2xl border border-border/80 bg-card shadow-2xl overflow-hidden">
+          <div className="rounded-2xl border border-white/[0.1] bg-card/60 backdrop-blur-2xl shadow-[0_24px_70px_-15px_rgba(0,0,0,0.7),inset_0_1px_0_0_rgba(255,255,255,0.12)] overflow-hidden">
             {/* Window chrome header */}
-            <div className="h-10 border-b border-border/70 bg-muted/40 px-4 flex items-center justify-between">
+            <div className="h-10 border-b border-white/[0.08] bg-white/[0.03] backdrop-blur-md px-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-zinc-600/70" />
                 <div className="h-2.5 w-2.5 rounded-full bg-zinc-600/70" />
@@ -150,10 +153,10 @@ export default function LandingPage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] font-mono border-border/80 text-muted-foreground">
+                <Badge variant="outline" className="text-[10px] font-mono border-white/[0.08] bg-white/[0.04] text-muted-foreground rounded-full">
                   <Building2 className="h-2.5 w-2.5 mr-1" /> Connaught Place Branch
                 </Badge>
-                <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   RTSP Online
                 </span>
@@ -161,34 +164,34 @@ export default function LandingPage() {
             </div>
 
             {/* Mockup Dashboard Content */}
-            <div className="p-5 sm:p-7 space-y-5 bg-background">
+            <div className="p-5 sm:p-7 space-y-5 bg-background/50">
               {/* Snapshot row */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded-xl border border-border/70 bg-card/70 p-3.5 flex items-center justify-between">
+                <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-md p-4 flex items-center justify-between shadow-2xs">
                   <div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Today's Collections</span>
-                    <div className="text-lg font-bold font-mono text-foreground mt-0.5">₹48,250</div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">Today's Collections</span>
+                    <div className="text-xl font-bold font-mono text-foreground mt-0.5 tabular-nums">₹48,250</div>
                   </div>
-                  <div className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs font-bold">
+                  <div className="h-8 w-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-xs font-bold shadow-xs">
                     ₹
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-card/70 p-3.5 flex items-center justify-between">
+                <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-md p-4 flex items-center justify-between shadow-2xs">
                   <div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Live Floor Attendance</span>
-                    <div className="text-lg font-bold font-mono text-foreground mt-0.5">142 Checked-in</div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">Live Floor Attendance</span>
+                    <div className="text-xl font-bold font-mono text-foreground mt-0.5 tabular-nums">142 Checked-in</div>
                   </div>
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <Users className="h-3.5 w-3.5" />
+                  <div className="h-8 w-8 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shadow-xs">
+                    <Users className="h-4 w-4" />
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-card/70 p-3.5 flex items-center justify-between">
+                <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-md p-4 flex items-center justify-between shadow-2xs">
                   <div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Active Trainee Profiles</span>
-                    <div className="text-lg font-bold font-mono text-foreground mt-0.5">389 Members</div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">Active Trainee Profiles</span>
+                    <div className="text-xl font-bold font-mono text-foreground mt-0.5 tabular-nums">389 Members</div>
                   </div>
-                  <div className="h-7 w-7 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                    <TrendingUp className="h-3.5 w-3.5" />
+                  <div className="h-8 w-8 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center shadow-xs">
+                    <TrendingUp className="h-4 w-4" />
                   </div>
                 </div>
               </div>
@@ -196,63 +199,63 @@ export default function LandingPage() {
               {/* Feed & analytics split */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Live stream mock */}
-                <div className="rounded-xl border border-border/70 bg-card/50 p-4 space-y-3 md:col-span-2">
-                  <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md p-4.5 space-y-3 md:col-span-2 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
                     <div className="flex items-center gap-2">
                       <Activity className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-xs font-semibold text-foreground">Real-Time Attendance Feed</span>
+                      <span className="text-xs font-semibold tracking-tight text-foreground">Real-Time Attendance Feed</span>
                     </div>
                     <span className="text-[10px] font-mono text-muted-foreground">Updated in real-time</span>
                   </div>
-                  <div className="divide-y divide-border/50 text-xs">
-                    <div className="flex items-center justify-between py-2">
+                  <div className="divide-y divide-white/[0.04] text-xs">
+                    <div className="flex items-center justify-between py-2.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded-full bg-muted border border-border/80 flex items-center justify-center font-mono text-[10px] font-bold">AS</div>
+                        <div className="h-7.5 w-7.5 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center font-mono text-[10px] font-bold text-foreground shadow-2xs">AS</div>
                         <div>
                           <div className="font-medium text-foreground">Aryan Sharma</div>
                           <div className="text-[10px] text-muted-foreground">Annual Pro • Personal Training</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[9px] font-mono border-emerald-500/30 text-emerald-400 bg-emerald-500/10">FACE VERIFIED</Badge>
-                        <span className="text-[10px] font-mono text-muted-foreground">09:42 AM</span>
+                        <Badge variant="outline" className="text-[9px] font-mono border-emerald-500/30 text-emerald-400 bg-emerald-500/10 rounded-full font-semibold">FACE VERIFIED</Badge>
+                        <span className="text-[10px] font-mono text-muted-foreground tabular-nums">09:42 AM</span>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center justify-between py-2.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded-full bg-muted border border-border/80 flex items-center justify-center font-mono text-[10px] font-bold">PV</div>
+                        <div className="h-7.5 w-7.5 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center font-mono text-[10px] font-bold text-foreground shadow-2xs">PV</div>
                         <div>
                           <div className="font-medium text-foreground">Pooja Verma</div>
                           <div className="text-[10px] text-muted-foreground">Quarterly Strength</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[9px] font-mono border-blue-500/30 text-blue-400 bg-blue-500/10">FINGERPRINT</Badge>
-                        <span className="text-[10px] font-mono text-muted-foreground">09:39 AM</span>
+                        <Badge variant="outline" className="text-[9px] font-mono border-blue-500/30 text-blue-400 bg-blue-500/10 rounded-full font-semibold">FINGERPRINT</Badge>
+                        <span className="text-[10px] font-mono text-muted-foreground tabular-nums">09:39 AM</span>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center justify-between py-2.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded-full bg-muted border border-border/80 flex items-center justify-center font-mono text-[10px] font-bold">RK</div>
+                        <div className="h-7.5 w-7.5 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center font-mono text-[10px] font-bold text-foreground shadow-2xs">RK</div>
                         <div>
                           <div className="font-medium text-foreground">Rahul Kapoor</div>
                           <div className="text-[10px] text-muted-foreground">Monthly Cardio</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[9px] font-mono border-border/80 text-muted-foreground">QR SCAN</Badge>
-                        <span className="text-[10px] font-mono text-muted-foreground">09:35 AM</span>
+                        <Badge variant="outline" className="text-[9px] font-mono border-white/[0.08] bg-white/[0.03] text-muted-foreground rounded-full font-semibold">QR SCAN</Badge>
+                        <span className="text-[10px] font-mono text-muted-foreground tabular-nums">09:35 AM</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* WhatsApp Status Mini card */}
-                <div className="rounded-xl border border-border/70 bg-card/50 p-4 space-y-3 flex flex-col justify-between">
+                <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md p-4.5 space-y-3 flex flex-col justify-between shadow-2xs">
                   <div>
-                    <div className="flex items-center gap-2 border-b border-border/60 pb-2">
+                    <div className="flex items-center gap-2 border-b border-white/[0.06] pb-2.5">
                       <MessageSquare className="h-3.5 w-3.5 text-emerald-400" />
-                      <span className="text-xs font-semibold text-foreground">WhatsApp Engine</span>
+                      <span className="text-xs font-semibold tracking-tight text-foreground">WhatsApp Engine</span>
                     </div>
                     <div className="mt-3 space-y-2 text-xs">
                       <div className="flex justify-between text-muted-foreground text-[11px]">
@@ -261,15 +264,15 @@ export default function LandingPage() {
                       </div>
                       <div className="flex justify-between text-muted-foreground text-[11px]">
                         <span>Auto-Invoices Today</span>
-                        <span className="font-mono text-foreground">24 Sent</span>
+                        <span className="font-mono text-foreground tabular-nums">24 Sent</span>
                       </div>
                       <div className="flex justify-between text-muted-foreground text-[11px]">
                         <span>Renewal Nudges</span>
-                        <span className="font-mono text-foreground">11 Queued</span>
+                        <span className="font-mono text-foreground tabular-nums">11 Queued</span>
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-lg bg-muted/40 border border-border/60 p-2.5 text-[11px] text-muted-foreground">
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5 text-[11px] text-muted-foreground leading-relaxed">
                     ⚡ Instant PDF delivery on payment confirmation.
                   </div>
                 </div>
@@ -280,10 +283,10 @@ export default function LandingPage() {
       </section>
 
       {/* Feature Bento Grid */}
-      <section id="features" className="py-20 border-t border-border/60">
+      <section id="features" className="py-20 border-t border-white/[0.08]">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground apple-display">
               Engineered for floor speed & operational rigor
             </h2>
             <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
@@ -293,78 +296,78 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Card 1 (Span 2) */}
-            <div className="md:col-span-2 rounded-xl border border-border/70 bg-card/70 p-6 flex flex-col justify-between">
+            <div className="md:col-span-2 rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 flex flex-col justify-between">
               <div>
-                <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-4">
+                <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center mb-4 shadow-xs">
                   <ScanFace className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-semibold text-foreground">
+                <h3 className="text-base font-semibold tracking-tight text-foreground">
                   Biometric Face & Optical Fingerprint Kiosks
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
                   Turn any standard IP camera, tablet, or USB biometric scanner into an unforgeable attendance kiosk. 128-dimensional face embedding vectors matched locally via browser WASM and Python sidecar with sub-second response times.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-border/60 flex flex-wrap gap-2 text-[11px] font-mono text-muted-foreground">
-                <span className="bg-muted/40 px-2 py-0.5 rounded border border-border/60">RTSP Stream Support</span>
-                <span className="bg-muted/40 px-2 py-0.5 rounded border border-border/60">Dual-Camera Flipping</span>
-                <span className="bg-muted/40 px-2 py-0.5 rounded border border-border/60">Offline Grace Period</span>
+              <div className="mt-6 pt-4 border-t border-white/[0.06] flex flex-wrap gap-2 text-[10px] font-mono text-muted-foreground font-semibold">
+                <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">RTSP Stream Support</span>
+                <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">Dual-Camera Flipping</span>
+                <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">Offline Grace Period</span>
               </div>
             </div>
 
             {/* Card 2 */}
-            <div className="rounded-xl border border-border/70 bg-card/70 p-6 flex flex-col justify-between">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 flex flex-col justify-between">
               <div>
-                <div className="h-9 w-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-4">
+                <div className="h-9 w-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4 shadow-xs">
                   <MessageSquare className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-semibold text-foreground">
+                <h3 className="text-base font-semibold tracking-tight text-foreground">
                   Official WhatsApp Automation
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
                   Send GST-compliant tax invoices, payment receipts, and expiring plan reminders via Meta's verified WhatsApp Cloud API. Zero ban risk, 100% deliverability.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-border/60 text-[11px] font-mono text-muted-foreground">
+              <div className="mt-6 pt-4 border-t border-white/[0.06] text-[10px] font-mono text-muted-foreground font-semibold">
                 Meta Verified Cloud API
               </div>
             </div>
 
             {/* Card 3 */}
-            <div className="rounded-xl border border-border/70 bg-card/70 p-6 flex flex-col justify-between">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 flex flex-col justify-between">
               <div>
-                <div className="h-9 w-9 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-4">
+                <div className="h-9 w-9 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-4 shadow-xs">
                   <Apple className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-semibold text-foreground">
+                <h3 className="text-base font-semibold tracking-tight text-foreground">
                   Nutrition & Workout Blueprints
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
                   Construct customized meal-by-meal diets and workout splits. Export studio-grade PDFs that automatically attach to member welcome packages.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-border/60 text-[11px] font-mono text-muted-foreground">
+              <div className="mt-6 pt-4 border-t border-white/[0.06] text-[10px] font-mono text-muted-foreground font-semibold">
                 Calibrated Macro Math & Split Templates
               </div>
             </div>
 
             {/* Card 4 (Span 2) */}
-            <div className="md:col-span-2 rounded-xl border border-border/70 bg-card/70 p-6 flex flex-col justify-between">
+            <div className="md:col-span-2 rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 flex flex-col justify-between">
               <div>
-                <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mb-4">
+                <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center mb-4 shadow-xs">
                   <Shield className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-semibold text-foreground">
+                <h3 className="text-base font-semibold tracking-tight text-foreground">
                   Multi-Branch Hierarchy & Role-Based Security
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
                   Gym owners view consolidated enterprise analytics while staff and trainers are strictly quarantined to their assigned facility via PostgreSQL Row-Level Security (RLS). Trainers only access workout routines and client logs; financial data remains strictly confidential.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-border/60 flex flex-wrap gap-2 text-[11px] font-mono text-muted-foreground">
-                <span className="bg-muted/40 px-2 py-0.5 rounded border border-border/60">PostgreSQL RLS Policies</span>
-                <span className="bg-muted/40 px-2 py-0.5 rounded border border-border/60">Granular Role RBAC</span>
-                <span className="bg-muted/40 px-2 py-0.5 rounded border border-border/60">Multi-Location Branch Switcher</span>
+              <div className="mt-6 pt-4 border-t border-white/[0.06] flex flex-wrap gap-2 text-[10px] font-mono text-muted-foreground font-semibold">
+                <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">PostgreSQL RLS Policies</span>
+                <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">Granular Role RBAC</span>
+                <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">Multi-Location Branch Switcher</span>
               </div>
             </div>
           </div>
@@ -372,10 +375,10 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 border-t border-border/60 bg-muted/10">
+      <section id="pricing" className="py-20 border-t border-white/[0.08] bg-muted/10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground apple-display">
               Simple, transparent pricing
             </h2>
             <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
@@ -385,11 +388,11 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {/* Free Starter */}
-            <div className="rounded-xl border border-border/70 bg-card/70 p-6 sm:p-7 flex flex-col justify-between">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 sm:p-8 flex flex-col justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Starter</h3>
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">Starter</h3>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground">₹0</span>
+                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground tabular-nums">₹0</span>
                   <span className="text-xs text-muted-foreground ml-1 font-mono">/month</span>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">Essential management for personal fitness studios.</p>
@@ -402,21 +405,21 @@ export default function LandingPage() {
                 </ul>
               </div>
               <Link href="/login" className="mt-8">
-                <Button variant="outline" className="w-full text-xs border-border/80 hover:bg-muted/50 text-foreground active:scale-[0.97]">
+                <Button variant="outline" size="pill" className="w-full text-xs border-white/[0.1] bg-card/40 backdrop-blur-md hover:bg-white/[0.08] text-foreground active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out cursor-pointer">
                   Get Started Free
                 </Button>
               </Link>
             </div>
 
             {/* Professional Tier (Highlighted) */}
-            <div className="rounded-xl border-2 border-primary bg-card p-6 sm:p-7 flex flex-col justify-between relative shadow-lg">
-              <div className="absolute top-0 right-6 -translate-y-1/2 bg-primary text-primary-foreground px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider">
+            <div className="rounded-2xl border-2 border-primary/80 bg-card/85 backdrop-blur-2xl p-7 sm:p-8 flex flex-col justify-between relative shadow-[0_12px_45px_rgba(99,102,241,0.25),inset_0_1px_0_0_rgba(255,255,255,0.2)]">
+              <div className="absolute top-0 right-6 -translate-y-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider shadow-md">
                 Recommended
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Professional</h3>
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">Professional</h3>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground">₹999</span>
+                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground tabular-nums">₹999</span>
                   <span className="text-xs text-muted-foreground ml-1 font-mono">/month</span>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">Full automation for growing health clubs.</p>
@@ -430,18 +433,18 @@ export default function LandingPage() {
                 </ul>
               </div>
               <Link href="/login" className="mt-8">
-                <Button className="w-full text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.97] transition-[transform,background-color] duration-150 ease-out">
+                <Button size="pill" className="w-full text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out cursor-pointer">
                   Start Pro Trial
                 </Button>
               </Link>
             </div>
 
             {/* Enterprise Tier */}
-            <div className="rounded-xl border border-border/70 bg-card/70 p-6 sm:p-7 flex flex-col justify-between">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 sm:p-8 flex flex-col justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Enterprise Multi-Branch</h3>
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">Enterprise Multi-Branch</h3>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground">₹2,499</span>
+                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground tabular-nums">₹2,499</span>
                   <span className="text-xs text-muted-foreground ml-1 font-mono">/month</span>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">For gym franchises and multi-facility chains.</p>
@@ -454,8 +457,8 @@ export default function LandingPage() {
                 </ul>
               </div>
               <Link href="/login" className="mt-8">
-                <Button variant="outline" className="w-full text-xs border-border/80 hover:bg-muted/50 text-foreground active:scale-[0.97]">
-                  Contact Enterprise
+                <Button variant="outline" size="pill" className="w-full text-xs border-white/[0.1] bg-card/40 backdrop-blur-md hover:bg-white/[0.08] text-foreground active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out cursor-pointer">
+                  Contact Sales
                 </Button>
               </Link>
             </div>
