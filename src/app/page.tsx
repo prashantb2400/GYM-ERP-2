@@ -26,9 +26,9 @@ import {
   Fingerprint,
   Sparkles,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, ButtonIslandIcon } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, DoubleBezelCard } from '@/components/ui/card';
 import {
   Accordion,
   AccordionContent,
@@ -81,20 +81,20 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-16 md:pt-28 md:pb-20 overflow-hidden">
+      <section className="relative pt-24 pb-20 md:pt-36 md:pb-28 overflow-hidden">
         {/* Subtle radial ambient illumination */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-primary/[0.08] rounded-full blur-[140px] pointer-events-none -z-10" />
 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-center relative">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/[0.1] bg-white/[0.04] backdrop-blur-md text-muted-foreground text-xs font-semibold mb-6 shadow-2xs">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-white/[0.1] bg-white/[0.04] backdrop-blur-md text-muted-foreground text-[10px] font-mono font-semibold uppercase tracking-[0.2em] mb-7 shadow-2xs">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 duration-1000" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
             </span>
-            <span>The Operating System for Modern Indian Gyms 🇮🇳</span>
+            <span>Operating System for Modern Gyms 🇮🇳</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground leading-[1.12] max-w-4xl mx-auto apple-display">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-[-0.035em] text-foreground leading-[1.12] max-w-4xl mx-auto apple-display">
             Complete control over memberships, billing & attendance.
           </h1>
 
@@ -102,11 +102,13 @@ export default function LandingPage() {
             Biometric face & optical fingerprint kiosks, automated WhatsApp GST invoicing, and custom diet blueprint engines — architected for multi-branch scale.
           </p>
 
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <div className="mt-9 flex flex-col sm:flex-row gap-3.5 justify-center items-center">
             <Link href="/login" className="w-full sm:w-auto">
-              <Button size="pill" className="w-full sm:w-auto text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground px-7 shadow-[0_1px_2px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.22)] active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out gap-2 cursor-pointer">
+              <Button size="pill" className="w-full sm:w-auto text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground pl-7 pr-3 shadow-[0_1px_2px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.22)] active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out cursor-pointer group">
                 Start Free Trial
-                <ArrowRight className="h-4 w-4" />
+                <ButtonIslandIcon>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </ButtonIslandIcon>
               </Button>
             </Link>
             <a href="#features" className="w-full sm:w-auto">
@@ -117,7 +119,7 @@ export default function LandingPage() {
           </div>
 
           {/* Operational metrics strip */}
-          <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-3.5 max-w-3xl mx-auto">
+          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-3.5 max-w-3xl mx-auto">
             <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md p-4 text-center shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
               <div className="font-mono text-xl sm:text-2xl font-bold text-foreground tabular-nums">100%</div>
               <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mt-0.5 font-semibold">GST Invoicing</div>
@@ -139,9 +141,9 @@ export default function LandingPage() {
       </section>
 
       {/* Platform Showcase: Authentic Dashboard Preview Card */}
-      <section id="preview" className="py-14 border-t border-white/[0.08] bg-muted/10 relative">
+      <section id="preview" className="py-20 md:py-28 border-t border-white/[0.08] bg-muted/10 relative">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-          <div className="rounded-2xl border border-white/[0.1] bg-card/60 backdrop-blur-2xl shadow-[0_24px_70px_-15px_rgba(0,0,0,0.7),inset_0_1px_0_0_rgba(255,255,255,0.12)] overflow-hidden">
+          <DoubleBezelCard className="p-2 sm:p-2.5 shadow-[0_32px_80px_-20px_rgba(0,0,0,0.8)]" innerClassName="p-0 overflow-hidden">
             {/* Window chrome header */}
             <div className="h-10 border-b border-white/[0.08] bg-white/[0.03] backdrop-blur-md px-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -278,45 +280,48 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </DoubleBezelCard>
         </div>
       </section>
 
       {/* Feature Bento Grid */}
-      <section id="features" className="py-20 border-t border-white/[0.08]">
+      <section id="features" className="py-24 md:py-32 border-t border-white/[0.08]">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground apple-display">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-muted-foreground text-[10px] font-mono font-semibold uppercase tracking-[0.2em] mb-4">
+              Core Capabilities
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground apple-display">
               Engineered for floor speed & operational rigor
             </h2>
-            <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
+            <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
               Eliminate paper logs, spreadsheet sync errors, and uncollected dues with purpose-built automation.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Card 1 (Span 2) */}
-            <div className="md:col-span-2 rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 flex flex-col justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Card 1 (Span 2) - Double Bezel */}
+            <DoubleBezelCard className="md:col-span-2 p-1.5" innerClassName="h-full flex flex-col justify-between p-6 sm:p-8 bg-card/60">
               <div>
                 <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center mb-4 shadow-xs">
                   <ScanFace className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-semibold tracking-tight text-foreground">
+                <h3 className="text-base sm:text-lg font-semibold tracking-tight text-foreground">
                   Biometric Face & Optical Fingerprint Kiosks
                 </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
                   Turn any standard IP camera, tablet, or USB biometric scanner into an unforgeable attendance kiosk. 128-dimensional face embedding vectors matched locally via browser WASM and Python sidecar with sub-second response times.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/[0.06] flex flex-wrap gap-2 text-[10px] font-mono text-muted-foreground font-semibold">
+              <div className="mt-8 pt-4 border-t border-white/[0.06] flex flex-wrap gap-2 text-[10px] font-mono text-muted-foreground font-semibold">
                 <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">RTSP Stream Support</span>
                 <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">Dual-Camera Flipping</span>
                 <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">Offline Grace Period</span>
               </div>
-            </div>
+            </DoubleBezelCard>
 
             {/* Card 2 */}
-            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 flex flex-col justify-between">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-6 sm:p-7 flex flex-col justify-between">
               <div>
                 <div className="h-9 w-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4 shadow-xs">
                   <MessageSquare className="h-5 w-5" />
@@ -324,17 +329,17 @@ export default function LandingPage() {
                 <h3 className="text-base font-semibold tracking-tight text-foreground">
                   Official WhatsApp Automation
                 </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
                   Send GST-compliant tax invoices, payment receipts, and expiring plan reminders via Meta's verified WhatsApp Cloud API. Zero ban risk, 100% deliverability.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/[0.06] text-[10px] font-mono text-muted-foreground font-semibold">
+              <div className="mt-8 pt-4 border-t border-white/[0.06] text-[10px] font-mono text-muted-foreground font-semibold">
                 Meta Verified Cloud API
               </div>
             </div>
 
             {/* Card 3 */}
-            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 flex flex-col justify-between">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-6 sm:p-7 flex flex-col justify-between">
               <div>
                 <div className="h-9 w-9 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-4 shadow-xs">
                   <Apple className="h-5 w-5" />
@@ -342,46 +347,49 @@ export default function LandingPage() {
                 <h3 className="text-base font-semibold tracking-tight text-foreground">
                   Nutrition & Workout Blueprints
                 </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
                   Construct customized meal-by-meal diets and workout splits. Export studio-grade PDFs that automatically attach to member welcome packages.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/[0.06] text-[10px] font-mono text-muted-foreground font-semibold">
+              <div className="mt-8 pt-4 border-t border-white/[0.06] text-[10px] font-mono text-muted-foreground font-semibold">
                 Calibrated Macro Math & Split Templates
               </div>
             </div>
 
-            {/* Card 4 (Span 2) */}
-            <div className="md:col-span-2 rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 flex flex-col justify-between">
+            {/* Card 4 (Span 2) - Double Bezel */}
+            <DoubleBezelCard className="md:col-span-2 p-1.5" innerClassName="h-full flex flex-col justify-between p-6 sm:p-8 bg-card/60">
               <div>
                 <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center mb-4 shadow-xs">
                   <Shield className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-semibold tracking-tight text-foreground">
+                <h3 className="text-base sm:text-lg font-semibold tracking-tight text-foreground">
                   Multi-Branch Hierarchy & Role-Based Security
                 </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
                   Gym owners view consolidated enterprise analytics while staff and trainers are strictly quarantined to their assigned facility via PostgreSQL Row-Level Security (RLS). Trainers only access workout routines and client logs; financial data remains strictly confidential.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/[0.06] flex flex-wrap gap-2 text-[10px] font-mono text-muted-foreground font-semibold">
+              <div className="mt-8 pt-4 border-t border-white/[0.06] flex flex-wrap gap-2 text-[10px] font-mono text-muted-foreground font-semibold">
                 <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">PostgreSQL RLS Policies</span>
                 <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">Granular Role RBAC</span>
                 <span className="bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.08]">Multi-Location Branch Switcher</span>
               </div>
-            </div>
+            </DoubleBezelCard>
           </div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 border-t border-white/[0.08] bg-muted/10">
+      <section id="pricing" className="py-24 md:py-32 border-t border-white/[0.08] bg-muted/10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground apple-display">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-muted-foreground text-[10px] font-mono font-semibold uppercase tracking-[0.2em] mb-4">
+              Investment Scale
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground apple-display">
               Simple, transparent pricing
             </h2>
-            <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
+            <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
               Start free, scale into hardware kiosks and multi-branch management as your membership expands.
             </p>
           </div>
@@ -411,8 +419,8 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Professional Tier (Highlighted) */}
-            <div className="rounded-2xl border-2 border-primary/80 bg-card/85 backdrop-blur-2xl p-7 sm:p-8 flex flex-col justify-between relative shadow-[0_12px_45px_rgba(99,102,241,0.25),inset_0_1px_0_0_rgba(255,255,255,0.2)]">
+            {/* Professional Tier (Highlighted) - Double Bezel */}
+            <DoubleBezelCard className="p-1.5 ring-2 ring-primary/80 shadow-[0_16px_50px_rgba(99,102,241,0.25)] relative" innerClassName="h-full flex flex-col justify-between p-7 sm:p-8 bg-card/90">
               <div className="absolute top-0 right-6 -translate-y-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider shadow-md">
                 Recommended
               </div>
@@ -433,11 +441,14 @@ export default function LandingPage() {
                 </ul>
               </div>
               <Link href="/login" className="mt-8">
-                <Button size="pill" className="w-full text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out cursor-pointer">
-                  Start Pro Trial
+                <Button size="pill" className="w-full text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] active:scale-[0.97] transition-[transform,background-color] duration-120 ease-out cursor-pointer group flex items-center justify-between pl-5 pr-2">
+                  <span>Start Pro Trial</span>
+                  <ButtonIslandIcon>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </ButtonIslandIcon>
                 </Button>
               </Link>
-            </div>
+            </DoubleBezelCard>
 
             {/* Enterprise Tier */}
             <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.06)] p-7 sm:p-8 flex flex-col justify-between">
@@ -467,7 +478,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 border-t border-border/60">
+      <section id="faq" className="py-24 md:py-32 border-t border-border/60">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold tracking-tight text-foreground">Frequently Asked Questions</h2>

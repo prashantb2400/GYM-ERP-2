@@ -1,57 +1,101 @@
-# Product Design System
+# Design System: GymERP (Gym Operations & Biometric Intelligence Platform)
 
-## Brand
-- **Product Name**: Nexus SaaS Platform
-- **Primary Visual Direction**: Clean, modern, accessible enterprise dashboard with high contrast, precise 4px/8px grid alignment, and subtle interactive micro-states.
+## 1. Visual Theme & Atmosphere
+GymERP is an enterprise-grade biometric operating system and financial cockpit for modern fitness facilities. The visual atmosphere is **High-Density Cockpit Operational** (Density: 7/10, Variance: 6/10, Motion: 6/10) — clinical, precise, and authoritative, yet tactile and refined like machined aeronautical hardware.
 
-## Typography
-- **Font Family**: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
-- **Heading Scale**:
-  - `h1`: 2rem (32px), `font-bold`, `tracking-tight`, line-height 1.25
-  - `h2`: 1.5rem (24px), `font-semibold`, `tracking-tight`, line-height 1.3
-  - `h3`: 1.25rem (20px), `font-semibold`, line-height 1.35
-  - `h4`: 1rem (16px), `font-medium`, line-height 1.4
-- **Body Scale**:
-  - `body-lg`: 1.125rem (18px), line-height 1.5
-  - `body`: 0.875rem (14px), line-height 1.5, regular/medium
-  - `body-sm`: 0.75rem (12px), line-height 1.4, regular/medium
-  - `caption`: 0.6875rem (11px), line-height 1.3, text-muted-foreground
+Surfaces evoke physical instruments: deep obsidian and slate foundations, hairline translucent borders, and concentric **Double-Bezel (Doppelrand)** enclosures. Motion is strictly physical, driven by critically damped spring physics and tactile push depressions without latency or neon digital artifacts.
 
-## Colors & Tokens
-- **Background**: `hsl(var(--background))` / `#090d16` (Dark), `#ffffff` (Light)
-- **Foreground**: `hsl(var(--foreground))` / `#f8fafc` (Dark), `#0f172a` (Light)
-- **Card / Surface**: `hsl(var(--card))` / `#111827` (Dark), `#ffffff` (Light)
-- **Card Foreground**: `hsl(var(--card-foreground))` / `#f8fafc`
-- **Primary**: `hsl(var(--primary))` / `#3b82f6` (Blue-500)
-- **Primary Foreground**: `hsl(var(--primary-foreground))` / `#ffffff`
-- **Secondary**: `hsl(var(--secondary))` / `#1e293b`
-- **Secondary Foreground**: `hsl(var(--secondary-foreground))` / `#f8fafc`
-- **Muted**: `hsl(var(--muted))` / `#1e293b`
-- **Muted Foreground**: `hsl(var(--muted-foreground))` / `#94a3b8`
-- **Accent**: `hsl(var(--accent))` / `#1e293b`
-- **Accent Foreground**: `hsl(var(--accent-foreground))` / `#f8fafc`
-- **Destructive**: `hsl(var(--destructive))` / `#ef4444`
-- **Destructive Foreground**: `hsl(var(--destructive-foreground))` / `#ffffff`
-- **Border**: `hsl(var(--border))` / `#1e293b` (Dark), `#e2e8f0` (Light)
-- **Input Ring**: `hsl(var(--ring))` / `#3b82f6`
+---
 
-## Layout & Spatial System
-- **Container**: Max width `1280px` (`max-w-7xl`), centered with `px-4 sm:px-6 lg:px-8`
-- **Spacing Scale**: 4px base (4, 8, 12, 16, 20, 24, 32, 40, 48, 64px)
-- **Border Radius**:
-  - `sm`: `0.25rem` (4px)
-  - `md`: `0.375rem` (6px)
-  - `lg`: `0.5rem` (8px)
-  - `full`: `9999px`
+## 2. Calibrated Color Palette & Roles
+The platform strictly enforces a **single calibrated accent** philosophy (saturation < 80%), anchored by pure neutral slate and obsidian bases. Neon glows, purple button halos, and arbitrary multicolor accents are strictly banned.
 
-## UI Components
-- **Buttons**: `default`, `secondary`, `destructive`, `outline`, `ghost`, `link` with `h-9 px-4 py-2` default size and active/focus rings.
-- **Inputs & Textareas**: `bg-background border border-input rounded-md px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring`.
-- **Cards**: `rounded-lg border bg-card text-card-foreground shadow-sm` with distinct header, title, description, content, and footer sections.
-- **Tabs**: Pill or line tabs with `inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1`.
-- **Badges & Switches**: Consistent status indicators with distinct colors for verified, pending, security tiers.
+- **Obsidian Canvas** (`#09090b` / `oklch(0.12 0.005 285)`) — Primary dark background, rich and deep off-black with zero pure `#000000` dead zones.
+- **Machined Slate Core** (`#121215` / `oklch(0.15 0.006 285)`) — Elevated container and card surface; provides tactile contrast against the obsidian floor.
+- **Translucent Glass Surface** (`rgba(18, 18, 22, 0.70)`) — Topbars, floating drawers, and backdrop-blur panels with 20px blur and 180% saturation.
+- **Athletic Indigo Accent** (`#6366f1` / `oklch(0.60 0.21 275)`) — Single functional accent reserved for primary CTAs, active tab pills, focus indicators, and key operational alerts.
+- **High-Contrast Ink** (`#f8fafc` / `oklch(0.98 0.002 285)`) — Primary typography, metric readouts, and high-priority statuses.
+- **Muted Zinc** (`#a1a1aa` / `oklch(0.65 0.012 285)`) — Secondary copy, units of measurement, captions, and structural labels.
+- **Hairline Boundary** (`#27272a` / `oklch(0.24 0.008 285)`) — 1px structural borders and division rules (`rgba(255, 255, 255, 0.08)`).
+- **Specular Top Highlight** (`rgba(255, 255, 255, 0.12)`) — 1px light-catching specular rim on cards and active buttons.
 
-## Rules
-- Always use CSS variables and Tailwind utility classes mapping to design tokens.
-- Never hardcode HEX colors directly in component JSX.
-- Preserve accessibility contrast ratios (WCAG AAA/AA).
+---
+
+## 3. Typographic Architecture
+GymERP pairs modern geometric grotesque display fonts with monospaced tabular figures. Generic system fonts and standard serifs are completely eliminated.
+
+- **Display & Headlines**: `Geist` (Sans-Serif).
+  - Tighter negative tracking (`letter-spacing: -0.025em` to `-0.035em`).
+  - Strict **Sentence case** across all major page headers and section titles (no Title Case shouting).
+  - Controlled line-height (`1.12` to `1.2`) for tight typographic density.
+- **Body & Controls**: `Geist` (Sans-Serif).
+  - Line length limited to max 65 characters (`max-w-[65ch]`) with relaxed leading (`1.5` to `1.6`).
+  - Balanced text wrap (`text-wrap: balance` / `text-wrap: pretty`) to eliminate orphaned single words.
+- **Operational Numbers & Data**: `Geist Mono` (`font-mono`).
+  - Universal tabular figures (`font-variant-numeric: tabular-nums`) across all financial sums (₹), attendance check-ins, reps, weights, percentages, and timestamps.
+- **Capsule Badges**: Microscopic uppercase tracking (`text-[10px] font-mono tracking-wider uppercase`).
+- **Banned Typography**: `Inter`, `Roboto`, `Arial`, and all generic serif fonts (`Times New Roman`, `Georgia`, `Garamond`). Serifs are banned across all dashboard and operational screens.
+
+---
+
+## 4. Hardware Component Specifications
+
+### A. The Double-Bezel (Doppelrand) Architecture
+Major cards, preview windows, and telemetry panels do not sit flatly on the canvas. They are engineered as physical machined enclosures:
+- **Outer Shell**: `rounded-[2rem] p-1.5 bg-black/5 dark:bg-white/[0.04] ring-1 ring-black/5 dark:ring-white/10` with soft ambient shadow.
+- **Inner Core**: `rounded-[calc(2rem-0.375rem)] bg-card text-card-foreground shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)] p-6`.
+
+### B. Nested CTA & "Island" Buttons
+- Primary buttons are pill-shaped (`rounded-full`) with generous padding (`px-6 py-2.5`).
+- Trailing action icons (`↗`, `→`) never sit naked next to text. They must be wrapped in a nested circular island (`size-6 rounded-full bg-white/20 dark:bg-white/15 flex items-center justify-center ml-2`).
+- On hover, the nested island icon executes an independent diagonal kinetic translation (`group-hover:translate-x-0.5 group-hover:-translate-y-0.5`).
+
+### C. Apple Segmented Controls & Pills
+- Segmented tab containers use recessed frosted glass pills (`rounded-full bg-muted/50 p-1 border border-white/[0.08] backdrop-blur-sm`).
+- Active triggers feature a subtle raised white/dark core with crisp borders and soft drop shadows.
+
+### D. Inputs & Form Fields
+- Labels sit cleanly above the field, helper text optional, error text inline below in red-400.
+- Inputs feature recessed subtle backgrounds (`bg-muted/30 hover:bg-muted/50`), `rounded-xl` corners, and an accent focus ring (`focus-visible:ring-1 focus-visible:ring-primary/80`).
+
+### E. Loaders & Empty States
+- Generic circular spinners are banned in content areas. All data loading states utilize skeletal shimmer placeholders matching the exact geometry of the incoming cards and tables.
+- Empty states are composed operational setups with explicit primary action buttons and instructions.
+
+---
+
+## 5. Layout & Responsive Principles
+- **Grid-First Architecture**: CSS Grid is used for multi-column layouts; no fragile flexbox percentage calculations.
+- **Macro-Whitespace**: Landing page sections breathe with substantial vertical padding (`py-24` to `py-32`). Dashboard uses balanced gutters (`space-y-6`).
+- **Strict Mobile Collapse (< 768px)**:
+  - Multi-column bento grids and master-detail split views aggressively collapse to a clean single column (`grid-cols-1`, `w-full`, `px-4`).
+  - No horizontal scrolling or overflow under any circumstances.
+- **Dynamic Viewport Height**: Full-height sections use `min-h-[100dvh]` to eliminate mobile Safari layout jumping (never `h-screen`).
+- **Container Constraints**: Maximum width constraint of `1280px` (`max-w-7xl`) centered with auto margins.
+
+---
+
+## 6. Motion & Interaction Engine
+- **Spring Physics**: Critically damped spring curves (`cubic-bezier(0.25, 1, 0.35, 1)` and `cubic-bezier(0.23, 1, 0.32, 1)`). No linear or generic `ease` transitions.
+- **Tactile Push Feedback**: Universal button and clickable element pointer-down press (`active:scale-[0.97]` over `120ms`).
+- **Staggered Waterfall Reveal**: Dynamic lists and card groups enter with 30ms staggered delays rather than mounting simultaneously.
+- **Performance Guardrails**:
+  - Animations are strictly hardware-accelerated, modifying only `transform` and `opacity`. Animating `top`, `left`, `width`, or `height` is strictly prohibited.
+  - `backdrop-blur` is restricted to fixed navigation chrome and modal scrims; never applied to scrolling containers.
+- **Accessibility Fallbacks**:
+  - `@media (prefers-reduced-motion: reduce)`: disables transforms and spring transitions.
+  - `@media (prefers-reduced-transparency: reduce)`: replaces glass blurs with solid opaque surfaces.
+
+---
+
+## 7. Anti-Patterns (Strictly Forbidden AI Tells)
+1. **No Emojis**: Do not use emojis in UI headings, stat cards, or status indicators. Use precise, curated Lucide icons.
+2. **No `Inter` Font**: The platform uses Geist and Geist Mono exclusively.
+3. **No Pure Black (`#000000`)**: Always use off-black obsidian (`#09090b` / `oklch(0.12 0.005 285)`).
+4. **No Neon Outer Glows**: No oversaturated purple/cyan neon halos or glowing borders.
+5. **No AI Copywriting Clichés**: Strictly banned terms: *"Elevate"*, *"Seamless"*, *"Unleash"*, *"Next-Gen"*, *"Game-changer"*, *"Tapestry"*, *"In the world of..."*. Use direct, plain, technical language.
+6. **No Fake Round Numbers**: No fictitious `99.99%`, `50%`, or `$100.00`. Use organic, messy operational figures (`87.4%`, `₹4,250`, `184 check-ins`).
+7. **No 3-Equal-Columns AI Grid**: Replace generic 3-column rows with asymmetric bento layouts, 2-column zig-zag, or master-detail splits.
+8. **No Symmetrical Padding**: Section padding must be optical; bottom padding often slightly exceeds top padding.
+9. **No Floating Unaligned Buttons**: All CTAs in card groups must be pinned flush at the bottom.
+10. **No Dead Anchor Links**: Real actions or disabled visual states only.

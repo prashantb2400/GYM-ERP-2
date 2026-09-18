@@ -252,6 +252,56 @@ tbody tr:hover td {
 }
 
 /* ==========================================
+   Machined Double-Bezel (Doppelrand) Architecture
+   ========================================== */
+.double-bezel-shell {
+  border-radius: 2rem;
+  padding: 0.375rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.4);
+}
+
+.double-bezel-core {
+  border-radius: calc(2rem - 0.375rem);
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+:root:not(.dark) .double-bezel-shell {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.06);
+}
+
+:root:not(.dark) .double-bezel-core {
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* ==========================================
+   Button-in-Button Nested Island Architecture
+   ========================================== */
+.btn-island-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.2);
+  margin-left: 0.375rem;
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.group:hover .btn-island-icon,
+button:hover .btn-island-icon {
+  transform: translate(2px, -1px);
+}
+
+
+/* ==========================================
    Apple Optical Typography (WWDC 2020)
    ========================================== */
 .apple-display {

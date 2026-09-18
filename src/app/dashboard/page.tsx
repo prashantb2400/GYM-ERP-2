@@ -24,7 +24,7 @@ import {
   Zap,
   ArrowUpRight,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, DoubleBezelCard } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils/format';
@@ -404,9 +404,9 @@ export default function DashboardHome() {
         />
       )}
 
-      {/* Today's Operational Snapshot Bar (Apple Control Center style) */}
+      {/* Today's Operational Snapshot Bar (Machined Double-Bezel Architecture) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="rounded-2xl bg-card/60 backdrop-blur-md border border-white/[0.08] p-4 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
+        <DoubleBezelCard className="p-1" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
               {isTrainer ? 'Active Routines' : "Today's Collections"}
@@ -418,8 +418,8 @@ export default function DashboardHome() {
           <div className="h-9 w-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-xs">
             {isTrainer ? <Dumbbell className="h-4.5 w-4.5" /> : <IndianRupee className="h-4.5 w-4.5" />}
           </div>
-        </div>
-        <div className="rounded-2xl bg-card/60 backdrop-blur-md border border-white/[0.08] p-4 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
+        </DoubleBezelCard>
+        <DoubleBezelCard className="p-1" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
               Check-ins Today
@@ -431,8 +431,8 @@ export default function DashboardHome() {
           <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shadow-xs">
             <CalendarCheck className="h-4.5 w-4.5" />
           </div>
-        </div>
-        <div className="rounded-2xl bg-card/60 backdrop-blur-md border border-white/[0.08] p-4 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
+        </DoubleBezelCard>
+        <DoubleBezelCard className="p-1" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
               New Members Today
@@ -444,128 +444,128 @@ export default function DashboardHome() {
           <div className="h-9 w-9 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center shadow-xs">
             <UserPlus className="h-4.5 w-4.5" />
           </div>
-        </div>
+        </DoubleBezelCard>
       </div>
 
-      {/* Primary KPI Metric Cards */}
+      {/* Primary KPI Metric Cards (Machined Double-Bezel Enclosures) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+        <DoubleBezelCard className="p-1" innerClassName="p-5 bg-card/60 backdrop-blur-md">
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
               {isTrainer ? 'Active Trainees' : 'Active Members'}
-            </CardTitle>
+            </span>
             <Users className="h-4 w-4 text-muted-foreground/70" />
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="pt-1">
             <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
               {stats.activeMembers}
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">Currently enrolled profiles</p>
-          </CardContent>
-        </Card>
+          </div>
+        </DoubleBezelCard>
 
         {isTrainer ? (
           <Link href="/dashboard/exercise" className="block group">
-            <Card className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)] group-hover:bg-card/75 group-hover:border-white/[0.14] active:scale-[0.98] transition-[background-color,border-color,transform] duration-150">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+            <DoubleBezelCard className="p-1 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-all">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                   Workout Routines
-                </CardTitle>
+                </span>
                 <Dumbbell className="h-4 w-4 text-muted-foreground/70 group-hover:text-primary transition-colors" />
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="pt-1">
                 <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
                   {stats.exercisePlans}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1">Active exercise routines</p>
-              </CardContent>
-            </Card>
+              </div>
+            </DoubleBezelCard>
           </Link>
         ) : isOwner ? (
-          <Card className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+          <DoubleBezelCard className="p-1" innerClassName="p-5 bg-card/60 backdrop-blur-md">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                 Monthly Revenue
-              </CardTitle>
+              </span>
               <IndianRupee className="h-4 w-4 text-emerald-400" />
-            </CardHeader>
-            <CardContent>
+            </div>
+            <div className="pt-1">
               <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
                 {formatCurrency(stats.monthlyRevenue)}
               </div>
               <p className="text-[11px] text-muted-foreground mt-1">Invoices issued this month</p>
-            </CardContent>
-          </Card>
+            </div>
+          </DoubleBezelCard>
         ) : (
-          <Card className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+          <DoubleBezelCard className="p-1" innerClassName="p-5 bg-card/60 backdrop-blur-md">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                 Today's Collections
-              </CardTitle>
+              </span>
               <IndianRupee className="h-4 w-4 text-emerald-400" />
-            </CardHeader>
-            <CardContent>
+            </div>
+            <div className="pt-1">
               <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
                 {formatCurrency(todayStats.revenue)}
               </div>
               <p className="text-[11px] text-muted-foreground mt-1">Desk payment collections</p>
-            </CardContent>
-          </Card>
+            </div>
+          </DoubleBezelCard>
         )}
 
         {isTrainer ? (
           <Link href="/dashboard/diet" className="block group">
-            <Card className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)] group-hover:bg-card/75 group-hover:border-white/[0.14] active:scale-[0.98] transition-[background-color,border-color,transform] duration-150">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+            <DoubleBezelCard className="p-1 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-all">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                   Diet Charts
-                </CardTitle>
+                </span>
                 <Apple className="h-4 w-4 text-muted-foreground/70 group-hover:text-emerald-400 transition-colors" />
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="pt-1">
                 <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
                   {stats.dietPlans}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1">Nutrition & meal charts</p>
-              </CardContent>
-            </Card>
+              </div>
+            </DoubleBezelCard>
           </Link>
         ) : (
           <Link href="/dashboard/due" className="block group">
-            <Card className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)] group-hover:bg-card/75 group-hover:border-white/[0.14] active:scale-[0.98] transition-[background-color,border-color,transform] duration-150">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+            <DoubleBezelCard className="p-1 group-hover:ring-amber-500/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-all">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                   Dues Outstanding
-                </CardTitle>
+                </span>
                 <CalendarDays className="h-4 w-4 text-muted-foreground/70 group-hover:text-amber-400 transition-colors" />
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="pt-1">
                 <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
                   {formatCurrency(stats.duesOutstanding)}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1">Pending payments to collect</p>
-              </CardContent>
-            </Card>
+              </div>
+            </DoubleBezelCard>
           </Link>
         )}
 
         <Link href={isTrainer ? "/dashboard/attendance" : "/dashboard/members?filter=expiring"} className="block group">
-          <Card className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.06)] group-hover:bg-card/75 group-hover:border-white/[0.14] active:scale-[0.98] transition-[background-color,border-color,transform] duration-150">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+          <DoubleBezelCard className="p-1 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-all">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                 {isTrainer ? 'Floor Check-ins' : 'Expiring Soon'}
-              </CardTitle>
+              </span>
               <Clock className="h-4 w-4 text-muted-foreground/70 group-hover:text-primary transition-colors" />
-            </CardHeader>
-            <CardContent>
+            </div>
+            <div className="pt-1">
               <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
                 {isTrainer ? todayStats.checkins : stats.expiringSoon}
               </div>
               <p className="text-[11px] text-muted-foreground mt-1">
                 {isTrainer ? "Today's check-ins" : 'Plans ending in 7 days'}
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </DoubleBezelCard>
         </Link>
       </div>
 

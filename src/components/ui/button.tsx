@@ -66,4 +66,20 @@ function Button({
   )
 }
 
-export { Button, buttonVariants }
+function ButtonIslandIcon({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"span">) {
+  return (
+    <span
+      className={cn("btn-island-icon", className)}
+      {...props}
+    >
+      {children}
+    </span>
+  )
+}
+
+export { Button, ButtonIslandIcon, buttonVariants }
+

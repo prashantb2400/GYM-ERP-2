@@ -81,6 +81,33 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+function DoubleBezelCard({
+  className,
+  innerClassName,
+  children,
+  ...props
+}: React.ComponentProps<"div"> & { innerClassName?: string }) {
+  return (
+    <div
+      data-slot="double-bezel-card"
+      className={cn(
+        "double-bezel-shell transition-all duration-300",
+        className
+      )}
+      {...props}
+    >
+      <div
+        className={cn(
+          "double-bezel-core p-6",
+          innerClassName
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export {
   Card,
   CardHeader,
@@ -89,4 +116,6 @@ export {
   CardAction,
   CardDescription,
   CardContent,
+  DoubleBezelCard,
 }
+
