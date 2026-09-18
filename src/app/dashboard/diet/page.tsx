@@ -27,6 +27,7 @@ import {
   Zap,
   Copy,
   RotateCcw,
+  ArrowLeft,
   SlidersHorizontal,
   Info,
 } from 'lucide-react';
@@ -971,695 +972,654 @@ export default function DietChartsPage() {
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* Redesigned Apple-Grade Diet Builder Studio Dialog              */}
+      {/* Modern, Clean, Effortless Diet Plan Studio (Full-Screen)      */}
       {/* ------------------------------------------------------------- */}
-      <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="max-w-6xl w-[96vw] h-[92vh] flex flex-col p-0 overflow-hidden apple-glass-card rounded-2xl border border-white/[0.1] shadow-2xl bg-zinc-950/95">
-          {/* Studio Header Bar */}
-          <DialogHeader className="p-3.5 sm:p-4 border-b border-white/[0.08] shrink-0 bg-muted/20">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 apple-specular-top">
-                  <Apple className="h-4.5 w-4.5" />
+      {openModal && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden animate-in fade-in duration-150">
+          {/* 1. Top Control Bar (Never wraps, ultra-clean) */}
+          <header className="h-14 px-3 sm:px-6 border-b border-border/70 bg-card/80 backdrop-blur-xl flex items-center justify-between gap-2 shrink-0">
+            {/* Left: Back / Exit + Title */}
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpenModal(false)}
+                className="h-8 px-2 sm:px-3 text-xs gap-1.5 rounded-full text-muted-foreground hover:text-foreground active:scale-95 shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Exit Studio</span>
+              </Button>
+              <div className="h-4 w-px bg-border/80 hidden sm:block" />
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="size-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <Apple className="h-4 w-4" />
                 </div>
-                <div>
-                  <DialogTitle className="text-base font-semibold tracking-tight text-foreground flex items-center gap-2 apple-headline">
+                <div className="flex items-baseline gap-2 truncate">
+                  <h1 className="text-xs sm:text-sm font-bold text-foreground truncate">
                     {dietId ? 'Edit Diet Plan' : 'Diet Plan Studio'}
-                    <span className="text-[11px] font-normal text-muted-foreground font-mono">
-                      v2.5 Architecture
-                    </span>
-                  </DialogTitle>
-                  <DialogDescription className="text-muted-foreground text-xs mt-0.5">
-                    Plan daily caloric budget, compose structured meals, and configure macro splits.
-                  </DialogDescription>
+                  </h1>
+                  <span className="text-[10px] font-mono text-muted-foreground hidden md:inline">
+                    v2.5
+                  </span>
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-2.5 flex-wrap">
-                {/* 1-Click Templates Dropdown */}
-                {!dietId && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="pill-sm"
-                        className="h-8 text-xs border-white/[0.1] bg-card/60 hover:bg-card text-foreground gap-1.5 cursor-pointer active:scale-[0.97]"
-                      >
-                        <Sparkles className="h-3.5 w-3.5 text-primary" />
-                        <span>Preset Templates</span>
-                        <ChevronDown className="h-3 w-3 opacity-60" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="w-80 apple-glass-card border-white/[0.1] text-foreground p-1.5 shadow-2xl z-50 rounded-2xl"
-                    >
-                      <DropdownMenuLabel className="text-[10px] font-mono font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">
-                        Nutritional Blueprints
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-white/[0.08]" />
-                      {PRESET_DIET_TEMPLATES.map((tmpl) => (
-                        <DropdownMenuItem
-                          key={tmpl.id}
-                          onClick={() => handleApplyTemplate(tmpl)}
-                          className="flex flex-col items-start gap-1 p-2.5 rounded-xl cursor-pointer hover:bg-white/[0.06] focus:bg-white/[0.06] transition-colors"
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-xs text-foreground">{tmpl.name}</span>
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] font-mono border-white/[0.1] text-muted-foreground py-0 px-1.5"
-                            >
-                              {tmpl.targetCalories} kcal
-                            </Badge>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground line-clamp-1">{tmpl.description}</p>
-                          <div className="text-[10px] text-muted-foreground/70 font-mono">
-                            {tmpl.meals.length} Meals ({tmpl.meals.map((m) => m.meal_name).join(', ')})
-                          </div>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {/* Center / Right: Macro Pill, Presets & Save */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Solid Macro Pill - whitespace-nowrap prevents line wrapping */}
+              <div className="flex items-center gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-muted/60 border border-border/80 text-xs font-mono whitespace-nowrap">
+                <span className="flex items-center gap-1 font-bold text-foreground">
+                  <Flame className="size-3.5 text-amber-500 shrink-0" />
+                  <span>{nutritionSummary.totalCalories}</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">kcal</span>
+                </span>
+                <span className="text-muted-foreground/40">•</span>
+                <span className="flex items-center gap-1 font-bold text-foreground">
+                  <Zap className="size-3.5 text-emerald-500 shrink-0" />
+                  <span>{nutritionSummary.totalProtein}g</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">pro</span>
+                </span>
+                {nutritionSummary.target > 0 && (
+                  <>
+                    <span className="text-muted-foreground/40 hidden lg:inline">•</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold hidden lg:inline-flex ${
+                      nutritionSummary.diff === 0
+                        ? 'bg-emerald-500/15 text-emerald-400'
+                        : nutritionSummary.diff > 0
+                        ? 'bg-amber-500/15 text-amber-400'
+                        : 'bg-indigo-500/15 text-indigo-400'
+                    }`}>
+                      {nutritionSummary.diff === 0
+                        ? 'Target Met'
+                        : nutritionSummary.diff > 0
+                        ? `+${nutritionSummary.diff} kcal`
+                        : `${nutritionSummary.diff} kcal`}
+                    </span>
+                  </>
                 )}
-
-                {/* Macro Target Capsule */}
-                <div className="flex items-center gap-2 bg-card/60 border border-white/[0.08] px-3 py-1 rounded-full text-xs font-mono shadow-xs">
-                  <span className="text-muted-foreground text-[11px]">Total:</span>
-                  <span className="font-bold text-foreground tabular-nums">
-                    {nutritionSummary.totalCalories}
-                  </span>
-                  <span className="text-muted-foreground text-[10px]">kcal</span>
-                  <span className="text-muted-foreground/40">•</span>
-                  <span className="font-bold text-foreground tabular-nums">
-                    {nutritionSummary.totalProtein}g
-                  </span>
-                  <span className="text-muted-foreground text-[10px]">pro</span>
-                  {nutritionSummary.target > 0 && (
-                    <>
-                      <span className="text-muted-foreground/40">•</span>
-                      <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
-                          nutritionSummary.diff === 0
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : nutritionSummary.diff > 0
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                        }`}
-                      >
-                        {nutritionSummary.diff === 0
-                          ? 'Target Met'
-                          : nutritionSummary.diff > 0
-                          ? `+${nutritionSummary.diff} kcal`
-                          : `${nutritionSummary.diff} kcal`}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </DialogHeader>
-
-          {/* Master-Detail Studio Workspace */}
-          <form
-            onSubmit={handleSaveDiet}
-            className="flex-1 flex flex-col md:flex-row overflow-hidden"
-          >
-            {/* ----------------------------------------------------------- */}
-            {/* LEFT COLUMN: Plan Metadata & Daily Meal Timeline Rail       */}
-            {/* ----------------------------------------------------------- */}
-            <div className="w-full md:w-80 lg:w-88 border-r border-white/[0.08] bg-zinc-950/60 backdrop-blur-md flex flex-col shrink-0 overflow-y-auto p-4 space-y-4">
-              {/* Plan Metadata Box */}
-              <div className="apple-glass-card p-3.5 rounded-2xl space-y-3 bg-card/40 border border-white/[0.06]">
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="dietName"
-                    className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider"
-                  >
-                    Plan Name *
-                  </Label>
-                  <Input
-                    id="dietName"
-                    placeholder="e.g. 1,800 Kcal Lean Fat Loss"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="bg-background/60 border-white/[0.08] text-xs h-8 text-foreground placeholder:text-muted-foreground/60 rounded-xl focus-visible:border-primary"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor="targetCals"
-                      className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider"
-                    >
-                      Target Daily Kcal
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="targetCals"
-                        type="number"
-                        placeholder="1800"
-                        value={targetCalories}
-                        onChange={(e) => setTargetCalories(e.target.value)}
-                        className="bg-background/60 border-white/[0.08] text-xs h-8 pr-10 text-foreground font-mono rounded-xl focus-visible:border-primary"
-                      />
-                      <span className="absolute right-2.5 top-2 text-[10px] text-muted-foreground font-mono pointer-events-none">
-                        kcal
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">
-                      Visibility
-                    </Label>
-                    <div className="flex items-center h-8 px-2.5 rounded-xl bg-background/60 border border-white/[0.08] text-xs font-mono text-muted-foreground truncate">
-                      <span className="text-primary font-medium">Template</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="desc"
-                    className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider"
-                  >
-                    Coaching Directives & Notes
-                  </Label>
-                  <Input
-                    id="desc"
-                    placeholder="e.g. 3.5L water daily. Pre-workout coffee 30m prior."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="bg-background/60 border-white/[0.08] text-xs h-8 text-foreground placeholder:text-muted-foreground/60 rounded-xl focus-visible:border-primary"
-                  />
-                </div>
               </div>
 
-              {/* Meals Timeline / Schedule */}
-              <div className="space-y-2 flex-1 flex flex-col">
-                <div className="flex items-center justify-between gap-2 pb-1 border-b border-white/[0.08]">
-                  <div className="flex items-center gap-1.5">
-                    <Utensils className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-xs font-semibold text-foreground tracking-tight apple-subhead">
-                      Daily Schedule
-                    </span>
-                    <Badge
+              {/* Presets Dropdown */}
+              {!dietId && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
                       variant="outline"
-                      className="text-[10px] font-mono py-0 px-1.5 border-white/[0.1] text-muted-foreground"
+                      size="sm"
+                      className="h-8 px-2.5 sm:px-3 text-xs rounded-full gap-1.5 cursor-pointer active:scale-95"
                     >
-                      {meals.length}
-                    </Badge>
-                  </div>
-
-                  {/* Add Meal Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-6.5 text-[11px] px-2 rounded-full border-white/[0.1] bg-card/60 hover:bg-card text-foreground font-medium gap-1 cursor-pointer active:scale-[0.97]"
-                      >
-                        <Plus className="h-3 w-3" /> Add Meal
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="apple-glass-card border-white/[0.1] text-foreground p-1 text-xs z-50 rounded-xl"
-                    >
-                      {[
-                        'Breakfast',
-                        'Mid-Morning Snack',
-                        'Lunch',
-                        'Evening Snack',
-                        'Pre-Workout',
-                        'Post-Workout',
-                        'Dinner',
-                      ].map((mPreset) => (
-                        <DropdownMenuItem
-                          key={mPreset}
-                          onClick={() => handleAddMealCard(mPreset)}
-                          className="cursor-pointer hover:bg-white/[0.06] text-xs rounded-lg py-1.5"
-                        >
-                          + {mPreset}
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator className="bg-white/[0.08]" />
+                      <Sparkles className="size-3.5 text-primary" />
+                      <span className="hidden sm:inline">Presets</span>
+                      <ChevronDown className="size-3 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80 p-1.5 shadow-2xl rounded-2xl z-50">
+                    <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-2 py-1">
+                      Nutritional Blueprints
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {PRESET_DIET_TEMPLATES.map((tmpl) => (
                       <DropdownMenuItem
-                        onClick={() => handleAddMealCard()}
-                        className="cursor-pointer text-primary hover:bg-primary/10 font-semibold text-xs rounded-lg py-1.5"
+                        key={tmpl.id}
+                        onClick={() => handleApplyTemplate(tmpl)}
+                        className="flex flex-col items-start gap-1 p-2.5 rounded-xl cursor-pointer"
                       >
-                        + Custom Meal
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-semibold text-xs text-foreground">{tmpl.name}</span>
+                          <Badge variant="outline" className="text-[10px] font-mono py-0 px-1.5">
+                            {tmpl.targetCalories} kcal
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-1">{tmpl.description}</p>
                       </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
-                {/* Vertical Meal Card Stream */}
-                <div className="space-y-2 overflow-y-auto pr-1 flex-1">
-                  {meals.map((m, idx) => {
-                    const isSelected = safeActiveMealIndex === idx;
-                    const mCals = (m.items || []).reduce(
-                      (s, it) => s + (Number(it.calories) || 0),
-                      0
-                    );
-                    const mPro = (m.items || []).reduce(
-                      (s, it) => s + (Number(it.protein) || 0),
-                      0
-                    );
+              {/* Top Save Button */}
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveDiet}
+                disabled={saving}
+                className="h-8 px-3.5 sm:px-4 text-xs font-semibold rounded-full gap-1.5 shadow-sm active:scale-95"
+              >
+                {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                <span className="hidden xs:inline">{dietId ? 'Update' : 'Save'}</span>
+              </Button>
+            </div>
+          </header>
 
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => setActiveMealIndex(idx)}
-                        className={`group relative p-3 rounded-2xl transition-[background-color,border-color,transform] duration-150 ease-out border cursor-pointer select-none ${
-                          isSelected
-                            ? 'apple-glass-card border-primary/40 bg-primary/[0.07] shadow-sm'
-                            : 'bg-card/40 border-white/[0.06] hover:border-white/[0.14] hover:bg-card/70'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div
-                              className={`w-2 h-2 rounded-full shrink-0 transition-colors ${
-                                isSelected ? 'bg-primary shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'bg-muted-foreground/30'
-                              }`}
-                            />
-                            <span className="font-semibold text-xs text-foreground truncate">
-                              {m.meal_name || `Meal ${idx + 1}`}
-                            </span>
-                          </div>
+          {/* 2. Plan Metadata Strip (Compact 3-column bar) */}
+          <div className="border-b border-border/60 bg-card/40 px-3 sm:px-6 py-2.5 shrink-0">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="dietName" className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">
+                  Plan Name *
+                </Label>
+                <Input
+                  id="dietName"
+                  placeholder="e.g. 1,800 Kcal Lean Fat Loss"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs bg-background/60 rounded-xl"
+                />
+              </div>
 
-                          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                            <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
-                              <Clock className="h-2.5 w-2.5" />
-                              {m.time || 'Schedule'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/[0.04] text-[10px] font-mono">
-                          <span className="text-muted-foreground">
-                            {m.items?.length || 0} item{(m.items?.length || 0) !== 1 ? 's' : ''}
-                          </span>
-                          <span className="text-foreground font-semibold">
-                            {mCals} kcal • {mPro}g pro
-                          </span>
-                        </div>
-
-                        {/* Reorder and Delete controls on hover */}
-                        <div className="absolute right-2 top-2 hidden group-hover:flex items-center gap-0.5 bg-background/80 backdrop-blur-md rounded-lg p-0.5 border border-white/[0.08]">
-                          <button
-                            type="button"
-                            disabled={idx === 0}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMoveMeal(idx, 'up');
-                            }}
-                            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer"
-                            title="Move Up"
-                          >
-                            <ArrowUp className="h-3 w-3" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === meals.length - 1}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMoveMeal(idx, 'down');
-                            }}
-                            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer"
-                            title="Move Down"
-                          >
-                            <ArrowDown className="h-3 w-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDuplicateMeal(idx);
-                            }}
-                            className="p-1 text-muted-foreground hover:text-foreground cursor-pointer"
-                            title="Duplicate Meal"
-                          >
-                            <Copy className="h-3 w-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveMealCard(idx);
-                            }}
-                            className="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
-                            title="Delete Meal"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className="space-y-1">
+                <Label htmlFor="targetCals" className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">
+                  Daily Target Calories
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="targetCals"
+                    type="number"
+                    placeholder="2000"
+                    value={targetCalories}
+                    onChange={(e) => setTargetCalories(e.target.value)}
+                    className="h-8 text-xs pr-12 font-mono bg-background/60 rounded-xl"
+                  />
+                  <span className="absolute right-2.5 top-2 text-[10px] text-muted-foreground font-mono pointer-events-none">
+                    kcal
+                  </span>
                 </div>
               </div>
-            </div>
 
-            {/* ----------------------------------------------------------- */}
-            {/* RIGHT COLUMN: Active Meal Focus Studio & Food Items Table   */}
-            {/* ----------------------------------------------------------- */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-zinc-900/10">
+              <div className="space-y-1">
+                <Label htmlFor="desc" className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">
+                  Coaching Notes & Directives
+                </Label>
+                <Input
+                  id="desc"
+                  placeholder="e.g. 3.5L water daily. Pre-workout coffee 30m prior."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="h-8 text-xs bg-background/60 rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Horizontal Meal Navigation Rail */}
+          <div className="border-b border-border/60 bg-muted/20 px-3 sm:px-6 py-2 shrink-0">
+            <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5 flex-1">
+                {meals.map((m, idx) => {
+                  const isSelected = safeActiveMealIndex === idx;
+                  const mCals = (m.items || []).reduce((s, it) => s + (Number(it.calories) || 0), 0);
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => setActiveMealIndex(idx)}
+                      className={`group shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs cursor-pointer select-none transition-all duration-150 ${
+                        isSelected
+                          ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                          : 'bg-card/70 hover:bg-card border border-border text-foreground'
+                      }`}
+                    >
+                      <span className="truncate max-w-[120px]">{m.meal_name || `Meal ${idx + 1}`}</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full whitespace-nowrap ${
+                        isSelected ? 'bg-black/20 text-white' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {m.time ? `${m.time} • ` : ''}{mCals} kcal
+                      </span>
+
+                      {/* Dropdown Menu for Move/Duplicate/Delete */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className={`size-4 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 ${
+                              isSelected ? 'hover:bg-white/20' : 'hover:bg-muted'
+                            }`}
+                          >
+                            <ChevronDown className="size-3" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-40 p-1 text-xs rounded-xl z-50">
+                          <DropdownMenuItem
+                            disabled={idx === 0}
+                            onClick={() => handleMoveMeal(idx, 'up')}
+                            className="gap-2 cursor-pointer"
+                          >
+                            <ArrowUp className="size-3.5" /> Move Left
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={idx === meals.length - 1}
+                            onClick={() => handleMoveMeal(idx, 'down')}
+                            className="gap-2 cursor-pointer"
+                          >
+                            <ArrowDown className="size-3.5" /> Move Right
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDuplicateMeal(idx)}
+                            className="gap-2 cursor-pointer"
+                          >
+                            <Copy className="size-3.5" /> Duplicate
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            disabled={meals.length <= 1}
+                            onClick={() => handleRemoveMealCard(idx)}
+                            className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="size-3.5" /> Delete Meal
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  );
+                })}
+
+                {/* Add Meal Trigger */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-3 rounded-full text-xs font-medium border-dashed border-border hover:border-primary gap-1 shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <Plus className="size-3.5" /> Add Meal
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-44 p-1 text-xs rounded-xl z-50">
+                    {['Breakfast', 'Mid-Morning Snack', 'Lunch', 'Evening Snack', 'Pre-Workout', 'Post-Workout', 'Dinner'].map((preset) => (
+                      <DropdownMenuItem
+                        key={preset}
+                        onClick={() => handleAddMealCard(preset)}
+                        className="cursor-pointer py-1.5"
+                      >
+                        + {preset}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => handleAddMealCard()}
+                      className="cursor-pointer py-1.5 font-semibold text-primary"
+                    >
+                      + Custom Meal
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Active Meal Canvas (Scrollable Main Workspace) */}
+          <div className="flex-1 overflow-y-auto bg-background/50">
+            <div className="max-w-6xl mx-auto p-3 sm:p-6 space-y-4">
               {activeMeal ? (
                 <>
-                  {/* Active Meal Header Strip */}
-                  <div className="p-3.5 sm:p-4 border-b border-white/[0.08] bg-card/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-                    <div className="flex items-center gap-3 flex-wrap">
+                  {/* Meal Header & Fast Actions */}
+                  <div className="p-3 sm:p-4 rounded-2xl border border-border/80 bg-card/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                       <Input
                         value={activeMeal.meal_name}
-                        onChange={(e) =>
-                          handleUpdateMealMeta(safeActiveMealIndex, 'meal_name', e.target.value)
-                        }
+                        onChange={(e) => handleUpdateMealMeta(safeActiveMealIndex, 'meal_name', e.target.value)}
                         placeholder="Meal Name (e.g. Breakfast)"
-                        className="h-8 text-sm font-semibold bg-background/50 border-white/[0.08] text-foreground w-48 rounded-xl focus-visible:border-primary"
+                        className="h-8 text-sm font-semibold w-40 sm:w-48 bg-background/60 rounded-xl"
                       />
-
-                      <div className="flex items-center gap-1.5 bg-background/50 border border-white/[0.08] rounded-xl px-2.5 h-8">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
+                      <div className="flex items-center gap-1.5 bg-background/60 border border-border rounded-xl px-2.5 h-8">
+                        <Clock className="size-3 text-muted-foreground" />
                         <input
                           value={activeMeal.time}
-                          onChange={(e) =>
-                            handleUpdateMealMeta(safeActiveMealIndex, 'time', e.target.value)
-                          }
+                          onChange={(e) => handleUpdateMealMeta(safeActiveMealIndex, 'time', e.target.value)}
                           placeholder="08:00 AM"
                           className="text-xs bg-transparent border-none text-foreground focus:outline-none w-20 font-mono"
                         />
                       </div>
-
-                      <div className="text-xs font-mono bg-muted/40 border border-white/[0.08] px-3 py-1 rounded-full text-foreground shadow-xs">
-                        <span className="font-bold">{activeMealCals}</span>{' '}
-                        <span className="text-muted-foreground text-[10px]">kcal</span> •{' '}
-                        <span className="font-bold">{activeMealPro}g</span>{' '}
-                        <span className="text-muted-foreground text-[10px]">pro</span>
+                      <div className="text-xs font-mono bg-muted/60 px-2.5 py-1 rounded-full text-foreground whitespace-nowrap">
+                        <span className="font-bold">{activeMealCals}</span> kcal • <span className="font-bold">{activeMealPro}g</span> pro
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Button
                         type="button"
-                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAddEmptyItem(safeActiveMealIndex)}
+                        className="h-8 px-3 text-xs rounded-xl gap-1.5 font-medium cursor-pointer active:scale-95"
+                      >
+                        <Plus className="size-3.5" /> Add Food
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
                         size="sm"
                         onClick={() => setShowQuickFoodDrawer(!showQuickFoodDrawer)}
-                        className={`h-7.5 px-2.5 text-xs rounded-xl font-medium gap-1.5 cursor-pointer active:scale-[0.97] ${
+                        className={`h-8 px-3 text-xs rounded-xl font-medium gap-1.5 cursor-pointer active:scale-95 ${
                           showQuickFoodDrawer
-                            ? 'bg-primary/10 text-primary border border-primary/20'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-card/60 border border-white/[0.06]'
+                            ? 'bg-primary/15 text-primary border-primary/30'
+                            : 'bg-card/70 hover:bg-card text-foreground border-border'
                         }`}
                       >
-                        <Sparkles className="h-3.5 w-3.5" />
+                        <Sparkles className="size-3.5 text-primary" />
                         <span>Food Library</span>
                       </Button>
-
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleClearMeal(safeActiveMealIndex)}
-                        className="h-7.5 px-2 text-xs text-muted-foreground hover:text-foreground rounded-xl active:scale-[0.97]"
-                        title="Clear all foods"
+                        className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground rounded-xl active:scale-95"
+                        title="Clear meal items"
                       >
-                        <RotateCcw className="h-3 w-3 mr-1" /> Clear
+                        <RotateCcw className="size-3 mr-1" /> Clear
                       </Button>
-
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveMealCard(safeActiveMealIndex)}
-                        className="h-7.5 px-2 text-xs text-muted-foreground hover:text-destructive rounded-xl active:scale-[0.97]"
-                        title="Delete this meal"
+                        disabled={meals.length <= 1}
+                        className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive rounded-xl active:scale-95"
+                        title="Delete meal"
                       >
-                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                        <Trash2 className="size-3.5 mr-1" /> Delete
                       </Button>
                     </div>
                   </div>
 
-                  {/* Food Items Table / Cards */}
-                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-                    {/* Collapsible Quick Food Palette Drawer */}
-                    {showQuickFoodDrawer && (
-                      <div className="apple-glass-card p-3.5 rounded-2xl border border-white/[0.08] bg-card/60 space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="h-3.5 w-3.5 text-primary" />
-                            <span className="text-xs font-semibold text-foreground">
-                              Quick-Add Food Items
-                            </span>
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              (Click to append into {activeMeal.meal_name})
-                            </span>
-                          </div>
-
-                          {/* Category Filter Pills */}
-                          <div className="flex items-center gap-1 overflow-x-auto">
-                            {[
-                              { key: 'all', label: 'All' },
-                              { key: 'protein', label: '🍗 Protein' },
-                              { key: 'carbs', label: '🍚 Carbs' },
-                              { key: 'fats', label: '🥜 Fats' },
-                              { key: 'greens', label: '🥗 Greens/Fruits' },
-                            ].map((cat) => (
-                              <button
-                                key={cat.key}
-                                type="button"
-                                onClick={() => setFoodCategory(cat.key as any)}
-                                className={`px-2 py-0.5 rounded-lg text-[10px] font-medium transition-colors cursor-pointer active:scale-95 ${
-                                  foodCategory === cat.key
-                                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                                    : 'bg-card/50 text-muted-foreground hover:bg-card hover:text-foreground border border-white/[0.06]'
-                                }`}
-                              >
-                                {cat.label}
-                              </button>
-                            ))}
-                          </div>
+                  {/* Collapsible Food Library Drawer */}
+                  {showQuickFoodDrawer && (
+                    <div className="p-3.5 sm:p-4 rounded-2xl border border-border/80 bg-card/80 space-y-3 shadow-md">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="size-4 text-primary" />
+                          <span className="text-xs sm:text-sm font-semibold text-foreground">
+                            1-Click Fitness Food Library
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono hidden sm:inline">
+                            (Appends to {activeMeal.meal_name})
+                          </span>
                         </div>
 
-                        {/* Search in quick food library */}
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            placeholder="Filter foods by name (e.g. egg, chicken, oats, paneer)..."
-                            value={quickFoodSearch}
-                            onChange={(e) => setQuickFoodSearch(e.target.value)}
-                            className="pl-8 h-7.5 text-xs bg-background/50 border-white/[0.08] text-foreground rounded-xl"
-                          />
-                        </div>
-
-                        {/* Food Chip Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1">
-                          {filteredQuickFoods.map((food, idx) => (
+                        {/* Category filter pills */}
+                        <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+                          {[
+                            { key: 'all', label: 'All' },
+                            { key: 'protein', label: '🍗 Protein' },
+                            { key: 'carbs', label: '🍚 Carbs' },
+                            { key: 'fats', label: '🥜 Fats' },
+                            { key: 'greens', label: '🥗 Greens/Fruits' },
+                          ].map((cat) => (
                             <button
-                              key={idx}
+                              key={cat.key}
                               type="button"
-                              onClick={() => handleAddQuickFood(food)}
-                              className="flex items-center justify-between p-2 rounded-xl text-left bg-card/40 border border-white/[0.06] hover:border-primary/40 hover:bg-primary/[0.05] transition-all cursor-pointer active:scale-95 group"
+                              onClick={() => setFoodCategory(cat.key as any)}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-95 whitespace-nowrap ${
+                                foodCategory === cat.key
+                                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                              }`}
                             >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-sm shrink-0">{food.icon}</span>
-                                <div className="min-w-0">
-                                  <div className="text-[11px] font-semibold text-foreground truncate group-hover:text-primary">
-                                    {food.name}
-                                  </div>
-                                  <div className="text-[9px] text-muted-foreground font-mono truncate">
-                                    {food.qty}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right font-mono shrink-0 pl-1">
-                                <div className="text-[10px] font-bold text-foreground">
-                                  {food.calories} <span className="text-[8px] font-normal text-muted-foreground">kcal</span>
-                                </div>
-                                <div className="text-[9px] text-emerald-400 font-semibold">
-                                  {food.protein}g <span className="text-[8px] font-normal text-muted-foreground">P</span>
-                                </div>
-                              </div>
+                              {cat.label}
                             </button>
                           ))}
                         </div>
                       </div>
-                    )}
 
-                    {/* Clean Items Table */}
-                    <div className="apple-glass-card rounded-2xl overflow-hidden border border-white/[0.08] bg-card/30">
-                      {/* Table Column Headers */}
-                      <div className="flex items-center gap-3 px-3.5 py-2 border-b border-white/[0.06] text-[10px] uppercase font-mono font-semibold text-muted-foreground tracking-wider bg-card/20">
-                        <div className="flex-1">Food Item & Brand</div>
-                        <div className="w-36">Serving / Portion</div>
-                        <div className="w-24">Calories</div>
-                        <div className="w-20">Protein</div>
-                        <div className="w-9 text-center">Action</div>
+                      {/* Search Bar */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                        <Input
+                          placeholder="Search foods (e.g. egg whites, chicken breast, oats, whey, paneer)..."
+                          value={quickFoodSearch}
+                          onChange={(e) => setQuickFoodSearch(e.target.value)}
+                          className="pl-9 h-8 text-xs bg-background/60 rounded-xl"
+                        />
                       </div>
 
-                      {/* Items List Rows */}
-                      <div className="divide-y divide-white/[0.04]">
-                        {(activeMeal.items || []).length === 0 ? (
-                          <div className="text-center py-10 px-4 space-y-2">
-                            <Utensils className="h-6 w-6 mx-auto text-muted-foreground/50" />
-                            <p className="text-xs font-semibold text-foreground">
-                              No food items in {activeMeal.meal_name}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
-                              Add a custom food row below or open the Food Library to pick popular fitness foods with 1 click.
-                            </p>
-                            <div className="pt-2 flex items-center justify-center gap-2">
+                      {/* Responsive Grid of Food Chips */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {filteredQuickFoods.map((food, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleAddQuickFood(food)}
+                            className="flex items-center justify-between p-2 rounded-xl text-left bg-background/60 border border-border/70 hover:border-primary/50 hover:bg-primary/[0.06] transition-all cursor-pointer active:scale-95 group"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-base shrink-0">{food.icon}</span>
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold text-foreground truncate group-hover:text-primary">
+                                  {food.name}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground font-mono truncate">
+                                  {food.qty}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right font-mono shrink-0 pl-1">
+                              <div className="text-[11px] font-bold text-foreground">
+                                {food.calories} <span className="text-[9px] font-normal text-muted-foreground">kcal</span>
+                              </div>
+                              <div className="text-[10px] text-emerald-500 font-semibold">
+                                {food.protein}g <span className="text-[9px] font-normal text-muted-foreground">pro</span>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Food Items Display: Desktop Table + Mobile Cards */}
+                  {/* DESKTOP TABLE VIEW */}
+                  <div className="hidden sm:block rounded-2xl overflow-hidden border border-border/80 bg-card/60">
+                    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/70 text-[10px] uppercase font-mono font-semibold text-muted-foreground tracking-wider bg-muted/30">
+                      <div className="flex-1">Food Item & Brand</div>
+                      <div className="w-40">Serving / Portion</div>
+                      <div className="w-28">Calories</div>
+                      <div className="w-24">Protein</div>
+                      <div className="w-10 text-center">Action</div>
+                    </div>
+
+                    <div className="divide-y divide-border/40">
+                      {(activeMeal.items || []).length === 0 ? (
+                        <div className="text-center py-10 px-4 space-y-2">
+                          <Utensils className="size-6 mx-auto text-muted-foreground/50" />
+                          <p className="text-xs font-semibold text-foreground">
+                            No food items in {activeMeal.meal_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                            Add a custom food row below or open the Food Library to pick popular fitness foods with 1 click.
+                          </p>
+                          <div className="pt-2 flex items-center justify-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => handleAddEmptyItem(safeActiveMealIndex)}
+                              className="h-8 text-xs rounded-xl gap-1.5 cursor-pointer active:scale-95"
+                            >
+                              <Plus className="size-3.5" /> Add Food Row
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowQuickFoodDrawer(true)}
+                              className="h-8 text-xs rounded-xl gap-1.5 cursor-pointer active:scale-95"
+                            >
+                              <Sparkles className="size-3.5 text-primary" /> Browse Library
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        activeMeal.items.map((item, itemIdx) => (
+                          <div
+                            key={itemIdx}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30 transition-colors"
+                          >
+                            <div className="flex-1">
+                              <Input
+                                value={item.name}
+                                onChange={(e) => handleUpdateItem(safeActiveMealIndex, itemIdx, 'name', e.target.value)}
+                                placeholder="e.g. Boiled Egg Whites / Rolled Oats"
+                                className="h-8 text-xs bg-background/60 rounded-xl"
+                              />
+                            </div>
+                            <div className="w-40">
+                              <Input
+                                value={item.qty}
+                                onChange={(e) => handleUpdateItem(safeActiveMealIndex, itemIdx, 'qty', e.target.value)}
+                                placeholder="e.g. 4 whites (140g)"
+                                className="h-8 text-xs bg-background/60 rounded-xl"
+                              />
+                            </div>
+                            <div className="w-28 relative">
+                              <Input
+                                type="number"
+                                value={item.calories || ''}
+                                onChange={(e) => handleUpdateItem(safeActiveMealIndex, itemIdx, 'calories', e.target.value)}
+                                placeholder="0"
+                                className="h-8 text-xs pr-10 font-mono bg-background/60 rounded-xl"
+                              />
+                              <span className="absolute right-2.5 top-2 text-[10px] text-muted-foreground font-mono pointer-events-none">
+                                kcal
+                              </span>
+                            </div>
+                            <div className="w-24 relative">
+                              <Input
+                                type="number"
+                                value={item.protein || ''}
+                                onChange={(e) => handleUpdateItem(safeActiveMealIndex, itemIdx, 'protein', e.target.value)}
+                                placeholder="0"
+                                className="h-8 text-xs pr-7 font-mono bg-background/60 rounded-xl"
+                              />
+                              <span className="absolute right-2.5 top-2 text-[10px] text-muted-foreground font-mono pointer-events-none">
+                                g
+                              </span>
+                            </div>
+                            <div className="w-10 text-center">
                               <Button
                                 type="button"
-                                size="sm"
-                                onClick={() => handleAddEmptyItem(safeActiveMealIndex)}
-                                className="h-7.5 text-xs rounded-xl gap-1.5 cursor-pointer active:scale-[0.97]"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveItem(safeActiveMealIndex, itemIdx)}
+                                className="size-8 text-muted-foreground hover:text-destructive rounded-lg cursor-pointer active:scale-95"
                               >
-                                <Plus className="h-3.5 w-3.5" /> Add Food Row
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowQuickFoodDrawer(true)}
-                                className="h-7.5 text-xs rounded-xl gap-1.5 border-white/[0.1] bg-card/50 hover:bg-card cursor-pointer active:scale-[0.97]"
-                              >
-                                <Sparkles className="h-3.5 w-3.5 text-primary" /> Browse Library
+                                <Trash2 className="size-3.5" />
                               </Button>
                             </div>
                           </div>
-                        ) : (
-                          activeMeal.items.map((item, itemIdx) => (
-                            <div
-                              key={itemIdx}
-                              className="flex items-center gap-3 px-3.5 py-2 hover:bg-card/40 transition-colors"
-                            >
-                              <div className="flex-1">
-                                <Input
-                                  value={item.name}
-                                  onChange={(e) =>
-                                    handleUpdateItem(safeActiveMealIndex, itemIdx, 'name', e.target.value)
-                                  }
-                                  placeholder="e.g. Grilled Chicken Breast / Boiled Eggs"
-                                  className="h-8 text-xs bg-background/50 border-white/[0.08] text-foreground rounded-xl placeholder:text-muted-foreground/60 focus-visible:border-primary"
-                                />
-                              </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
 
-                              <div className="w-36">
-                                <Input
-                                  value={item.qty}
-                                  onChange={(e) =>
-                                    handleUpdateItem(safeActiveMealIndex, itemIdx, 'qty', e.target.value)
-                                  }
-                                  placeholder="e.g. 150g or 4 whites"
-                                  className="h-8 text-xs bg-background/50 border-white/[0.08] text-foreground rounded-xl placeholder:text-muted-foreground/60 focus-visible:border-primary"
-                                />
-                              </div>
-
-                              <div className="w-24 relative">
-                                <Input
-                                  type="number"
-                                  value={item.calories || ''}
-                                  onChange={(e) =>
-                                    handleUpdateItem(
-                                      safeActiveMealIndex,
-                                      itemIdx,
-                                      'calories',
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="0"
-                                  className="h-8 text-xs bg-background/50 border-white/[0.08] text-foreground font-mono font-medium rounded-xl pr-9 focus-visible:border-primary"
-                                />
-                                <span className="absolute right-2 top-2 text-[9px] text-muted-foreground font-mono pointer-events-none">
-                                  kcal
-                                </span>
-                              </div>
-
-                              <div className="w-20 relative">
-                                <Input
-                                  type="number"
-                                  value={item.protein || ''}
-                                  onChange={(e) =>
-                                    handleUpdateItem(
-                                      safeActiveMealIndex,
-                                      itemIdx,
-                                      'protein',
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="0"
-                                  className="h-8 text-xs bg-background/50 border-white/[0.08] text-foreground font-mono font-medium rounded-xl pr-5 focus-visible:border-primary"
-                                />
-                                <span className="absolute right-2 top-2 text-[9px] text-muted-foreground font-mono pointer-events-none">
-                                  g
-                                </span>
-                              </div>
-
-                              <div className="w-9 flex justify-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveItem(safeActiveMealIndex, itemIdx)}
-                                  className="h-8 w-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer active:scale-95"
-                                  title="Remove item"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-
-                      {/* Add Food Row Strip */}
-                      {(activeMeal.items || []).length > 0 && (
-                        <div className="p-3 border-t border-white/[0.06] bg-card/10 flex items-center justify-between">
+                  {/* MOBILE CARDS VIEW (Clean, No-cramp cards on phones) */}
+                  <div className="block sm:hidden space-y-2.5">
+                    {(activeMeal.items || []).length === 0 ? (
+                      <div className="text-center py-8 px-4 rounded-2xl border border-border/80 bg-card/60 space-y-2">
+                        <Utensils className="size-6 mx-auto text-muted-foreground/50" />
+                        <p className="text-xs font-semibold text-foreground">
+                          No food items in {activeMeal.meal_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Add a custom food row or pick from the Food Library.
+                        </p>
+                        <div className="pt-2 flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleAddEmptyItem(safeActiveMealIndex)}
+                            className="h-8 text-xs rounded-xl gap-1.5 w-full cursor-pointer active:scale-95"
+                          >
+                            <Plus className="size-3.5" /> Add Food Row
+                          </Button>
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => handleAddEmptyItem(safeActiveMealIndex)}
-                            className="h-7 text-xs border-dashed border-white/[0.12] bg-card/30 hover:bg-card/70 text-foreground gap-1.5 rounded-xl cursor-pointer active:scale-[0.97]"
+                            onClick={() => setShowQuickFoodDrawer(true)}
+                            className="h-8 text-xs rounded-xl gap-1.5 w-full cursor-pointer active:scale-95"
                           >
-                            <Plus className="h-3 w-3" />
-                            <span>Add Food Item</span>
+                            <Sparkles className="size-3.5 text-primary" /> Browse Food Library
                           </Button>
-
-                          <div className="text-[11px] font-mono text-muted-foreground">
-                            Meal Macro Total:{' '}
-                            <span className="text-foreground font-semibold">{activeMealCals} kcal</span> •{' '}
-                            <span className="text-emerald-400 font-semibold">{activeMealPro}g protein</span>
+                        </div>
+                      </div>
+                    ) : (
+                      activeMeal.items.map((item, itemIdx) => (
+                        <div key={itemIdx} className="p-3 rounded-2xl border border-border/80 bg-card/60 space-y-2.5 shadow-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <Input
+                              value={item.name}
+                              onChange={(e) => handleUpdateItem(safeActiveMealIndex, itemIdx, 'name', e.target.value)}
+                              placeholder="Food Item & Brand (e.g. Boiled Eggs)"
+                              className="h-8 text-xs font-semibold bg-background/60 rounded-xl"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveItem(safeActiveMealIndex, itemIdx)}
+                              className="size-8 text-muted-foreground hover:text-destructive shrink-0 rounded-lg cursor-pointer"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input
+                              value={item.qty}
+                              onChange={(e) => handleUpdateItem(safeActiveMealIndex, itemIdx, 'qty', e.target.value)}
+                              placeholder="Portion (150g)"
+                              className="h-7.5 text-xs bg-background/60 rounded-lg text-center"
+                            />
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                value={item.calories || ''}
+                                onChange={(e) => handleUpdateItem(safeActiveMealIndex, itemIdx, 'calories', e.target.value)}
+                                placeholder="Kcal"
+                                className="h-7.5 text-xs font-mono bg-background/60 rounded-lg text-center pr-6"
+                              />
+                              <span className="absolute right-1.5 top-1.5 text-[9px] text-muted-foreground font-mono">kcal</span>
+                            </div>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                value={item.protein || ''}
+                                onChange={(e) => handleUpdateItem(safeActiveMealIndex, itemIdx, 'protein', e.target.value)}
+                                placeholder="Protein"
+                                className="h-7.5 text-xs font-mono bg-background/60 rounded-lg text-center pr-4"
+                              />
+                              <span className="absolute right-1.5 top-1.5 text-[9px] text-muted-foreground font-mono">g</span>
+                            </div>
                           </div>
                         </div>
-                      )}
-                    </div>
+                      ))
+                    )}
                   </div>
                 </>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
-                  <Utensils className="h-8 w-8 mb-2 opacity-40" />
+                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                  <Utensils className="size-8 mb-2 opacity-40" />
                   <p className="text-sm font-semibold text-foreground">No meal selected</p>
-                  <p className="text-xs mt-1">Select a meal from the left timeline or add a new meal.</p>
+                  <p className="text-xs mt-1">Select a meal tab above or click "+ Add Meal" to begin.</p>
                 </div>
               )}
             </div>
-          </form>
+          </div>
 
-          {/* Sticky Studio Footer */}
-          <DialogFooter className="p-3.5 sm:p-4 border-t border-white/[0.08] shrink-0 bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* 5. Sticky Bottom Action Bar */}
+          <footer className="px-4 sm:px-6 py-3 border-t border-border/80 bg-card/90 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap font-mono">
               <span>
-                Total Calories: <strong className="text-foreground">{nutritionSummary.totalCalories}</strong> kcal
+                Total: <strong className="text-foreground">{nutritionSummary.totalCalories}</strong> kcal
               </span>
               <span>•</span>
               <span>
-                Total Protein: <strong className="text-foreground">{nutritionSummary.totalProtein}</strong>g
+                Protein: <strong className="text-foreground">{nutritionSummary.totalProtein}</strong>g
               </span>
+              <span>•</span>
+              <span>{meals.length} Meals</span>
               {nutritionSummary.target > 0 && (
                 <>
                   <span>•</span>
@@ -1668,10 +1628,10 @@ export default function DietChartsPage() {
                     <span
                       className={
                         nutritionSummary.diff === 0
-                          ? 'text-emerald-400'
+                          ? 'text-emerald-400 font-semibold'
                           : nutritionSummary.diff > 0
-                          ? 'text-amber-400'
-                          : 'text-indigo-400'
+                          ? 'text-amber-400 font-semibold'
+                          : 'text-indigo-400 font-semibold'
                       }
                     >
                       {nutritionSummary.diff > 0
@@ -1686,30 +1646,30 @@ export default function DietChartsPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-end sm:self-auto">
               <Button
                 type="button"
                 variant="ghost"
-                size="pill-sm"
+                size="sm"
                 onClick={() => setOpenModal(false)}
-                className="text-xs cursor-pointer active:scale-[0.97]"
+                className="h-8 text-xs rounded-full cursor-pointer active:scale-95"
               >
                 Cancel
               </Button>
               <Button
                 type="button"
-                size="pill-sm"
+                size="sm"
                 onClick={handleSaveDiet}
                 disabled={saving}
-                className="text-xs font-semibold gap-1.5 cursor-pointer shadow-md shadow-primary/20 active:scale-[0.97]"
+                className="h-8 px-4 text-xs font-semibold rounded-full gap-1.5 shadow-sm active:scale-95"
               >
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                {dietId ? 'Update Diet Plan' : 'Save Diet Plan'}
+                {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                <span>{dietId ? 'Update Diet Plan' : 'Save Diet Plan'}</span>
               </Button>
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </footer>
+        </div>
+      )}
 
       {/* ------------------------------------------------------------- */}
       {/* Assign Diet Modal Dialog                                      */}
