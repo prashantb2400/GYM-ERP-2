@@ -289,7 +289,7 @@ export interface Attendance {
   date: string;
   check_in_time: string;
   check_out_time?: string | null;
-  method: 'manual' | 'face_recognition' | 'fingerprint' | 'qr_scan';
+  method: 'manual' | 'face_recognition' | 'fingerprint' | 'qr_scan' | 'cctv';
   device_id: string | null;
   device_name: string | null;
   confidence: number | null;

@@ -6,8 +6,15 @@ export function hasPermission(
   required?: Permission
 ): boolean {
   if (!required) return true;
-  if (role === 'owner') return true; // Owner has wildcard bypass
+  if (role === 'owner' || (role as string) === 'super_admin' || (role as string) === 'admin') return true;
   
+  // Backward compatibility: If checking cctv.view, grant access if user has attendance or settings access
+  if (required === 'cctv.view') {
+    if (hasPermission(role, permissions, 'attendance.view') || hasPermission(role, permissions, 'settings.view')) {
+      return true;
+    }
+  }
+
   // If the user has explicit database-assigned permissions
   if (Array.isArray(permissions) && permissions.includes(required)) return true;
   

@@ -11,7 +11,7 @@ export const SIDEBAR_ITEMS = [
   { label: 'Branches', href: '/dashboard/branches', icon: 'Building2', permission: 'branches.view' as const },
   { label: 'Invoices', href: '/dashboard/invoices', icon: 'Receipt', permission: 'invoices.view' as const },
   { label: 'Attendance', href: '/dashboard/attendance', icon: 'CalendarCheck', permission: 'attendance.view' as const },
-  { label: 'CCTV & Vigilance', href: '/dashboard/cctv', icon: 'Cctv', permission: 'cctv.view' as const },
+  { label: 'CCTV & Vigilance', href: '/dashboard/cctv', icon: 'Cctv', permission: 'attendance.view' as const },
   { label: 'Analytics', href: '/dashboard/analytics', icon: 'BarChart3', permission: 'analytics.view' as const },
   { label: 'Follow-ups', href: '/dashboard/followups', icon: 'PhoneCall', permission: 'followups.view' as const },
   { label: 'Due Collection', href: '/dashboard/due', icon: 'IndianRupee', permission: 'due.view' as const },

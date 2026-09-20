@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranch } from '@/hooks/useBranch';
 import type { Member, Attendance } from '@/types/database';
-import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace, Fingerprint, FileSpreadsheet, QrCode, Sparkles } from 'lucide-react';
+import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace, Fingerprint, FileSpreadsheet, QrCode, Sparkles, Cctv } from 'lucide-react';
 import { exportToExcel } from '@/lib/export/excel-export';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
@@ -254,7 +254,7 @@ export default function AttendancePage() {
         'Member Name': log.member_name || log.members?.name || 'Member',
         'Check-in Time': log.check_in_time ? new Date(log.check_in_time).toLocaleTimeString('en-IN') : '-',
         'Date': log.date || today,
-        'Method': log.method === 'face_recognition' ? 'AI Face' : log.method === 'fingerprint' ? 'Fingerprint' : log.method === 'qr_scan' ? 'QR Code' : 'Manual',
+        'Method': log.method === 'face_recognition' ? 'AI Face' : log.method === 'fingerprint' ? 'Fingerprint' : log.method === 'qr_scan' ? 'QR Code' : log.method === 'cctv' ? 'CCTV AI' : 'Manual',
         'Branch': branches?.find(b => b.id === log.branch_id)?.name || 'Main Branch',
         'Notes': log.notes || '',
       }));
@@ -264,6 +264,7 @@ export default function AttendancePage() {
         { 'Metric': 'AI Face Check-ins', 'Value': todayLogs.filter(l => l.method === 'face_recognition').length },
         { 'Metric': 'Fingerprint Check-ins', 'Value': todayLogs.filter(l => l.method === 'fingerprint').length },
         { 'Metric': 'QR Code Check-ins', 'Value': todayLogs.filter(l => l.method === 'qr_scan').length },
+        { 'Metric': 'CCTV AI Check-ins', 'Value': todayLogs.filter(l => l.method === 'cctv').length },
         { 'Metric': 'Manual Check-ins', 'Value': todayLogs.filter(l => l.method === 'manual').length },
         { 'Metric': 'Report Date', 'Value': today },
       ];
@@ -563,10 +564,11 @@ export default function AttendancePage() {
                       log.method === 'qr_scan' ? 'text-blue-400 border-blue-400/20 bg-blue-400/10' :
                       log.method === 'face_recognition' ? 'text-cyan-400 border-cyan-400/20 bg-cyan-400/10' :
                       log.method === 'fingerprint' ? 'text-purple-400 border-purple-400/20 bg-purple-400/10' :
+                      log.method === 'cctv' ? 'text-indigo-400 border-indigo-400/20 bg-indigo-400/10' :
                       'text-zinc-400 border-zinc-800 bg-zinc-900'
                     }`}
                   >
-                    {log.method === 'qr_scan' ? 'QR Code' : log.method === 'face_recognition' ? 'AI Face' : log.method === 'fingerprint' ? 'Fingerprint' : 'Manual'}
+                    {log.method === 'qr_scan' ? 'QR Code' : log.method === 'face_recognition' ? 'AI Face' : log.method === 'fingerprint' ? 'Fingerprint' : log.method === 'cctv' ? 'CCTV AI' : 'Manual'}
                   </Badge>
                 </div>
               ))}
@@ -663,6 +665,13 @@ export default function AttendancePage() {
               <ScanFace className="h-4 w-4 text-cyan-200" />
               AI Face Kiosk
               <Badge className="bg-white/20 text-white text-[10px] px-1.5 py-0 border-0 ml-1">Live</Badge>
+            </Button>
+          </Link>
+          <Link href="/dashboard/cctv">
+            <Button className="gap-2 shadow-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold border-0">
+              <Cctv className="h-4 w-4 text-indigo-200" />
+              CCTV Vigilance
+              <Badge className="bg-white/20 text-white text-[10px] px-1.5 py-0 border-0 ml-1">Live AI</Badge>
             </Button>
           </Link>
           <Link href="/dashboard/attendance/kiosk">

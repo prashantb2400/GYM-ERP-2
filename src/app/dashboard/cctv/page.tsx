@@ -306,7 +306,7 @@ export default function CctvDashboardPage() {
 
   return (
     <RequirePermission
-      permission="cctv.view"
+      anyPermission={['cctv.view', 'attendance.view', 'settings.view']}
       fallbackTitle="CCTV Vigilance Restricted"
       fallbackDescription="You need surveillance monitoring permissions to access the CCTV live dashboard."
     >
