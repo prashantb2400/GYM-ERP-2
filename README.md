@@ -1,27 +1,31 @@
 <div align="center">
 
-  <img src="public/gymerp_app_logo.jpg" alt="GymERP Logo" width="150" style="border-radius: 20px; box-shadow: 0 8px 30px rgba(59, 130, 246, 0.3);" />
+  <img src="public/gymerp_app_logo.jpg" alt="GymERP Logo" width="140" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(79, 70, 229, 0.35);" />
 
-  # 🏋️‍♂️ GymERP
+  # 🏋️‍♂️ GymERP v2.5
 
-  ### **Enterprise Multi-Tenant SaaS & Zero-Install Biometric Management Platform**
+  ### **Enterprise Multi-Tenant Gym SaaS • Autonomous AI Voice Kiosk • CCTV Surveillance & Vigilance Matrix**
 
   [![Next.js](https://img.shields.io/badge/Next.js-16.2_(Turbopack)-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
   [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-  [![TensorFlow.js](https://img.shields.io/badge/Face--API-Client--Side_AI-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)](https://github.com/vladmandic/face-api)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-  [![Vitest](https://img.shields.io/badge/Tests-28%2F28_Passing-22c55e?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
-  [![Security](https://img.shields.io/badge/Security-Audited_%26_BOLA_Hardened-blue?style=for-the-badge&logo=shield&logoColor=white)](#-security--compliance)
+  [![FastAPI](https://img.shields.io/badge/CCTV_Edge-FastAPI_Python-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+  [![Docker](https://img.shields.io/badge/Docker-Compose_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+  [![MCP](https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge)](https://modelcontextprotocol.io/)
+  [![Vitest](https://img.shields.io/badge/Tests-30%2F30_Passing_(240_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 
   <br />
 
-  **GymERP** is an all-in-one, multi-tenant cloud SaaS engineered for fitness centers, martial arts dojos, and athletic franchises. It pairs member lifecycle management, GST billing, and WhatsApp CRM with a **zero-install, in-browser AI face recognition attendance kiosk** and **browser-native QR scanner** that run directly inside Google Chrome without desktop software installation.
+  **GymERP** is an all-in-one, enterprise-grade multi-tenant gym management platform. It pairs comprehensive member management, GST invoicing, lead CRM, and WhatsApp broadcasts with **four synchronized attendance modalities**:
+  1. **Autonomous AI Voice Kiosk** (Android lobby tablet with circular water visual UI, voice conversation, automated registration, KYC OCR, and receipt printing)
+  2. **CCTV Surveillance & Vigilance Hub** (RTSP multi-feed matrix with edge AI face detection fail-safe for members missing the kiosk)
+  3. **Zero-Install In-Browser WebGL Face Kiosk** (Client-side 128-d vector matching in Chrome with zero native desktop software)
+  4. **Dynamic QR Code & Optical Fingerprint Stations** (Mantra / SecuGen USB biometric drivers & mobile passes)
 
   <br />
 
-  [✨ Features](#-key-features) • [🏛️ System Architecture](#-system-architecture) • [👁️ Face Recognition Engine](#-in-browser-ai-face-recognition-zero-install) • [📱 QR Kiosk](#-browser-native-qr-code-kiosk) • [📂 Project Structure](#-project-structure) • [🚀 Quick Start](#-getting-started) • [🔒 Security](#-security--compliance)
+  [✨ Features](#-key-features) • [🏛️ Architecture](#-system-architecture) • [🚀 Deployment Guide](#-step-by-step-production-deployment-guide) • [📹 CCTV Integration](#-complete-cctv--vigilance-integration-guide) • [📱 Tablet Kiosk Setup](#-autonomous-ai-voice-tablet-kiosk-setup) • [🤖 MCP Server](#-model-context-protocol-mcp-server) • [🔒 Security](#-security--compliance)
 
   <hr />
 
@@ -35,42 +39,16 @@
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                   GYMERP PLATFORM MATRIX                               │
 ├───────────────────────┬────────────────────────┬───────────────────────────────────────┤
-│ 🏢 Core SaaS Engine   │ 💳 Billing & WhatsApp  │ 👁️ Attendance & AI Kiosk              │
+│ 🏢 Multi-Tenant SaaS  │ 🤖 Autonomous AI Kiosk │ 📹 CCTV & Attendance Ecosystem        │
 ├───────────────────────┼────────────────────────┼───────────────────────────────────────┤
-│ • Multi-Tenant RBAC   │ • GST Tax Invoicing    │ • In-Browser Face Recognition (Chrome)│
-│ • Super Admin Portal  │ • Razorpay Webhooks    │ • Dynamic QR Pass & Scanner Kiosk     │
-│ • Branch Management   │ • WhatsApp Cloud API   │ • Zero-Install WebGL Acceleration     │
-│ • Lead & Member CRM   │ • Auto Expiry Alerts   │ • Offline-First IndexedDB Sync Queue  │
-│ • Member PWA Portal   │ • PDF Generation       │ • DPDP 2023 Biometric Privacy & Erasure│
+│ • Tenant & Branch RLS │ • Voice Water Halo UI  │ • Live RTSP Camera Matrix (1x1, 2x2)  │
+│ • Super Admin Portal  │ • Zero-Password Code   │ • Automated Attendance Fail-Safe      │
+│ • GST Tax Invoicing   │ • Speech-to-Speech AI  │ • Browser WebGL Face Kiosk            │
+│ • Razorpay Gateway    │ • KYC ID Document OCR  │ • Mantra / SecuGen Fingerprint Reader │
+│ • WhatsApp Cloud CRM  │ • Thermal ESC-POS Print│ • Dynamic QR Pass & HTML5 Scanner     │
+│ • Role-Based Access   │ • Secret Server LLM    │ • Universal Station Quick-Switcher    │
 └───────────────────────┴────────────────────────┴───────────────────────────────────────┘
 ```
-
-### 👁️ Zero-Install In-Browser Face Recognition Attendance
-* **100% Client-Side Detection**: Powered by `@vladmandic/face-api` using WebGL hardware acceleration directly in Chrome.
-* **Privacy by Design**: Never transmits or stores photos. Extracts only irreversible 128-dimensional mathematical descriptor vectors.
-* **DPDP Act 2023 Compliant**: Explicit biometric consent capture and one-click Right to Erasure biometric deletion.
-* **Offline-First Resilience**: Local IndexedDB caching with automatic background queue synchronization upon reconnection.
-* **Smart Duplication Prevention**: Configurable 5-minute deduplication window and intelligent automatic Check-In / Check-Out toggling.
-
-### 📱 Browser-Native Dynamic QR Kiosk
-* **Personal Digital Pass**: Members access their unique dynamic QR code directly from their mobile portal.
-* **Dedicated Kiosk Mode**: Fullscreen reception kiosk running in the browser utilizing device cameras via `html5-qrcode`.
-* **Tamper-Proof Verification**: UUID-backed QR tokens validated against active membership status with zero hardware controllers needed.
-
-### 🏢 Multi-Tenant SaaS & Super Admin
-* **Tier Gating**: Built-in `Free`, `Pro`, and `Enterprise` subscription tiers with feature flags, member caps, and branch isolation.
-* **Super Admin Dashboard**: Platform MRR/ARR analytics, gym onboarding, subscription lifecycle management, and administrative impersonation.
-* **Role-Based Access Control**: Strict access boundaries separating `owner`, `receptionist`, `trainer`, and `member`.
-
-### 💳 Automated Invoicing, GST & Payment Gateway
-* **GST Invoicing**: Automatic GST-compliant tax calculations (CGST/SGST), discount safeguards, and sequential numbering.
-* **Razorpay Integration**: Server-resolved order pricing and cryptographic HMAC SHA-256 webhook processing.
-* **Server-Side PDF Generation**: Downloadable tax invoices, personalized workout routines, and diet charts.
-
-### 💬 WhatsApp Cloud CRM Automation
-* **Automated Member Alerts**: Due date reminders, membership expiry notifications, welcome messages, and receipts.
-* **Template Broadcast Engine**: High-throughput, rate-limited template broadcasting for gym announcements.
-* **Interactive Bot**: Webhook auto-responder providing instant membership status and renewal details.
 
 ---
 
@@ -78,289 +56,535 @@
 
 ```mermaid
 flowchart TB
-    subgraph Clients["Frontend Clients & Reception Kiosks"]
-        BrowserKiosk["📱 Chrome Reception Kiosk<br/>(Face Recognition & QR Scanner)"]
-        MemberPWA["📲 Member PWA Portal<br/>(Passes, Workouts, Invoices)"]
-        OwnerDash["💻 Owner & Staff Dashboard<br/>(Billing, Analytics, CRM)"]
-        SuperAdminDash["🛡️ Super Admin Portal<br/>(Platform Metrics & Tenants)"]
+    subgraph Kiosks["Lobby & Physical Entry Layer"]
+        TabletKiosk["📱 Android Voice Tablet Kiosk<br/>(/kiosk/agent • Voice Water UI)"]
+        WebKiosk["💻 Reception Web Kiosk<br/>(/dashboard/attendance/face-kiosk)"]
+        CCTVCams["📹 IP Security Cameras<br/>(Hikvision / Dahua / CP Plus RTSP)"]
+        BioUSB["👆 Biometric USB Scanners<br/>(Mantra MFS100 / SecuGen)"]
     end
 
-    subgraph EdgeLayer["Next.js 16 App Layer (Vercel / Node)"]
-        Middleware["Security Middleware & Proxy<br/>(HSTS, CSP, X-Frame-Options: DENY)"]
-        RateLimiter["Rate Limiter (Sliding Window)<br/>(Check-in & API DoS Protection)"]
-        APIRoutes["Secure REST API Routes<br/>(BOLA-Hardened Tenant Guards)"]
+    subgraph EdgeServices["Local Gym Hardware & Edge Bridges"]
+        CCTVEdge["🐍 Python CCTV Edge Service<br/>(cctv-service • OpenCV/dlib)"]
+        HWBridge["🔌 Go/Node Hardware Bridge<br/>(hardware-bridge • USB HID)"]
+        CFTunnel["🚇 Cloudflare Tunnel (cloudflared)<br/>(Zero-NAT Secure Ingress)"]
     end
 
-    subgraph ClientAI["Client-Side AI Engine (Zero-Install)"]
-        FaceAPI["@vladmandic/face-api<br/>(TinyFaceDetector + 68 Landmarks)"]
-        VectorMatcher["128-d Vector Euclidean Matcher<br/>(Confidence Scoring & Distance)"]
-        OfflineDB["IndexedDB (idb)<br/>(Roster Cache & Attendance Queue)"]
+    subgraph CloudApp["Cloud Application Layer (Next.js 16)"]
+        Middleware["Security & Auth Middleware<br/>(Tenant Isolation & Dev Auth)"]
+        CCTVAPI["/api/cctv/*<br/>(Cameras, Streams & HMAC Webhook)"]
+        KioskAPI["/api/kiosk/*<br/>(6-Char Pairing & Voice Check-In)"]
+        AttendAPI["/api/attendance/*<br/>(Face Roster, QR & Logs)"]
+        BillingAPI["/api/payments & /api/invoices<br/>(GST Engine & Razorpay Webhooks)"]
+        MCPServer["MCP Server (port 8080)<br/>(Agentic Tool Protocol)"]
     end
 
-    subgraph CloudServices["Data & Cloud Services"]
-        SupabaseAuth["Supabase Auth Engine<br/>(Cryptographic getUser JWT Validation)"]
-        SupabaseDB[("PostgreSQL 15 (Supabase)<br/>Row-Level Security (RLS) on all tables")]
-        SupabaseStorage["Supabase Storage S3<br/>(Member Photos & KYC Docs)"]
-        Razorpay["Razorpay Gateway<br/>(HMAC SHA-256 Webhooks)"]
-        WhatsAppAPI["Meta WhatsApp Cloud API<br/>(Templates & Webhooks)"]
+    subgraph DatabaseCloud["Cloud Data & Storage (Supabase)"]
+        SupaAuth["Supabase Authentication"]
+        SupaDB[("PostgreSQL with Row-Level Security<br/>17 Sequential Migrations")]
+        SupaStorage["Supabase Storage S3<br/>(Member Photos & KYC Documents)"]
     end
 
-    BrowserKiosk <--> ClientAI
-    BrowserKiosk -->|HTTPS / JSON| Middleware
-    MemberPWA -->|HTTPS / JSON| Middleware
-    OwnerDash -->|HTTPS / JSON| Middleware
-    SuperAdminDash -->|HTTPS / JSON| Middleware
+    CCTVCams -->|RTSP H.264| CCTVEdge
+    CCTVEdge -->|HTTPS Webhook| CFTunnel
+    CFTunnel --> CCTVAPI
+    TabletKiosk -->|HTTPS / WSS| KioskAPI
+    BioUSB --> HWBridge
+    HWBridge --> AttendAPI
+    WebKiosk --> AttendAPI
 
-    Middleware --> RateLimiter --> APIRoutes
-    APIRoutes --> SupabaseAuth
-    APIRoutes --> SupabaseDB
-    APIRoutes --> SupabaseStorage
-    APIRoutes --> Razorpay
-    APIRoutes --> WhatsAppAPI
+    Middleware --> CCTVAPI & KioskAPI & AttendAPI & BillingAPI & MCPServer
+    CCTVAPI & KioskAPI & AttendAPI & BillingAPI --> SupaAuth & SupaDB & SupaStorage
 ```
 
 ---
 
-## 👁️ In-Browser AI Face Recognition (Zero-Install)
+## 🚀 Step-by-Step Production Deployment Guide
 
-The face recognition system operates **100% inside the client's web browser** using hardware-accelerated WebGL and WebAssembly. No Python scripts, native drivers, or desktop binaries are required.
+You can deploy GymERP using any of the following 4 methods depending on your infrastructure:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Member as Gym Member
-    participant Camera as Reception Webcam (Chrome)
-    participant Engine as @vladmandic/face-api (Client-Side)
-    participant Matcher as Euclidean Vector Matcher
-    participant LocalDB as IndexedDB (Offline Storage)
-    participant API as GymERP API (/api/attendance/face-checkin)
-    participant DB as PostgreSQL (Supabase)
+### Method A: Vercel Cloud (Recommended for SaaS)
 
-    Note over Engine: Self-hosted models in /models/face/ loaded via WebGL
-    Member->>Camera: Walks in front of camera
-    Camera->>Engine: Raw video frames (8.3 FPS throttled)
-    Engine->>Engine: TinyFaceDetector locates bounding box
-    Engine->>Engine: Computes 128-float facial descriptor vector
-    Matcher->>LocalDB: Reads local gym member roster
-    Matcher->>Matcher: Computes Euclidean Distance (Threshold ≤ 0.50)
-    
-    alt Match Found (e.g. Member #042)
-        Matcher->>Camera: Visual bounding box + Member Name + Audio Chime
-        Matcher->>LocalDB: Queues attendance event immediately
-        Matcher->>API: POST /api/attendance/face-checkin
-        API->>DB: Check today's record & toggle Check-In / Check-Out
-        DB-->>API: Recorded successfully
-        API-->>LocalDB: Mark event synced
-    else No Match or Offline
-        Matcher->>Camera: Displays "Detecting..." / "No enrolled face matched"
-        Note over LocalDB: If network down, events buffer in IndexedDB and flush automatically on reconnect
-    end
-```
+1. **Fork or Clone Repository**:
+   ```bash
+   git clone https://github.com/prashantb2400/GYM-ERP-2.git
+   cd GYM-ERP-2
+   ```
 
-### Privacy & Biometric Architecture:
-* **Mathematical Descriptors Only**: Stored as a 128-element float array in `members.face_descriptor`. It is mathematically impossible to reconstruct a human face from this vector.
-* **DPDP 2023 Ready**: Captures explicit user consent (`consent_given_at`) before activation.
-* **Right to Erasure**: Dedicated `DELETE /api/members/:id/face-enroll` endpoint completely scrubs biometric descriptors.
+2. **Provision Supabase Project**:
+   - Go to [Supabase](https://supabase.com) and create a new project.
+   - Open **SQL Editor** and run migrations `001_initial.sql` through `017_cctv_and_vigilance.sql` in sequential order (or use `supabase db push`).
+
+3. **Deploy on Vercel**:
+   - Import the repository on [Vercel](https://vercel.com).
+   - Set the Framework Preset to **Next.js**.
+   - Configure Environment Variables (refer to [Environment Variables](#-environment-variables-reference)).
+   - Click **Deploy**.
+
+4. **Add Custom Domain & SSL**:
+   - In Vercel Project Settings > Domains, attach your custom domain (e.g. `app.yourgym.com`).
+   - SSL certificates are automatically provisioned.
 
 ---
 
-## 📱 Browser-Native QR Code Kiosk
+### Method B: Docker & Docker Compose (Full Stack with Edge Microservices)
 
-For gyms without webcams or for contact-free entry, GymERP provides a real-time QR attendance pipeline:
+Deploy the full stack including the Next.js app, CCTV edge service, and hardware bridge on a single server:
 
-```mermaid
-flowchart LR
-    subgraph MemberSide["Member Portal"]
-        A["Open PWA Dashboard"] --> B["Dynamic QR Pass<br/>(gym_token UUID)"]
-    end
+1. **Clone repository and configure environment files**:
+   ```bash
+   git clone https://github.com/prashantb2400/GYM-ERP-2.git
+   cd GYM-ERP-2
+   cp .env.example .env
+   cp cctv-service/.env.example cctv-service/.env
+   cp hardware-bridge/.env.example hardware-bridge/.env
+   ```
 
-    subgraph ReceptionSide["Reception Kiosk (Chrome)"]
-        B -.->|"Scans Pass"| C["Fullscreen Camera Kiosk<br/>(html5-qrcode)"]
-        C --> D["POST /api/attendance/qr-checkin"]
-    end
+2. **Edit root `.env` with your Supabase credentials**:
+   ```ini
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   CCTV_WEBHOOK_SECRET=your-secure-random-token
+   GEMINI_API_KEY=your-gemini-api-key
+   ```
 
-    subgraph ServerSide["Backend Engine"]
-        D --> E{"Validate Tenant<br/>& Member Status"}
-        E -->|Active| F["Log Attendance Record<br/>& Increment Stats"]
-        E -->|Inactive/Due| G["Display Alert Modal<br/>(Renewal Required)"]
-    end
+3. **Launch all containers**:
+   ```bash
+   docker compose up -d --build
+   ```
+
+4. **Verify running services**:
+   ```bash
+   docker compose ps
+   # Services running:
+   # nextjs-app       -> http://localhost:3000
+   # cctv-service     -> http://localhost:5001
+   # hardware-bridge  -> http://localhost:5002
+   # redis            -> http://localhost:6379
+   ```
+
+---
+
+### Method C: Linux VPS Deployment (Ubuntu / Debian + Nginx + PM2)
+
+For deployment on your own dedicated server or cloud VPS (DigitalOcean, AWS EC2, Hetzner):
+
+#### Step 1: Install Node.js 20+, Python 3.10+, and Nginx
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js 20 LTS
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs nginx git build-essential cmake
+
+# Install PM2 process manager
+sudo npm install -g pm2
+```
+
+#### Step 2: Clone and Build GymERP
+```bash
+cd /var/www
+sudo git clone https://github.com/prashantb2400/GYM-ERP-2.git gymerp
+sudo chown -R $USER:$USER /var/www/gymerp
+cd /var/www/gymerp
+
+# Install dependencies & build Next.js
+npm install
+cp .env.example .env.local
+nano .env.local  # Fill in your production Supabase & LLM keys
+npm run build
+```
+
+#### Step 3: Start Application with PM2
+```bash
+pm2 start npm --name "gymerp-web" -- start -- -p 3000
+pm2 save
+pm2 startup
+```
+
+#### Step 4: Configure Nginx Reverse Proxy with WebSocket Support
+Create `/etc/nginx/sites-available/gymerp`:
+
+```nginx
+server {
+    server_name app.yourgym.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Optional: Direct proxy to CCTV Edge Service
+    location /cctv-api/ {
+        proxy_pass http://127.0.0.1:5001/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+    }
+}
+```
+
+Enable site and configure SSL with Certbot:
+```bash
+sudo ln -s /etc/nginx/sites-available/gymerp /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+
+# Install free Let's Encrypt SSL
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d app.yourgym.com
 ```
 
 ---
 
-## 📂 Project Structure
+### Method D: Cloudflare Tunnel (Zero Port-Forwarding / Remote Webhooks)
+
+When hosting in a gym facility behind CGNAT or without a public static IP, Cloudflare Tunneling securely exposes the dashboard, tablet pairing, and WhatsApp webhooks:
+
+1. **Install cloudflared on the gym server**:
+   ```bash
+   curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+   sudo dpkg -i cloudflared.deb
+   ```
+
+2. **Authenticate with Cloudflare**:
+   ```bash
+   cloudflared tunnel login
+   ```
+
+3. **Create a tunnel**:
+   ```bash
+   cloudflared tunnel create gymerp-hub
+   ```
+
+4. **Configure `~/.cloudflared/config.yml`**:
+   ```yaml
+   tunnel: <TUNNEL_UUID>
+   credentials-file: /root/.cloudflared/<TUNNEL_UUID>.json
+
+   ingress:
+     - hostname: kiosk.yourgym.com
+       service: http://localhost:3000
+     - hostname: cctv.yourgym.com
+       service: http://localhost:5001
+     - service: http_status:404
+   ```
+
+5. **Route DNS and start tunnel as a background service**:
+   ```bash
+   cloudflared tunnel route dns gymerp-hub kiosk.yourgym.com
+   sudo cloudflared service install
+   sudo systemctl start cloudflared
+   ```
+
+Now your gym kiosks, CCTV edge microservice, and WhatsApp webhooks can communicate securely without router port-forwarding!
+
+---
+
+## 📹 Complete CCTV & Vigilance Integration Guide
+
+The CCTV system connects standard IP security cameras directly to GymERP for **live matrix surveillance** and **automated attendance fail-safe** (capturing members who bypass the reception kiosk).
 
 ```
-.
-├── public/
-│   ├── gymerp_app_logo.jpg         # Application logo branding
-│   └── models/face/                # Self-hosted TensorFlow.js face models
-│       ├── tiny_face_detector_model*
-│       ├── face_landmark_68_model*
-│       └── face_recognition_model*
-│
-├── src/
-│   ├── app/                        # Next.js 16 App Router
-│   │   ├── api/                    # Secure REST API Endpoints
-│   │   │   ├── attendance/         # Face roster, face check-in, QR check-in
-│   │   │   ├── cron/               # Timing-safe automated background tasks
-│   │   │   ├── members/            # Member management & biometric enrollment
-│   │   │   ├── payments/           # Razorpay order generation & webhooks
-│   │   │   ├── superadmin/         # Platform billing, MRR & impersonation
-│   │   │   └── whatsapp/           # Meta Cloud API broadcast & webhook
-│   │   ├── dashboard/              # Owner & Staff Admin Management Portal
-│   │   │   └── attendance/         # Attendance log, Face Kiosk & QR Kiosk
-│   │   ├── member/                 # Mobile-first Member Self-Service Portal
-│   │   └── superadmin/             # Multi-tenant Master SaaS Dashboard
-│   │
-│   ├── components/                 # React 19 UI Components
-│   │   ├── attendance/             # FaceEnrollmentModal & Kiosk controls
-│   │   ├── layout/                 # Navigation, Sidebars & Header bars
-│   │   └── ui/                     # Radix UI + Tailwind CSS primitives
-│   │
-│   ├── lib/
-│   │   ├── face-attendance/        # In-browser face recognition engine
-│   │   │   ├── matcher.ts          # Euclidean vector distance & confidence math
-│   │   │   ├── models.ts           # Model weight loader & memory manager
-│   │   │   ├── offline-db.ts       # IndexedDB roster & queue storage
-│   │   │   ├── sync.ts             # Online/offline queue flush mechanism
-│   │   │   └── types.ts            # Integration contract definitions
-│   │   ├── server/
-│   │   │   └── rate-limit.ts       # Sliding-window in-memory rate limiter
-│   │   ├── supabase/               # Server, client & admin Supabase connectors
-│   │   └── whatsapp/               # Meta Cloud API client & message templates
-│   │
-│   ├── test/                       # Vitest Automated Test Suite
-│   │   └── unit/                   # Vector math, formatters, QR, permissions
-│   └── types/                      # TypeScript schemas & DB definitions
-│
-├── supabase/
-│   └── migrations/                 # Sequential PostgreSQL RLS Schemas
-│       ├── 001_initial.sql
-│       ├── 002_v2_features.sql
-│       ├── 003_push_subscriptions.sql
-│       ├── 004_platform_subscriptions.sql
-│       ├── 005_qr_attendance.sql
-│       └── 006_in_browser_face_attendance.sql
-│
-├── next.config.ts                  # Hardened CSP, Permissions-Policy & Headers
-└── package.json                    # Dependencies & automation scripts
+┌────────────────────────────────────────────────────────────────────────┐
+│                        CCTV ATTENDANCE FLOW                            │
+│                                                                        │
+│   [ 📹 Entrance RTSP Camera ]                                          │
+│             │                                                          │
+│             ▼  (RTSP Stream H.264 @ 15fps)                             │
+│   [ 🐍 cctv-service / Edge Watchdog ]                                  │
+│             │                                                          │
+│             ├─► Detect Face -> Extract 128-d Vector                   │
+│             ├─► Compare Vector with Member Roster                     │
+│             │                                                          │
+│             ▼  (POST /api/cctv/webhook)                                │
+│   [ ⚡ GymERP Next.js Backend ]                                         │
+│             │                                                          │
+│             ├─► If Member Found -> Log Attendance (method: 'cctv')     │
+│             ├─► If Overdue / Expired -> Create Vigilance Triage Alert  │
+│             └─► If Unrecognized Person -> Log Unknown Visitor Snapshot │
+│             │                                                          │
+│             ▼                                                          │
+│   [ 🖥️ Owner Dashboard: /dashboard/cctv ]                             │
+│       • Live 1x1, 2x2, 3x3 Camera Grid                                 │
+│       • Realtime Auto-Attendance Log                                   │
+│       • One-Click "Convert Visitor to Lead"                            │
+└────────────────────────────────────────────────────────────────────────┘
 ```
+
+### 1. Supported Cameras & Protocol Requirements
+
+GymERP connects to any standard IP camera that exposes an **RTSP stream** (H.264 / H.265 / MJPEG):
+* **Hikvision**: `rtsp://admin:<password>@<camera-ip>:554/Streaming/Channels/101` (Main) or `/102` (Sub)
+* **CP Plus**: `rtsp://admin:<password>@<camera-ip>:554/cam/realmonitor?channel=1&subtype=0`
+* **Dahua**: `rtsp://admin:<password>@<camera-ip>:554/cam/realmonitor?channel=1&subtype=1`
+* **Uniview**: `rtsp://admin:<password>@<camera-ip>:554/unicast/c1/s0/live`
+* **TP-Link Tapo**: `rtsp://<account>:<password>@<camera-ip>:554/stream1`
+* **USB / V4L2 Webcams**: Supported on edge via `/dev/video0`.
+
+> **Recommendation**: For face detection and attendance, use the **Sub-stream** (e.g. 720p or 1080p @ 15fps). Sub-streams provide near-instant low-latency AI processing with minimal CPU overhead.
+
+---
+
+### 2. Adding Cameras in the GymERP Dashboard
+
+1. Log in to the GymERP Owner/Admin Dashboard.
+2. In the sidebar, click **CCTV & Vigilance** (or navigate to `/dashboard/cctv`).
+3. Click the **Add Camera** button in the top right.
+4. Fill in camera parameters:
+   - **Camera Name**: e.g. `Main Entrance Gate 1`
+   - **RTSP Stream URL**: e.g. `rtsp://admin:Pass123@192.168.1.108:554/Streaming/Channels/102`
+   - **Location**: e.g. `Lobby Entrance`
+   - **Target Branch**: Assign to a specific branch or Master HQ
+   - **Face Auto-Attendance**: Toggle **ON** (automatically logs attendance when enrolled member faces are detected)
+   - **Record Vigilance Events**: Toggle **ON** (captures snapshots of unknown visitors or defaulters)
+5. Click **Save Camera Feed**. The camera feed appears in the multi-view grid immediately.
+
+---
+
+### 3. Running the Edge Recognition Microservice (`cctv-service`)
+
+The edge service captures the RTSP feed, runs face detection using OpenCV and dlib, and delivers webhooks back to GymERP:
+
+```bash
+cd cctv-service
+
+# 1. Create Python Virtual Environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 2. Install Dependencies
+pip install -r requirements.txt
+
+# 3. Configure .env
+cp .env.example .env
+```
+
+Edit `cctv-service/.env`:
+```ini
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+GYMERP_WEBHOOK_URL=http://localhost:3000/api/cctv/webhook
+GYMERP_WEBHOOK_SECRET=your-shared-cctv-secret
+FACE_TOLERANCE=0.45
+LOG_LEVEL=INFO
+```
+
+Start the service:
+```bash
+uvicorn main:app --host 0.0.0.0 --port 5001 --reload
+```
+
+---
+
+### 4. CCTV Webhook Payload Contract
+
+The edge service sends event notifications to `/api/cctv/webhook`:
+
+```json
+POST /api/cctv/webhook
+Headers:
+  x-cctv-token: your-shared-cctv-secret
+  Content-Type: application/json
+
+Body:
+{
+  "camera_id": "c1f73b88-1234-4a21-9988-123456789abc",
+  "gym_id": "gym-hq-uuid",
+  "event_type": "auto_attendance",
+  "member_id": "member-uuid",
+  "confidence": 0.94,
+  "snapshot_url": "https://storage.supabase.co/cctv/snapshot-123.jpg",
+  "metadata": {
+    "camera_name": "Main Entrance",
+    "bounding_box": [120, 150, 280, 310]
+  }
+}
+```
+
+**Actions Executed by GymERP**:
+* **`auto_attendance`**: Marks attendance for the member with `method: 'cctv'`. If already checked in today, ignores duplicates cleanly.
+* **`unknown_visitor`**: Adds an entry to the Vigilance Triage feed. Staff can click **"Create Lead"** to start an automated WhatsApp guest pass.
+* **`expired_member`**: Flags the check-in and triggers an automated WhatsApp renewal link to the member.
+* **`due_defaulter`**: Displays an overdue indicator on the reception topbar.
+
+---
+
+## 📱 Autonomous AI Voice Tablet Kiosk Setup
+
+GymERP features an autonomous voice kiosk interface for lobby Android tablets (`/kiosk/agent`):
+* **Circular Voice Water Animation**: Visual audio waveform response that expands, ripples, and pulses dynamically during speech.
+* **Zero-Password Hardware Pairing**: Pair any tablet in 5 seconds using a 6-character short code without revealing gym credentials.
+* **Continuous Vision Watchdog**: Hardware-accelerated client-side face recognition checks in members as they step in front of the tablet.
+* **Automated Voice Registration & KYC**: Speech assistant conducts member registration, captures ID proof photos, and extracts details via server OCR.
+
+```
+┌───────────────────────────────────────────────────────────┐
+│              ZERO-PASSWORD TABLET PAIRING                 │
+├─────────────────────────────┬─────────────────────────────┤
+│ 1. Open Tablet Browser      │ 2. Authorize in Dashboard   │
+│                             │                             │
+│ Navigate to:                │ Open GymERP Dashboard >     │
+│ https://app.yourgym.com/    │ Settings > Kiosk Tablets.   │
+│ kiosk/agent                 │                             │
+│                             │ Click "Pair New Tablet".    │
+│ Screen displays code:       │ Type 6-char code:           │
+│ ┌───────────────────────┐   │ ┌───────────────────────┐   │
+│ │        K 9 X 2 P 4    │   │ │       [ K9X2P4 ]      │   │
+│ └───────────────────────┘   │ └───────────────────────┘   │
+│                             │                             │
+│ The tablet is paired instantly and authorized permanently! │
+└─────────────────────────────┴─────────────────────────────┘
+```
+
+### Steps to Deploy on an Android Tablet:
+
+1. **Hardware Recommendation**:
+   - Any Android tablet (Samsung Galaxy Tab A8/A9, Lenovo M10, Xiaomi Pad, or Amazon Fire HD 10).
+   - Minimum 3GB RAM, Android 10+, Front Camera 5MP+.
+
+2. **Kiosk Lockdown (Prevent App Tampering)**:
+   - Install **Fully Kiosk Browser** from Google Play Store.
+   - Set Start URL to: `https://app.yourgym.com/kiosk/agent`.
+   - Enable:
+     - *Kiosk Mode* (disables status bar, home button, back button).
+     - *Webcam & Microphone Autostart Permission*.
+     - *Keep Screen On while plugged in*.
+
+3. **Pair Tablet**:
+   - The tablet displays a 6-character pairing code (e.g. `K9X2P4`).
+   - Log into your GymERP Owner Dashboard on your computer or phone.
+   - Go to **Settings > Self-Kiosk & AI Voice Tablets**.
+   - Click **Pair New Tablet**, select the branch location, enter the code, and click **Authorize Tablet**.
+   - The tablet instantly switches to active mode and begins autonomous operation!
+
+4. **Configuring Thermal Receipt & Invoice Printer**:
+   - Connect any standard **80mm USB / Bluetooth ESC/POS printer** (Epson, TVS, Rongta, NGX).
+   - In Fully Kiosk Browser settings, enable *Direct Thermal ESC/POS USB Printing*.
+   - When a new member registers or pays dues via the tablet, GymERP prints their tax invoice and personalized diet plan automatically.
+
+---
+
+## 🤖 Model Context Protocol (MCP) Server
+
+GymERP includes an **MCP Server** (`mcp-server/`) allowing AI assistants (Claude Desktop, Cursor, DeepMind Antigravity, Custom LLM Agents) to manage the gym via standardized tools:
+
+### Available MCP Tools
+
+| Tool Name | Parameters | Purpose |
+| :--- | :--- | :--- |
+| `get_attendance_stats` | `gym_id`, `branch_id`, `date` | Fetch real-time attendance counts and hourly breakdown |
+| `search_members` | `gym_id`, `query`, `status` | Query member profiles, dues, phone numbers, and validity |
+| `create_member` | `gym_id`, `name`, `phone`, `plan_id` | Enroll new gym members with automatic code generation |
+| `log_cctv_event` | `camera_id`, `member_id`, `event_type` | Post synthetic or camera vigilance events into the triage queue |
+| `list_cameras` | `gym_id`, `branch_id` | View configured CCTV cameras and online status |
+| `generate_invoice` | `gym_id`, `member_id`, `amount`, `gst` | Issue GST-compliant invoice and return download link |
+
+### Running the MCP Server
+
+```bash
+cd mcp-server
+npm install
+npm run build
+node dist/index.js
+```
+
+Or connect it to Claude Desktop / Cursor in `mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "gymerp": {
+      "command": "node",
+      "args": ["/var/www/gymerp/mcp-server/dist/index.js"],
+      "env": {
+        "SUPABASE_URL": "https://your-project.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "your-service-role-key"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 🗄️ Database Migrations Reference
+
+GymERP uses 17 sequential PostgreSQL migrations located in `supabase/migrations/`:
+
+| Migration | File | Description |
+| :---: | :--- | :--- |
+| **001** | `001_initial.sql` | Core schema: gyms, users, members, plans, invoices, attendance, RLS policies |
+| **002** | `002_v2_features.sql` | Expenses, inventory, diet charts, exercise routines, KYC documents |
+| **003** | `003_push_subscriptions.sql` | Web Push notification subscriptions and delivery queue |
+| **004** | `004_platform_subscriptions.sql` | SaaS billing tiers, Super Admin metrics, platform invoices |
+| **005** | `005_qr_attendance.sql` | Member dynamic QR tokens (`gym_token`) and kiosk methods |
+| **006** | `006_in_browser_face_attendance.sql` | 128-d biometric descriptor array and DPDP consent tracking |
+| **007** | `007_branch_isolation.sql` | Multi-branch gym isolation, branch managers, branch-scoped RLS |
+| **008** | `008_fix_users_recursion.sql` | Optimized RLS helper functions eliminating recursive policy checks |
+| **009** | `009_storage_buckets.sql` | S3 storage buckets: avatars, member-photos, kyc-documents, invoices |
+| **010** | `010_qr_and_face_biometrics.sql` | Check-in constraints, liveness metrics, and duplicate windows |
+| **011** | `011_fix_users_infinite_recursion.sql` | High-concurrency RLS policy optimizations for tenant isolation |
+| **012** | `012_fingerprint_biometrics.sql` | Minutiae template storage for Mantra MFS100 / SecuGen devices |
+| **013** | `013_leads.sql` | Sales pipeline CRM, lead capture, trial visits, follow-up scheduler |
+| **014** | `014_admission_fee.sql` | One-time registration fees, invoice breakdowns, GST calculations |
+| **015** | `015_staff_access_hardening.sql` | Granular permission arrays (`cctv.view`, `settings.manage`, etc.) |
+| **016** | `016_kiosk_device_pairings.sql` | 6-char pairing tokens, tablet device registration, device heartbeats |
+| **017** | `017_cctv_and_vigilance.sql` | `cctv_cameras`, `vigilance_events`, RTSP parameters, `cctv` method |
+
+Apply all migrations at once via Supabase CLI:
+```bash
+supabase db push
+```
+
+---
+
+## 🔑 Environment Variables Reference
+
+| Variable Name | Required | Description | Example / Default |
+| :--- | :---: | :--- | :--- |
+| `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Supabase Project API URL | `https://xyz.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Supabase Public Anonymous Key | `eyJhbGciOi...` |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase Service Role Key (Server-Only) | `eyJhbGciOi...` |
+| `NEXT_PUBLIC_APP_URL` | **Yes** | Public canonical URL of your GymERP app | `https://app.yourgym.com` |
+| `GEMINI_API_KEY` | Optional | Google Gemini API Key for Voice Kiosk & OCR | `AIzaSy...` |
+| `OPENAI_API_KEY` | Optional | Alternative LLM Key for Voice Agent | `sk-...` |
+| `CCTV_WEBHOOK_SECRET` | Optional | Shared token between `cctv-service` & Next.js | `openssl rand -hex 32` |
+| `RAZORPAY_KEY_ID` | Optional | Razorpay Merchant Key for online fees | `rzp_live_...` |
+| `RAZORPAY_KEY_SECRET` | Optional | Razorpay Secret for webhook signature verification | `...` |
+| `WHATSAPP_TOKEN` | Optional | Meta WhatsApp Cloud API access token | `EAAx...` |
+| `WHATSAPP_PHONE_NUMBER_ID` | Optional | Meta WhatsApp Business Phone Number ID | `10599283...` |
+| `CRON_SECRET` | Optional | Bearer secret for automated midnight crons | `openssl rand -hex 32` |
 
 ---
 
 ## 🔒 Security & Compliance
 
-GymERP implements a comprehensive, defense-in-depth security model:
-
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                                 DEFENSE-IN-DEPTH MATRIX                                │
-├───────────────────────────┬────────────────────────────────────────────────────────────┤
-│ 🛡️ BOLA Prevention        │ Server-side tenant isolation via users table; prevents    │
-│                           │ cross-gym member, descriptor, or check-in spoofing.        │
-├───────────────────────────┼────────────────────────────────────────────────────────────┤
-│ ⏱️ Timing Attack Defense  │ Constant-time crypto.timingSafeEqual for Razorpay webhooks,│
-│                           │ CCTV auth tokens, Meta signatures, and Cron secrets.       │
-├───────────────────────────┼────────────────────────────────────────────────────────────┤
-│ 🚦 API Rate Limiting      │ In-memory sliding window limiter protecting sensitive      │
-│                           │ attendance, enrollment, and messaging endpoints from DoS.  │
-├───────────────────────────┼────────────────────────────────────────────────────────────┤
-│ 🗄️ Database Row Security   │ PostgreSQL RLS enabled across all tables; tenant isolation │
-│                           │ enforced by Postgres user contexts.                        │
-├───────────────────────────┼────────────────────────────────────────────────────────────┤
-│ 🌐 Header Hardening       │ Strict CSP with wasm-unsafe-eval, worker-src 'self' blob:, │
-│                           │ Permissions-Policy: camera=(self), and X-Frame-Options: DENY.│
-└───────────────────────────┴────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-* **Node.js**: `v20.x` or higher
-* **npm** / **pnpm** / **bun**
-* **Supabase Project**: Free or Pro Supabase PostgreSQL instance
-
----
-
-### 1. Clone & Install Dependencies
-
-```bash
-git clone https://github.com/prashantb2400/GYM-ERP-2.git
-cd GYM-ERP-2
-
-# Install dependencies
-npm install
-```
-
----
-
-### 2. Configure Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```bash
-cp .env.example .env.local
-```
-
-Key environment configurations:
-
-| Variable | Description | Source / Usage |
-| :--- | :--- | :--- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project API URL | Supabase Dashboard > API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase Key | Supabase Dashboard > API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Admin Secret Key | Supabase Dashboard > API |
-| `RAZORPAY_KEY_ID` | Razorpay Merchant Key | Razorpay Dashboard |
-| `RAZORPAY_KEY_SECRET` | Razorpay Secret | Razorpay Dashboard |
-| `WHATSAPP_TOKEN` | Meta Graph API System Token | Meta Developers Console |
-| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Business Phone ID | Meta Developers Console |
-| `WHATSAPP_APP_SECRET` | Meta App Secret for Webhooks | Meta Developers Console |
-| `CRON_SECRET` | Secret for Cron Authorization | `openssl rand -hex 32` |
-| `ENABLE_DEMO_SEED` | Safe flag for demo seeding | Set to `true` only for dev |
-
----
-
-### 3. Apply Database Migrations
-
-Apply sequential PostgreSQL migrations in order:
-
-```bash
-# Using Supabase CLI
-supabase db push
-
-# Or run migrations 001 through 006 sequentially in Supabase SQL Editor:
-# 001_initial.sql
-# 002_v2_features.sql
-# 003_push_subscriptions.sql
-# 004_platform_subscriptions.sql
-# 005_qr_attendance.sql
-# 006_in_browser_face_attendance.sql
-```
-
----
-
-### 4. Run Development Server
-
-```bash
-npm run dev
-```
-
-Visit `http://localhost:3000` to launch GymERP.
+* **DPDP Act 2023 Compliance**: Biometric facial descriptors are stored as mathematical vectors only. Raw camera images are never stored permanently unless explicitly captured as part of temporary security vigilance. Members have an immediate **Right to Erasure** button.
+* **BOLA-Hardened Tenant Boundaries**: Every API endpoint validates that the target `gym_id` matches the authenticated user context. Cross-gym spoofing is rejected at the database and middleware layers.
+* **Constant-Time HMAC Verification**: Webhooks for Razorpay, WhatsApp, and CCTV edge ingestion use constant-time cryptographic verification (`crypto.timingSafeEqual`) to prevent side-channel timing attacks.
+* **Encrypted Secrets**: Kiosk tablet pairing codes expire automatically in 15 minutes, and LLM API keys are never bundled into client JavaScript.
 
 ---
 
 ## 🧪 Testing & Automated Verification
 
-GymERP comes with unit and integration tests powered by **Vitest**:
+GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run unit tests
+# Run unit & integration test suite (30 test suites, 240 tests)
 npm test
 
-# Run TypeScript typecheck
+# Run TypeScript compiler verification
 npx tsc --noEmit
 
 # Run ESLint validation
@@ -377,5 +601,5 @@ npm run build
 This project is licensed under the [MIT License](LICENSE).
 
 <div align="center">
-  <sub>Engineered with precision for gym owners, coaches, and fitness communities worldwide.</sub>
+  <sub>GymERP — Empowering gym owners with autonomous AI and unified biometric intelligence.</sub>
 </div>
