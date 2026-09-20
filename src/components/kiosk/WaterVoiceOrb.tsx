@@ -42,6 +42,10 @@ export function WaterVoiceOrb({
     canvas.height = size * dpr;
     ctx.scale(dpr, dpr);
 
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     let time = 0;
 
     // Particles for droplet ripple effects
@@ -215,8 +219,9 @@ export function WaterVoiceOrb({
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.restore();
-
-      animRef.current = requestAnimationFrame(render);
+      if (!prefersReducedMotion) {
+        animRef.current = requestAnimationFrame(render);
+      }
     };
 
     render();

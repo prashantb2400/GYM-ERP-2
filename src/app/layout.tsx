@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'GymERP — Enterprise Gym Management Platform',
+  title: 'GymERP: Enterprise Gym Operating System',
   description: 'Automated membership management, billing, notifications, and analytics SaaS for gyms.',
 };
 
