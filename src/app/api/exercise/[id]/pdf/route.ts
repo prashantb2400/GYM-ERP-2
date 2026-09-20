@@ -3,11 +3,18 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { generateExercisePlanHTML } from '@/lib/pdf/exercise-template';
 import { ExercisePlanData, WorkoutDay, Exercise } from '@/lib/pdf/types';
 
+import { getAuthUser } from '@/lib/server/auth-helper';
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, error: authErr } = await getAuthUser(request);
+    if (!user || authErr) {
+      return new NextResponse('Unauthorized: Valid session required to view exercise routine', { status: 401 });
+    }
+
     const { id } = await params;
     const planId = id;
 
@@ -35,6 +42,39 @@ export async function GET(
     }
 
     const gymId = chart?.gym_id || memberData?.gym_id;
+
+    if (!chart && !memberData) {
+      return new NextResponse('Exercise plan not found', { status: 404 });
+    }
+
+    // Verify caller belongs to this gym or is the member themselves
+    const { data: callerUser } = await supabaseAdmin
+      .from('users')
+      .select('gym_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    const { data: callerMember } = await supabaseAdmin
+      .from('members')
+      .select('id, gym_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    const isOwnerOrStaff = callerUser && callerUser.gym_id === gymId;
+    const isSelf = callerMember && (callerMember.id === memberData?.id || callerMember.gym_id === gymId);
+
+    if (!isOwnerOrStaff && !isSelf) {
+      const { data: ownedGym } = await supabaseAdmin
+        .from('gyms')
+        .select('id')
+        .eq('id', gymId)
+        .eq('owner_id', user.id)
+        .maybeSingle();
+
+      if (!ownedGym) {
+        return new NextResponse('Forbidden: You do not have access to this workout plan', { status: 403 });
+      }
+    }
 
     // 2. Resolve Gym Profile
     let gymProfile = gymRecord;

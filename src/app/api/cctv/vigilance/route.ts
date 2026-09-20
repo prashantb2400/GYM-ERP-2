@@ -92,6 +92,27 @@ export async function PATCH(request: Request) {
       );
     }
 
+    // Resolve caller's gym_id
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('gym_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    let gymId = userData?.gym_id;
+    if (!gymId) {
+      const { data: ownedGym } = await supabaseAdmin
+        .from('gyms')
+        .select('id')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+      gymId = ownedGym?.id;
+    }
+
+    if (!gymId) {
+      return NextResponse.json({ error: 'No gym workspace found' }, { status: 403 });
+    }
+
     const { data: updated, error: updErr } = await supabaseAdmin
       .from('vigilance_events')
       .update({
@@ -99,10 +120,13 @@ export async function PATCH(request: Request) {
         metadata: notes ? { notes } : undefined,
       })
       .eq('id', eventId)
+      .eq('gym_id', gymId)
       .select()
       .single();
 
-    if (updErr) throw updErr;
+    if (updErr || !updated) {
+      return NextResponse.json({ error: 'Event not found or access denied' }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,

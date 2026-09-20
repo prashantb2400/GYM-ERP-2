@@ -3,11 +3,17 @@ import { headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { CRON_JOBS, executeCronJob } from '@/lib/cron/scheduler';
 
+import crypto from 'crypto';
+
 /** Verify the request is from Vercel Cron or an authorized admin call */
 function isCronAuthorized(authHeader: string | null): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false; // Must be set in production
-  return authHeader === `Bearer ${secret}`;
+  if (!secret || !authHeader) return false;
+  const expected = `Bearer ${secret}`;
+  const authBuf = Buffer.from(authHeader);
+  const expBuf = Buffer.from(expected);
+  if (authBuf.length !== expBuf.length) return false;
+  return crypto.timingSafeEqual(authBuf, expBuf);
 }
 
 export async function GET(request: Request) {

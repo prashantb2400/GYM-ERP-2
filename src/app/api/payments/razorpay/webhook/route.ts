@@ -9,10 +9,10 @@ export async function POST(request: Request) {
     
     // Verify Razorpay webhook signature
     const razorpaySignature = request.headers.get('x-razorpay-signature');
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    const keySecret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
     
     if (!keySecret) {
-      console.error('RAZORPAY_KEY_SECRET is not configured on the server');
+      console.error('RAZORPAY_WEBHOOK_SECRET or RAZORPAY_KEY_SECRET is not configured on the server');
       return NextResponse.json({ error: 'Webhook service not configured' }, { status: 503 });
     }
 
@@ -53,6 +53,7 @@ export async function POST(request: Request) {
         .from('payment_transactions')
         .select('*')
         .eq('razorpay_payment_id', paymentId)
+        .eq('gym_id', gymId)
         .single();
 
       if (existingTx && existingTx.status === 'captured') {
@@ -67,13 +68,15 @@ export async function POST(request: Request) {
           razorpay_signature: signature,
           status: 'captured',
         })
-        .eq('razorpay_order_id', orderId);
+        .eq('razorpay_order_id', orderId)
+        .eq('gym_id', gymId);
 
       // 2. Fetch the plan details to calculate dates
       const { data: planData } = await supabaseAdmin
         .from('plans')
         .select('*')
         .eq('id', planId)
+        .eq('gym_id', gymId)
         .single();
 
       if (!planData) {
@@ -90,6 +93,7 @@ export async function POST(request: Request) {
         .from('members')
         .select('*')
         .eq('id', memberId)
+        .eq('gym_id', gymId)
         .single();
 
       if (!memberData) {
@@ -106,7 +110,8 @@ export async function POST(request: Request) {
           status: 'active',
           total_paid_lifetime: Number(memberData.total_paid_lifetime || 0) + Number(planData.price),
         })
-        .eq('id', memberId);
+        .eq('id', memberId)
+        .eq('gym_id', gymId);
 
       if (memberUpdateErr) throw memberUpdateErr;
 
@@ -169,7 +174,8 @@ export async function POST(request: Request) {
       await supabaseAdmin
         .from('payment_transactions')
         .update({ invoice_id: newInvoice.id })
-        .eq('razorpay_order_id', orderId);
+        .eq('razorpay_order_id', orderId)
+        .eq('gym_id', gymId);
 
       // 6. Send automatic confirmation message via WhatsApp
       const cleanPhone = memberData.phone.replace(/\D/g, '');

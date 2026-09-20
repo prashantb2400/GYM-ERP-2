@@ -33,22 +33,25 @@ export async function GET(request: Request) {
       }
     }
 
-    // 2. If still not found, fallback to the latest active gym
+    // 2. Try resolving from paired device token header if available
     if (!gymId) {
-      const { data: anyGym } = await supabaseAdmin
-        .from('gyms')
-        .select('id')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const deviceToken = request.headers.get('x-device-token');
+      if (deviceToken) {
+        const { data: dev } = await supabaseAdmin
+          .from('kiosk_devices')
+          .select('gym_id')
+          .eq('device_token', deviceToken)
+          .eq('status', 'active')
+          .maybeSingle();
 
-      if (anyGym) {
-        gymId = anyGym.id;
+        if (dev?.gym_id) {
+          gymId = dev.gym_id;
+        }
       }
     }
 
     if (!gymId) {
-      return NextResponse.json({ error: 'No gym found to configure kiosk' }, { status: 404 });
+      return NextResponse.json({ error: 'gymId parameter or paired device token required' }, { status: 400 });
     }
 
     // Fetch gym data

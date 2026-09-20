@@ -30,6 +30,35 @@ export async function GET(
       return new NextResponse('Member not found', { status: 404 });
     }
 
+    // Verify caller has permission: either staff/owner in the same gym or the member themselves
+    const { data: callerUser } = await supabaseAdmin
+      .from('users')
+      .select('gym_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    const { data: callerMember } = await supabaseAdmin
+      .from('members')
+      .select('id, gym_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    const isOwnerOrStaff = callerUser && callerUser.gym_id === member.gym_id;
+    const isSelf = callerMember && callerMember.id === member.id;
+
+    if (!isOwnerOrStaff && !isSelf) {
+      const { data: ownedGym } = await supabaseAdmin
+        .from('gyms')
+        .select('id')
+        .eq('id', member.gym_id)
+        .eq('owner_id', user.id)
+        .maybeSingle();
+
+      if (!ownedGym) {
+        return new NextResponse('Forbidden: Access denied to member health report', { status: 403 });
+      }
+    }
+
     // Fetch gym details using admin client
     const { data: gymProfile } = await supabaseAdmin
       .from('gyms')

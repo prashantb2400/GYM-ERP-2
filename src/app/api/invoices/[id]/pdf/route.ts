@@ -7,11 +7,18 @@ import { getDietChoiceLabel, getFitnessLevelLabel } from '@/lib/fitness/plan-gen
 import { getBMICategory } from '@/lib/utils/format';
 
 
+import { getAuthUser } from '@/lib/server/auth-helper';
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, error: authErr } = await getAuthUser(request);
+    if (!user || authErr) {
+      return new NextResponse('Unauthorized: Valid session required to view invoice', { status: 401 });
+    }
+
     const { id } = await params;
     const invoiceId = id;
 
@@ -25,6 +32,36 @@ export async function GET(
     if (invoiceError || !invoice) {
       console.error('Invoice fetch error:', invoiceError);
       return new NextResponse('Invoice not found', { status: 404 });
+    }
+
+    // Verify caller has permission: either staff/owner in the same gym or the member themselves
+    const { data: callerUser } = await supabaseAdmin
+      .from('users')
+      .select('gym_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    const { data: callerMember } = await supabaseAdmin
+      .from('members')
+      .select('id, gym_id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    const isOwnerOrStaff = callerUser && callerUser.gym_id === invoice.gym_id;
+    const isSelf = callerMember && callerMember.id === invoice.member_id;
+
+    if (!isOwnerOrStaff && !isSelf) {
+      // Also check if user owns the gym
+      const { data: ownedGym } = await supabaseAdmin
+        .from('gyms')
+        .select('id')
+        .eq('id', invoice.gym_id)
+        .eq('owner_id', user.id)
+        .maybeSingle();
+
+      if (!ownedGym) {
+        return new NextResponse('Forbidden: You do not have access to this invoice', { status: 403 });
+      }
     }
 
     // Fetch gym details

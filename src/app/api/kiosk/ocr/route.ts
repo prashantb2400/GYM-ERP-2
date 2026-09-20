@@ -28,6 +28,9 @@ export async function POST(request: Request) {
     if (gymId && extracted.success) {
       try {
         const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+        if (cleanBase64.length > 10 * 1024 * 1024) {
+          return NextResponse.json({ error: 'Image payload exceeds 10MB limit' }, { status: 400 });
+        }
         const buffer = Buffer.from(cleanBase64, 'base64');
         const fileName = `${gymId}/kyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
 
@@ -39,10 +42,11 @@ export async function POST(request: Request) {
           });
 
         if (uploadData?.path) {
-          const { data: publicUrlData } = supabaseAdmin.storage
+          // Security: Generate short-lived signed URL instead of permanent public URL
+          const { data: signedUrlData } = await supabaseAdmin.storage
             .from('kyc-documents')
-            .getPublicUrl(uploadData.path);
-          documentUrl = publicUrlData?.publicUrl || null;
+            .createSignedUrl(uploadData.path, 3600);
+          documentUrl = signedUrlData?.signedUrl || null;
         }
       } catch (storageErr) {
         // Non-blocking: storage failure doesn't halt user registration

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAuthUser } from '@/lib/server/auth-helper';
+import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 
 export async function PATCH(
   request: Request,
@@ -11,6 +12,11 @@ export async function PATCH(
     const { user, error: authErr } = await getAuthUser(request);
     if (!user || authErr) {
       return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
+    }
+
+    const scope = await getBranchScope(user.id);
+    if (isBranchScopeError(scope)) {
+      return NextResponse.json({ error: scope.error }, { status: scope.status });
     }
 
     const body = await request.json();
@@ -30,10 +36,13 @@ export async function PATCH(
       .from('cctv_cameras')
       .update(updateData)
       .eq('id', id)
+      .eq('gym_id', scope.gymId)
       .select('*, branches(id, name)')
       .single();
 
-    if (updErr) throw updErr;
+    if (updErr || !updated) {
+      return NextResponse.json({ error: 'Camera not found or access denied' }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,
@@ -58,12 +67,22 @@ export async function DELETE(
       return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
-    const { error: delErr } = await supabaseAdmin
+    const scope = await getBranchScope(user.id);
+    if (isBranchScopeError(scope)) {
+      return NextResponse.json({ error: scope.error }, { status: scope.status });
+    }
+
+    const { data: deleted, error: delErr } = await supabaseAdmin
       .from('cctv_cameras')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('gym_id', scope.gymId)
+      .select('id')
+      .maybeSingle();
 
-    if (delErr) throw delErr;
+    if (delErr || !deleted) {
+      return NextResponse.json({ error: 'Camera not found or access denied' }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,

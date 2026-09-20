@@ -204,15 +204,23 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Protect API routes (except public webhooks, auth callbacks, and kiosk public endpoints)
-  if (path.startsWith('/api/') && 
-      !path.startsWith('/api/auth/') && 
-      !path.startsWith('/api/whatsapp/webhook') &&
-      !path.startsWith('/api/payments/razorpay/webhook') &&
-      !path.startsWith('/api/cron/') &&
-      !path.startsWith('/api/kiosk/')) {
-    
-    if (!user) {
+  // Protect API routes (except public webhooks, auth callbacks, edge hardware endpoints, and kiosk endpoints)
+  const isExcludedApiRoute = 
+    !path.startsWith('/api/') ||
+    path.startsWith('/api/auth/') || 
+    path.startsWith('/api/whatsapp/webhook') ||
+    path.startsWith('/api/payments/razorpay/webhook') ||
+    path.startsWith('/api/cctv/webhook') ||
+    path.startsWith('/api/settings/cctv-ping') ||
+    path.startsWith('/api/cron/') ||
+    path.startsWith('/api/kiosk/');
+
+  if (!isExcludedApiRoute) {
+    const authHeader = request.headers.get('authorization');
+    const hasBearerToken = authHeader?.startsWith('Bearer ');
+
+    // If no cookie session and no Bearer token in header, reject unauthenticated API requests
+    if (!user && !hasBearerToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }

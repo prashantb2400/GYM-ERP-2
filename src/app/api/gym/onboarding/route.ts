@@ -98,31 +98,6 @@ export async function POST(request: Request) {
 
     if (gymByOwner) {
       existingGym = gymByOwner;
-    } else if (contactEmail) {
-      const { data: gymByEmail } = await supabaseAdmin
-        .from('gyms')
-        .select('id, name')
-        .ilike('email', contactEmail)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (gymByEmail) {
-        existingGym = gymByEmail;
-      }
-    }
-
-    if (!existingGym) {
-      // Check for unowned gym (e.g. demo gym)
-      const { data: unownedGym } = await supabaseAdmin
-        .from('gyms')
-        .select('id, name')
-        .is('owner_id', null)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (unownedGym) {
-        existingGym = unownedGym;
-      }
     }
 
     if (existingGym) {

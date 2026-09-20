@@ -51,7 +51,13 @@ export async function GET(request: Request) {
     }
 
     // If no user found by auth_id, or if userData exists but has no gym_id, check by email
-    if ((!userData || !userData.gym_id) && authUser.email) {
+    const isEmailVerified = Boolean(
+      authUser.email_confirmed_at || 
+      authUser.confirmed_at || 
+      authUser.app_metadata?.provider === 'google'
+    );
+
+    if ((!userData || !userData.gym_id) && authUser.email && isEmailVerified) {
       const { data: userByEmail } = await supabaseAdmin
         .from('users')
         .select('*')
@@ -59,12 +65,15 @@ export async function GET(request: Request) {
         .maybeSingle();
 
       if (userByEmail) {
-        userData = userByEmail;
-        if (userByEmail.auth_id !== authUser.id) {
+        // Prevent hijacking: only link if auth_id was unassigned
+        if (!userByEmail.auth_id) {
           await supabaseAdmin
             .from('users')
             .update({ auth_id: authUser.id })
             .eq('id', userByEmail.id);
+          userData = { ...userByEmail, auth_id: authUser.id };
+        } else if (userByEmail.auth_id === authUser.id) {
+          userData = userByEmail;
         }
       }
     }
@@ -294,14 +303,16 @@ export async function GET(request: Request) {
       });
     }
 
-    // 4. Query members table for member portal
-    const cleanPhone = authUser.phone ? authUser.phone.replace(/\D/g, '').slice(-10) : null;
+    // 4. Query members table for member portal (only match verified channels)
+    const isPhoneVerified = Boolean(authUser.phone_confirmed_at);
+    const cleanPhone = (isPhoneVerified && authUser.phone) ? authUser.phone.replace(/\D/g, '').slice(-10) : null;
     let memberQuery = supabaseAdmin.from('members').select('*');
-    if (cleanPhone && authUser.email) {
+    
+    if (cleanPhone && authUser.email && isEmailVerified) {
       memberQuery = memberQuery.or(`auth_id.eq.${authUser.id},phone.eq.${cleanPhone},email.eq.${authUser.email}`);
     } else if (cleanPhone) {
       memberQuery = memberQuery.or(`auth_id.eq.${authUser.id},phone.eq.${cleanPhone}`);
-    } else if (authUser.email) {
+    } else if (authUser.email && isEmailVerified) {
       memberQuery = memberQuery.or(`auth_id.eq.${authUser.id},email.eq.${authUser.email}`);
     } else {
       memberQuery = memberQuery.eq('auth_id', authUser.id);
@@ -310,7 +321,7 @@ export async function GET(request: Request) {
     const { data: memberData } = await memberQuery.limit(1).maybeSingle();
 
     if (memberData) {
-      if (!memberData.auth_id) {
+      if (!memberData.auth_id && (isEmailVerified || isPhoneVerified)) {
         await supabaseAdmin.from('members').update({ auth_id: authUser.id }).eq('id', memberData.id);
       }
       const memberPayload: AuthMember = {

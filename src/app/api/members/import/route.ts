@@ -32,8 +32,8 @@ export async function POST(request: Request) {
       const { data: userRecord } = await supabaseAdmin
         .from('users')
         .select('permissions, role')
-        .eq('id', sessionUser.id)
-        .single();
+        .eq('auth_id', sessionUser.id)
+        .maybeSingle();
 
       const perms = (userRecord?.permissions as string[]) || [];
       if (!perms.includes('members.add') && !perms.includes('settings.manage')) {

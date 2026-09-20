@@ -1,12 +1,39 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
+import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`kiosk-lookup:${ip}`, 30, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many lookup requests. Please wait a moment.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } }
+      );
+    }
+
     const { gymId, query } = await request.json();
 
     if (!gymId || !query) {
       return NextResponse.json({ error: 'Missing gymId or query' }, { status: 400 });
+    }
+
+    // Optional kiosk device token verification
+    const deviceToken = request.headers.get('x-device-token');
+    if (deviceToken) {
+      const { data: dev } = await supabaseAdmin
+        .from('kiosk_devices')
+        .select('id, status')
+        .eq('device_token', deviceToken)
+        .eq('gym_id', gymId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (!dev) {
+        return NextResponse.json({ error: 'Unauthorized or deactivated kiosk device' }, { status: 401 });
+      }
     }
 
     const cleanQuery = String(query).trim();
@@ -43,12 +70,18 @@ export async function POST(request: Request) {
       .eq('is_active', true)
       .order('display_order', { ascending: true });
 
+    // Mask phone number for privacy display on public kiosk
+    const rawPhone = member.phone || '';
+    const maskedPhone = rawPhone.length >= 10
+      ? `${rawPhone.slice(0, 2)}******${rawPhone.slice(-2)}`
+      : '***';
+
     return NextResponse.json({
       member: {
         id: member.id,
         name: member.name,
         memberCode: member.member_code,
-        phone: member.phone,
+        phone: maskedPhone,
         status: member.status,
         photoUrl: member.photo_url,
         currentPlanName: (member.plans as any)?.name || 'Custom Plan',

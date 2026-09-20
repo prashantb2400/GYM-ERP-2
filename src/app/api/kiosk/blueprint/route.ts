@@ -2,12 +2,39 @@ import { NextResponse } from 'next/server';
 import { generateDietAndExerciseBlueprint, MemberFitnessProfile } from '@/lib/server/llm';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
+import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`kiosk-blueprint:${ip}`, 15, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded for AI blueprint generation. Please wait.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } }
+      );
+    }
+
     const { profile, memberId, gymId } = await request.json();
 
     if (!profile || !gymId) {
       return NextResponse.json({ error: 'Missing profile or gymId' }, { status: 400 });
+    }
+
+    // Optional kiosk device token verification
+    const deviceToken = request.headers.get('x-device-token');
+    if (deviceToken) {
+      const { data: dev } = await supabaseAdmin
+        .from('kiosk_devices')
+        .select('id, status')
+        .eq('device_token', deviceToken)
+        .eq('gym_id', gymId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (!dev) {
+        return NextResponse.json({ error: 'Unauthorized kiosk terminal' }, { status: 401 });
+      }
     }
 
     // 1. Generate blueprint (using secret server LLM or calibrated rules)

@@ -13,7 +13,7 @@
   [![FastAPI](https://img.shields.io/badge/CCTV_Edge-FastAPI_Python-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
   [![Docker](https://img.shields.io/badge/Docker-Compose_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
   [![MCP](https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge)](https://modelcontextprotocol.io/)
-  [![Vitest](https://img.shields.io/badge/Tests-30%2F30_Passing_(240_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+  [![Vitest](https://img.shields.io/badge/Tests-30%2F30_Passing_(248_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 
   <br />
 
@@ -80,8 +80,8 @@ flowchart TB
 
     subgraph DatabaseCloud["Cloud Data & Storage (Supabase)"]
         SupaAuth["Supabase Authentication"]
-        SupaDB[("PostgreSQL with Row-Level Security<br/>17 Sequential Migrations")]
-        SupaStorage["Supabase Storage S3<br/>(Member Photos & KYC Documents)"]
+        SupaDB[("PostgreSQL with Row-Level Security<br/>18 Sequential Migrations")]
+        SupaStorage["Supabase Storage S3<br/>(Private Buckets & Signed URLs)"]
     end
 
     CCTVCams -->|RTSP H.264| CCTVEdge
@@ -560,7 +560,8 @@ supabase db push
 | `OPENAI_API_KEY` | Optional | Alternative LLM Key for Voice Agent | `sk-...` |
 | `CCTV_WEBHOOK_SECRET` | Optional | Shared token between `cctv-service` & Next.js | `openssl rand -hex 32` |
 | `RAZORPAY_KEY_ID` | Optional | Razorpay Merchant Key for online fees | `rzp_live_...` |
-| `RAZORPAY_KEY_SECRET` | Optional | Razorpay Secret for webhook signature verification | `...` |
+| `RAZORPAY_KEY_SECRET` | Optional | Razorpay Key Secret | `...` |
+| `RAZORPAY_WEBHOOK_SECRET` | Optional | Razorpay Webhook Secret for signature validation | `...` |
 | `WHATSAPP_TOKEN` | Optional | Meta WhatsApp Cloud API access token | `EAAx...` |
 | `WHATSAPP_PHONE_NUMBER_ID` | Optional | Meta WhatsApp Business Phone Number ID | `10599283...` |
 | `CRON_SECRET` | Optional | Bearer secret for automated midnight crons | `openssl rand -hex 32` |
@@ -570,9 +571,11 @@ supabase db push
 ## 🔒 Security & Compliance
 
 * **DPDP Act 2023 Compliance**: Biometric facial descriptors are stored as mathematical vectors only. Raw camera images are never stored permanently unless explicitly captured as part of temporary security vigilance. Members have an immediate **Right to Erasure** button.
-* **BOLA-Hardened Tenant Boundaries**: Every API endpoint validates that the target `gym_id` matches the authenticated user context. Cross-gym spoofing is rejected at the database and middleware layers.
-* **Constant-Time HMAC Verification**: Webhooks for Razorpay, WhatsApp, and CCTV edge ingestion use constant-time cryptographic verification (`crypto.timingSafeEqual`) to prevent side-channel timing attacks.
-* **Encrypted Secrets**: Kiosk tablet pairing codes expire automatically in 15 minutes, and LLM API keys are never bundled into client JavaScript.
+* **BOLA-Hardened Tenant Boundaries**: Every API endpoint validates that the target `gym_id` matches the authenticated user context. Cross-gym spoofing is rejected at the database and middleware layers (`supabaseAdmin` queries explicitly scope `gym_id`).
+* **Private Storage & Signed URLs**: KYC buckets (`kyc`, `kyc-documents`) are completely private with tenant-scoped RLS policies. Documents are accessed exclusively via short-lived pre-signed URLs (60-minute expiry) to eliminate unauthorized data leaks.
+* **Constant-Time HMAC Verification**: Webhooks for Razorpay, WhatsApp, cron endpoints, and CCTV edge ingestion use constant-time cryptographic verification (`crypto.timingSafeEqual`) to eliminate side-channel timing attacks.
+* **Cryptographic Kiosk Pairing**: Kiosk pairing codes utilize CSPRNG (`crypto.randomInt`) with 15-minute TTL and IP rate-limiting to eliminate brute-force vector surfaces.
+* **Encrypted Secrets & Server-Side LLMs**: LLM API keys are kept strictly server-side and never exposed to the browser or kiosk client bundle.
 
 ---
 
@@ -581,7 +584,7 @@ supabase db push
 GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run unit & integration test suite (30 test suites, 240 tests)
+# Run unit & integration test suite (30 test suites, 248 tests)
 npm test
 
 # Run TypeScript compiler verification

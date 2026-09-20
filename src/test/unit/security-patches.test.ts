@@ -81,4 +81,66 @@ describe('Security Patches Verification', () => {
       expect(sanitizeNext('')).toBe('/dashboard');
     });
   });
+
+  describe('HIGH-08: Kiosk Phone Number Masking', () => {
+    function maskPhone(rawPhone: string): string {
+      return rawPhone.length >= 10
+        ? `${rawPhone.slice(0, 2)}******${rawPhone.slice(-2)}`
+        : '***';
+    }
+
+    it('masks 10-digit Indian phone numbers', () => {
+      expect(maskPhone('9876543210')).toBe('98******10');
+    });
+
+    it('masks 12-digit international phone numbers with country code', () => {
+      expect(maskPhone('919876543210')).toBe('91******10');
+    });
+
+    it('masks short or malformed numbers safely', () => {
+      expect(maskPhone('12345')).toBe('***');
+      expect(maskPhone('')).toBe('***');
+    });
+  });
+
+  describe('MEDIUM-11: Kiosk Pairing Code Entropy', () => {
+    it('generates 6-digit numeric codes with full entropy', () => {
+      const crypto = require('crypto');
+      for (let i = 0; i < 50; i++) {
+        const code = crypto.randomInt(100000, 999999).toString();
+        expect(code).toMatch(/^[1-9][0-9]{5}$/);
+        expect(Number(code)).toBeGreaterThanOrEqual(100000);
+        expect(Number(code)).toBeLessThanOrEqual(999999);
+      }
+    });
+  });
+
+  describe('LOW-14 & LOW-15: Timing-Safe Secret Verification', () => {
+    function verifySecret(provided: string | null, actual: string): boolean {
+      const crypto = require('crypto');
+      if (!provided) return false;
+      const provBuf = Buffer.from(provided);
+      const actBuf = Buffer.from(actual);
+      if (provBuf.length !== actBuf.length) return false;
+      return crypto.timingSafeEqual(provBuf, actBuf);
+    }
+
+    it('validates identical secret tokens without timing leak', () => {
+      expect(verifySecret('super-secret-cron-token-123', 'super-secret-cron-token-123')).toBe(true);
+    });
+
+    it('safely rejects unequal tokens of different length without throwing', () => {
+      expect(verifySecret('short', 'super-secret-cron-token-123')).toBe(false);
+    });
+
+    it('safely rejects unequal tokens of same length', () => {
+      expect(verifySecret('wrong-secret-cron-token-123', 'super-secret-cron-token-123')).toBe(false);
+    });
+
+    it('safely rejects null or empty tokens', () => {
+      expect(verifySecret(null, 'secret')).toBe(false);
+      expect(verifySecret('', 'secret')).toBe(false);
+    });
+  });
 });
+

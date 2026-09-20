@@ -11,7 +11,10 @@ export async function POST(request: Request) {
     const token = tokenFromHeader || body.token;
 
     // Verify CCTV auth token
-    const expectedToken = process.env.CCTV_AUTH_TOKEN || 'gymerp_cctv_edge_secret';
+    const expectedToken = process.env.CCTV_AUTH_TOKEN;
+    if (!expectedToken) {
+      return NextResponse.json({ error: 'CCTV webhook service not configured' }, { status: 503 });
+    }
     if (!token) {
       return NextResponse.json({ error: 'Missing authentication token' }, { status: 401 });
     }
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
     const expectedBuf = Buffer.from(expectedToken);
     const isValid = tokenBuf.length === expectedBuf.length && crypto.timingSafeEqual(tokenBuf, expectedBuf);
 
-    if (!isValid && process.env.NODE_ENV === 'production') {
+    if (!isValid) {
       return NextResponse.json({ error: 'Unauthorized edge handshake' }, { status: 401 });
     }
 
@@ -101,11 +104,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'memberId required for face_match' }, { status: 400 });
       }
 
-      // Fetch member profile
+      // Fetch member profile ensuring tenant isolation
       const { data: member, error: memErr } = await supabaseAdmin
         .from('members')
         .select('id, name, phone, status, expiry_date, member_code')
         .eq('id', memberId)
+        .eq('gym_id', gymId)
         .maybeSingle();
 
       if (memErr || !member) {

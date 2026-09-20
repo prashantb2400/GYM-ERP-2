@@ -2,17 +2,28 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import crypto from 'crypto';
 
+import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+
 function generatePairingCode(): string {
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Exclude 0, 1, I, O for readability
   let code = '';
   for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(crypto.randomInt(0, chars.length));
   }
   return `${code.slice(0, 3)}-${code.slice(3)}`;
 }
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`kiosk-pair-init:${ip}`, 15, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many pairing requests. Please wait a moment.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } }
+      );
+    }
+
     const pairingCode = generatePairingCode();
     const tempToken = `ktok_pending_${crypto.randomUUID()}`;
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
