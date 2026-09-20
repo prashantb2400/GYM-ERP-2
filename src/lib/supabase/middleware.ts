@@ -190,12 +190,13 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Protect API routes (except public webhooks and auth callbacks)
+  // Protect API routes (except public webhooks, auth callbacks, and kiosk public endpoints)
   if (path.startsWith('/api/') && 
       !path.startsWith('/api/auth/') && 
       !path.startsWith('/api/whatsapp/webhook') &&
       !path.startsWith('/api/payments/razorpay/webhook') &&
-      !path.startsWith('/api/cron/')) {
+      !path.startsWith('/api/cron/') &&
+      !path.startsWith('/api/kiosk/')) {
     
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

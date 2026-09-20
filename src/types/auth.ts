@@ -21,7 +21,8 @@ export type Permission =
   | 'expenses.view' | 'expenses.manage'
   | 'inventory.view' | 'inventory.manage'
   | 'branches.view' | 'branches.manage'
-  | 'cron.view' | 'cron.manage';
+  | 'cron.view' | 'cron.manage'
+  | 'cctv.view' | 'cctv.manage';
 
 export const DEFAULT_PERMISSIONS: Record<UserRole, Permission[]> = {
   owner: [
@@ -42,7 +43,8 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, Permission[]> = {
     'expenses.view', 'expenses.manage',
     'inventory.view', 'inventory.manage',
     'branches.view', 'branches.manage',
-    'cron.view', 'cron.manage'
+    'cron.view', 'cron.manage',
+    'cctv.view', 'cctv.manage'
   ],
   receptionist: [
     'members.view', 'members.add', 'members.edit',
@@ -53,7 +55,8 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, Permission[]> = {
     'due.view', 'due.collect',
     'whatsapp.send', 'kyc.view', 'plans.view',
     'expenses.view', 'expenses.manage',
-    'inventory.view', 'inventory.manage'
+    'inventory.view', 'inventory.manage',
+    'cctv.view', 'cctv.manage'
   ],
   trainer: [
     'members.view',

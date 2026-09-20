@@ -5,7 +5,7 @@ import time
 from typing import Optional
 from app.face_engine import FaceEngine
 from app.websocket_manager import WebSocketManager
-from app.supabase_client import save_attendance, get_supabase
+from app.supabase_client import save_attendance, save_unknown_visitor, get_supabase
 from app.config import settings
 from models.camera import CameraStatus, CameraStream
 import base64
@@ -130,6 +130,7 @@ class CameraManager:
                             else:
                                 # Unknown face
                                 snapshot_url = self._upload_snapshot(camera_id, frame)
+                                save_unknown_visitor(camera_id, snapshot_url)
                                 await self.ws_manager.emit_unknown_face(camera_id, snapshot_url)
                                 
                     await asyncio.sleep(0.01) # Yield to event loop

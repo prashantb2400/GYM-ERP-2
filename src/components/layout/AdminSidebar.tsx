@@ -29,6 +29,7 @@ import {
   Wallet,
   Package,
   Building2,
+  Cctv,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -41,6 +42,7 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   UserCog,
   Receipt,
   CalendarCheck,
+  Cctv,
   BarChart3,
   PhoneCall,
   IndianRupee,

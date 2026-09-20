@@ -25,6 +25,9 @@ import {
   UploadCloud,
   QrCode,
   CreditCard,
+  Tablet,
+  ExternalLink,
+  ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -44,6 +47,7 @@ import {
 import { MemberImportModal } from '@/components/members/MemberImportModal';
 import { downloadMemberImportTemplate } from '@/lib/members/template-generator';
 import { fetchWithAuth } from '@/lib/utils/api-client';
+import { KioskPairingModal } from '@/components/kiosk/KioskPairingModal';
 
 export default function SettingsPage() {
   const supabase = createClient();
@@ -55,6 +59,12 @@ export default function SettingsPage() {
   const [gym, setGym] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
   const [importModalOpen, setImportModalOpen] = useState(false);
+
+  // Kiosk & Hardware states
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
+  const [kioskDevices, setKioskDevices] = useState<any[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+  const [pairModalOpen, setPairModalOpen] = useState(false);
 
   // Form states
   const [gymName, setGymName] = useState('');
@@ -201,8 +211,59 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchBranches = async () => {
+    if (!user?.gymId) return;
+    try {
+      const { data } = await supabase
+        .from('branches')
+        .select('id, name')
+        .eq('gym_id', user.gymId);
+      if (data) setBranches(data);
+    } catch (err) {
+      console.warn('Failed to load branches for kiosk pairing:', err);
+    }
+  };
+
+  const fetchKioskDevices = async () => {
+    if (!user?.gymId) return;
+    try {
+      setLoadingDevices(true);
+      const res = await fetchWithAuth('/api/kiosk/pair/devices');
+      if (res.ok) {
+        const json = await res.json();
+        setKioskDevices(json.devices || []);
+      }
+    } catch (err) {
+      console.warn('Failed to load kiosk devices:', err);
+    } finally {
+      setLoadingDevices(false);
+    }
+  };
+
+  const handleRevokeDevice = async (deviceId: string, deviceName: string) => {
+    if (!confirm(`Revoke access for "${deviceName}"? The tablet will be immediately disconnected and returned to the pairing screen.`)) {
+      return;
+    }
+    try {
+      const res = await fetchWithAuth('/api/kiosk/pair/devices', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to revoke device');
+      toast.success(`Tablet "${deviceName}" revoked successfully`);
+      fetchKioskDevices();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Revocation failed';
+      toast.error(msg);
+    }
+  };
+
   useEffect(() => {
     fetchGymSettings();
+    fetchBranches();
+    fetchKioskDevices();
   }, [user?.gymId]);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -527,6 +588,134 @@ export default function SettingsPage() {
         </div>
       </form>
 
+      {/* Connected Kiosk Tablets & AI Voice Hardware Card */}
+      <Card className="border-zinc-800 bg-zinc-900/30">
+        <CardHeader className="pb-3 border-b border-zinc-800/40">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-indigo-950/60 border border-indigo-800/60 flex items-center justify-center text-indigo-400">
+                <Tablet className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-sm font-bold text-zinc-100">Self-Kiosk & AI Voice Tablets</CardTitle>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                    Zero-Password Auth
+                  </span>
+                </div>
+                <CardDescription className="text-xs text-zinc-400 mt-0.5">
+                  Pair lobby Android tablets running the Voice Water AI interface. Authorize devices securely using 6-character codes without typing gym passwords.
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href="/kiosk/agent" target="_blank">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  className="border-zinc-800 text-zinc-300 hover:text-white text-xs gap-1.5"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 text-zinc-400" />
+                  Launch Agent UI
+                </Button>
+              </Link>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setPairModalOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-8 px-3 gap-1.5 shadow-sm"
+              >
+                <Tablet className="h-3.5 w-3.5" />
+                Pair New Tablet
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4">
+          {loadingDevices ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+            </div>
+          ) : kioskDevices.length === 0 ? (
+            <div className="text-center py-8 px-4 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/30">
+              <Tablet className="h-8 w-8 text-zinc-600 mx-auto mb-2" />
+              <p className="text-xs font-semibold text-zinc-300">No Kiosk Tablets Paired Yet</p>
+              <p className="text-[11px] text-zinc-500 mt-1 max-w-md mx-auto">
+                Open GymERP on any Android tablet in your gym lobby, copy the 6-character pairing code shown on screen, and click <strong>Pair New Tablet</strong>.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-800/60 border border-zinc-800/60 rounded-xl overflow-hidden bg-zinc-950/20">
+              {kioskDevices.map((device) => {
+                const isActive = device.status === 'active';
+                const lastSeen = device.last_heartbeat_at
+                  ? new Date(device.last_heartbeat_at).toLocaleTimeString('en-IN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      day: 'numeric',
+                      month: 'short',
+                    })
+                  : 'Never';
+
+                return (
+                  <div
+                    key={device.id}
+                    className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-zinc-900/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                          isActive
+                            ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                            : 'bg-zinc-800 text-zinc-500'
+                        }`}
+                      >
+                        <Tablet className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-zinc-100">{device.device_name}</span>
+                          <span
+                            className={`inline-flex items-center gap-1 text-[9px] font-mono uppercase px-1.5 py-0.5 rounded border ${
+                              isActive
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                            }`}
+                          >
+                            <span className={`size-1.5 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
+                            {device.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-zinc-500 mt-0.5">
+                          <span>Branch: {device.branches?.name || 'All Branches'}</span>
+                          <span>•</span>
+                          <span>Heartbeat: {lastSeen}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      {isActive && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRevokeDevice(device.id, device.device_name)}
+                          className="text-xs text-red-400 hover:text-red-300 hover:bg-red-950/20 h-7 px-2.5 gap-1"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Revoke
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Data Migration & Bulk Member Import Card */}
       <Card className="border-zinc-800 bg-zinc-900/30">
         <CardHeader className="pb-3 border-b border-zinc-800/40">
@@ -629,6 +818,14 @@ export default function SettingsPage() {
         isOpen={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         existingPlans={plans}
+      />
+
+      {/* Kiosk Tablet Pairing Modal */}
+      <KioskPairingModal
+        open={pairModalOpen}
+        onOpenChange={setPairModalOpen}
+        branches={branches}
+        onPaired={fetchKioskDevices}
       />
     </div>
     </RequirePermission>

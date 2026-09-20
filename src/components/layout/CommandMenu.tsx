@@ -20,6 +20,7 @@ import {
   Clock,
   Settings,
   Sparkles,
+  Cctv,
 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -119,6 +120,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
     { label: 'Diet Charts', href: '/dashboard/diet', icon: Apple, permission: 'diet.view' as const },
     { label: 'Workout Plans', href: '/dashboard/exercise', icon: Dumbbell, permission: 'exercise.view' as const },
     { label: 'KYC Checks', href: '/dashboard/kyc', icon: FileCheck, permission: 'kyc.view' as const },
+    { label: 'CCTV & Vigilance', href: '/dashboard/cctv', icon: Cctv, permission: 'cctv.view' as const },
     { label: 'Settings', href: '/dashboard/settings', icon: Settings, permission: 'settings.manage' as const },
   ];
 

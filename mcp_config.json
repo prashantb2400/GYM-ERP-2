@@ -35,6 +35,21 @@
         "auto_approved": ["select_dev", "describe_table_dev"],
         "human_approval_required": ["drop_table", "truncate_table", "raw_delete", "production_access"]
       }
+    },
+    "gymerp": {
+      "command": "node",
+      "args": ["mcp-server/dist/index.js"],
+      "enabled": true,
+      "description": "GymERP SaaS operational intelligence: member management, attendance check-ins, GST billing, and lead CRM",
+      "permissions": {
+        "auto_approved": ["gym_search_members", "gym_get_member", "gym_get_attendance_logs", "gym_get_live_occupancy", "gym_list_plans", "gym_get_dues", "gym_list_leads", "gym_get_overview"],
+        "human_approval_required": ["gym_create_member", "gym_update_member", "gym_record_attendance", "gym_create_invoice", "gym_capture_lead", "gym_update_lead"]
+      },
+      "env": {
+        "NEXT_PUBLIC_SUPABASE_URL": "${NEXT_PUBLIC_SUPABASE_URL}",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}",
+        "GYMERP_GYM_ID": "${GYMERP_GYM_ID}"
+      }
     }
   }
 }

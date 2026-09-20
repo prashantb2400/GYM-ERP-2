@@ -1,0 +1,28 @@
+{
+  "name": "gym-erp-mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) Server for GymERP SaaS",
+  "main": "dist/index.js",
+  "bin": {
+    "gym-erp-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": ["mcp", "model-context-protocol", "gymerp", "ai-agent"],
+  "author": "GymERP Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "dotenv": "^17.4.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.0.0"
+  }
+}

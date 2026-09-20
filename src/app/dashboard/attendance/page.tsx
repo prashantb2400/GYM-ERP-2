@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranch } from '@/hooks/useBranch';
 import type { Member, Attendance } from '@/types/database';
-import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace, Fingerprint, FileSpreadsheet, QrCode } from 'lucide-react';
+import { Search, CheckCircle2, UserCheck, AlertTriangle, AlertCircle, Loader2, Calendar, Clock, Activity, Users, UserX, Camera, ScanFace, Fingerprint, FileSpreadsheet, QrCode, Sparkles } from 'lucide-react';
 import { exportToExcel } from '@/lib/export/excel-export';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
@@ -651,6 +651,13 @@ export default function AttendancePage() {
             <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
             Export Excel
           </Button>
+          <Link href="/kiosk" target="_blank">
+            <Button className="gap-2 shadow-xl bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-semibold border-0">
+              <Sparkles className="h-4 w-4 text-emerald-200" />
+              Self-Service Kiosk
+              <Badge className="bg-white/20 text-white text-[10px] px-1.5 py-0 border-0 ml-1">Lobby Touch</Badge>
+            </Button>
+          </Link>
           <Link href="/dashboard/attendance/face-kiosk">
             <Button className="gap-2 shadow-xl bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:via-indigo-500 hover:to-purple-500 text-white font-semibold border-0">
               <ScanFace className="h-4 w-4 text-cyan-200" />

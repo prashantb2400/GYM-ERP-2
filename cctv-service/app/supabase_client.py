@@ -16,22 +16,72 @@ def save_attendance(member_id: str, camera_id: str, confidence: float, snapshot_
         sb = get_supabase()
         today = datetime.now(timezone.utc).date().isoformat()
         
-        # Deduplication check
-        existing = sb.table("attendance").select("id").eq("member_id", member_id).gte("created_at", today).execute()
-        if existing.data and len(existing.data) > 0:
-            return False  # Already recorded today
+        # 1. Fetch member details
+        mem_res = sb.table("members").select("id, gym_id, branch_id, name, status, expiry_date, phone").eq("id", member_id).maybe_single().execute()
+        member = mem_res.data if mem_res else None
+        if not member:
+            return False
             
-        # Insert
-        sb.table("attendance").insert({
-            "member_id": member_id,
-            "camera_id": camera_id,
-            "confidence": confidence,
-            "snapshot_url": snapshot_url,
-            "method": "cctv"
-        }).execute()
+        gym_id = member.get("gym_id")
+        member_name = member.get("name", "Member")
+        branch_id = member.get("branch_id")
+        
+        # 2. Deduplication check
+        existing = sb.table("attendance").select("id").eq("gym_id", gym_id).eq("member_id", member_id).eq("date", today).execute()
+        if not (existing.data and len(existing.data) > 0):
+            # Insert attendance
+            sb.table("attendance").insert({
+                "gym_id": gym_id,
+                "member_id": member_id,
+                "member_name": member_name,
+                "date": today,
+                "confidence": confidence,
+                "snapshot_url": snapshot_url,
+                "device_id": camera_id,
+                "method": "cctv"
+            }).execute()
+            
+        # 3. Check if member plan is expired -> log vigilance alert
+        status = member.get("status")
+        exp_date = member.get("expiry_date")
+        is_expired = status == "expired" or (exp_date and exp_date < today)
+        if is_expired:
+            sb.table("vigilance_events").insert({
+                "gym_id": gym_id,
+                "branch_id": branch_id,
+                "camera_id": camera_id,
+                "event_type": "expired_member",
+                "member_id": member_id,
+                "member_name": member_name,
+                "confidence": confidence,
+                "snapshot_url": snapshot_url,
+                "status": "unresolved",
+                "metadata": {"phone": member.get("phone"), "expiry_date": exp_date}
+            }).execute()
+            
         return True
     except Exception as e:
         logger.error(f"Error saving attendance: {e}")
+        return False
+
+def save_unknown_visitor(camera_id: str, snapshot_url: str) -> bool:
+    try:
+        sb = get_supabase()
+        cam_res = sb.table("cctv_cameras").select("id, gym_id, branch_id").eq("id", camera_id).maybe_single().execute()
+        if not cam_res or not cam_res.data:
+            return False
+        cam = cam_res.data
+        sb.table("vigilance_events").insert({
+            "gym_id": cam.get("gym_id"),
+            "branch_id": cam.get("branch_id"),
+            "camera_id": camera_id,
+            "event_type": "unknown_visitor",
+            "snapshot_url": snapshot_url,
+            "status": "unresolved"
+        }).execute()
+        return True
+    except Exception as e:
+        logger.error(f"Error saving unknown visitor: {e}")
         return False
 
 def load_face_encodings() -> dict[str, np.ndarray]:
