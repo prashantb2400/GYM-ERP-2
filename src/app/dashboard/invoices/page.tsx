@@ -20,8 +20,8 @@ import {
   CheckCircle,
   Activity,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, DoubleBezelCard } from '@/components/ui/card';
+import { Button, ButtonIslandIcon } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -320,25 +320,25 @@ export default function InvoicesPage() {
       </div>
 
       {/* Filter Bar */}
-      <Card className="border-zinc-800 bg-zinc-900/40 p-4">
-        <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+      <DoubleBezelCard className="p-1" innerClassName="p-3 bg-zinc-950/80 rounded-xl">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
             <Input
               placeholder="Search by invoice number or member name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 border-zinc-800 bg-zinc-950 text-zinc-100 placeholder:text-zinc-700"
+              className="pl-10 border-border/80 bg-zinc-950 text-zinc-100 placeholder:text-zinc-600 rounded-lg text-xs h-9"
             />
           </div>
 
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-2.5 items-center">
             <div className="w-[150px]">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-100 text-xs">
+                <SelectTrigger className="border-border/80 bg-zinc-950 text-zinc-100 text-xs rounded-lg h-9">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100 text-xs">
+                <SelectContent className="bg-zinc-900 border-border/80 text-zinc-100 text-xs">
                   <SelectItem value="all">All Invoices</SelectItem>
                   <SelectItem value="paid">Paid Only</SelectItem>
                   <SelectItem value="partial">Partial Dues</SelectItem>
@@ -347,50 +347,50 @@ export default function InvoicesPage() {
               </Select>
             </div>
 
-            <Button type="submit" variant="secondary" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-4 h-9">
+            <Button type="submit" variant="secondary" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs px-4 h-9 rounded-lg">
               Apply Filter
             </Button>
           </div>
         </form>
-      </Card>
+      </DoubleBezelCard>
 
       {/* Invoices List Table */}
-      <Card className="border-zinc-800 bg-zinc-900/40 overflow-hidden relative">
+      <DoubleBezelCard className="p-1" innerClassName="p-0 overflow-hidden rounded-xl bg-zinc-950/80 relative">
         <BorderBeam />
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
           </div>
         ) : invoices.length === 0 ? (
-          <div className="text-center py-20 text-zinc-500">No invoices generated yet.</div>
+          <div className="text-center py-20 text-zinc-500 text-xs font-mono">No invoices generated yet.</div>
         ) : (
           <Table>
-            <TableHeader className="bg-zinc-900/60 border-zinc-800">
-              <TableRow className="border-zinc-800">
-                <TableHead className="text-zinc-400 font-semibold text-xs">Invoice #</TableHead>
-                <TableHead className="text-zinc-400 font-semibold text-xs">Member Name</TableHead>
-                <TableHead className="text-zinc-400 font-semibold text-xs">Issue Date</TableHead>
-                <TableHead className="text-zinc-400 font-semibold text-xs">Total Bill</TableHead>
-                <TableHead className="text-zinc-400 font-semibold text-xs">Amt Paid</TableHead>
-                <TableHead className="text-zinc-400 font-semibold text-xs">Outstanding</TableHead>
-                <TableHead className="text-zinc-400 font-semibold text-xs">Status</TableHead>
-                <TableHead className="text-zinc-400 font-semibold text-xs text-center">WhatsApp</TableHead>
-                <TableHead className="text-zinc-400 font-semibold text-xs text-right">Actions</TableHead>
+            <TableHeader className="bg-zinc-900/80 border-b border-border/80">
+              <TableRow className="border-border/60">
+                <TableHead className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider">Invoice #</TableHead>
+                <TableHead className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider">Member Name</TableHead>
+                <TableHead className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider">Issue Date</TableHead>
+                <TableHead className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider">Total Bill</TableHead>
+                <TableHead className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider">Amt Paid</TableHead>
+                <TableHead className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider">Outstanding</TableHead>
+                <TableHead className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider">Status</TableHead>
+                <TableHead className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider text-center">WhatsApp</TableHead>
+                <TableHead className="text-zinc-400 font-mono text-[10px] uppercase tracking-wider text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {invoices.map((inv) => (
-                <TableRow key={inv.id} className="border-zinc-800/40 hover:bg-zinc-800/10">
-                  <TableCell className="font-semibold text-zinc-300 text-xs">{inv.invoice_number}</TableCell>
+                <TableRow key={inv.id} className="border-border/40 hover:bg-zinc-800/20 transition-colors duration-100">
+                  <TableCell className="font-mono text-zinc-300 text-xs font-semibold">{inv.invoice_number}</TableCell>
                   <TableCell className="font-medium text-zinc-200 text-xs">{inv.member_name}</TableCell>
-                  <TableCell className="text-zinc-400 text-xs">{formatDate(inv.issued_at)}</TableCell>
-                  <TableCell className="text-zinc-200 font-semibold text-xs">{formatCurrency(inv.total)}</TableCell>
-                  <TableCell className="text-zinc-400 text-xs">{formatCurrency(inv.amount_paid)}</TableCell>
-                  <TableCell className={`text-xs font-semibold ${inv.amount_due > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>
+                  <TableCell className="font-mono text-zinc-400 text-xs">{formatDate(inv.issued_at)}</TableCell>
+                  <TableCell className="font-mono tabular-nums text-zinc-100 font-semibold text-xs">{formatCurrency(inv.total)}</TableCell>
+                  <TableCell className="font-mono tabular-nums text-emerald-400 text-xs font-medium">{formatCurrency(inv.amount_paid)}</TableCell>
+                  <TableCell className={`font-mono tabular-nums text-xs font-semibold ${inv.amount_due > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>
                     {formatCurrency(inv.amount_due)}
                   </TableCell>
                   <TableCell>
-                    <GlowingBadge className={`${getStatusBadgeColor(inv.status)} border text-[10px] font-semibold rounded px-2 py-0.5 capitalize`}>
+                    <GlowingBadge className={`${getStatusBadgeColor(inv.status)} border text-[10px] font-semibold rounded-md px-2 py-0.5 capitalize`}>
                       {inv.status}
                     </GlowingBadge>
                   </TableCell>
@@ -398,7 +398,7 @@ export default function InvoicesPage() {
                     <div className="flex justify-center">
                       <span title={inv.sent_via_whatsapp ? 'Sent via WhatsApp' : 'Not sent'}>
                         <MessageCircle
-                          className={`h-4 w-4 ${inv.sent_via_whatsapp ? 'text-green-400' : 'text-zinc-600'}`}
+                          className={`h-4 w-4 ${inv.sent_via_whatsapp ? 'text-emerald-400' : 'text-zinc-600'}`}
                         />
                       </span>
                     </div>
@@ -409,7 +409,7 @@ export default function InvoicesPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleOpenPrintPreview(inv)}
-                        className="h-8 w-8 text-zinc-400 hover:text-white"
+                        className="h-8 w-8 text-zinc-400 hover:text-white rounded-lg active:scale-[0.97]"
                         title="View & Print Invoice"
                       >
                         <Printer className="h-4 w-4" />
@@ -419,11 +419,11 @@ export default function InvoicesPage() {
                         size="icon"
                         disabled={sendingWa === inv.id}
                         onClick={() => handleSendWhatsAppInvoice(inv)}
-                        className="h-8 w-8 text-zinc-400 hover:text-green-400"
+                        className="h-8 w-8 text-zinc-400 hover:text-emerald-400 rounded-lg active:scale-[0.97]"
                         title="Send PDF to member via WhatsApp"
                       >
                         {sendingWa === inv.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-green-400" />
+                          <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
                         ) : (
                           <MessageCircle className="h-4 w-4" />
                         )}
@@ -435,7 +435,7 @@ export default function InvoicesPage() {
             </TableBody>
           </Table>
         )}
-      </Card>
+      </DoubleBezelCard>
 
       {/* Invoice Print Preview Dialog Modal */}
       <Dialog open={openPrintModal} onOpenChange={setOpenPrintModal}>

@@ -40,9 +40,18 @@ import { kioskPrinter } from '@/lib/kiosk/printer-driver';
 import { KycExtractedData, MemberFitnessProfile, GeneratedBlueprint } from '@/lib/server/llm';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { DoubleBezelCard } from '@/components/ui/card';
+import { Button, ButtonIslandIcon } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getInitials } from '@/lib/utils/format';
 import { useRouter } from 'next/navigation';
+
+const appleSpringTransition = {
+  type: 'spring' as const,
+  stiffness: 340,
+  damping: 28,
+  mass: 0.8,
+};
 
 type KioskStage =
   | 'pairing'
@@ -578,17 +587,18 @@ export default function SingleScreenVoiceKioskPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-sm text-center space-y-4"
+              transition={appleSpringTransition}
+              className="w-full max-w-sm text-center"
             >
-              <div className="p-6 rounded-3xl bg-zinc-900/80 border border-zinc-800 shadow-2xl backdrop-blur-md space-y-4">
+              <DoubleBezelCard className="p-1.5" innerClassName="p-6 text-center space-y-4">
                 <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-white">Connect Tablet to Gym</h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
-                    Open your <strong>Gym Owner Dashboard</strong> & enter this code under <em>Settings → Pair Kiosk</em>.
+                  <h3 className="text-lg font-bold tracking-tight text-white">Connect Tablet to Gym</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Open your <strong className="text-foreground">Gym Owner Dashboard</strong> and enter this code under <em className="text-foreground/90">Settings → Pair Kiosk</em>.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 inline-block font-mono">
+                <div className="p-4 rounded-xl bg-zinc-950 border border-border/80 inline-block font-mono">
                   <span className="text-3xl sm:text-4xl font-extrabold tracking-widest text-cyan-400">
                     {pairingCode || '...'}
                   </span>
@@ -596,15 +606,15 @@ export default function SingleScreenVoiceKioskPage() {
 
                 {pairingQr && (
                   <div className="pt-2">
-                    <div className="p-3 bg-white rounded-2xl inline-block shadow-lg">
+                    <div className="p-3 bg-white rounded-xl inline-block shadow-lg">
                       <QRCodeSVG value={pairingQr} size={140} level="M" />
                     </div>
-                    <p className="text-[11px] text-zinc-500 font-mono mt-2">
+                    <p className="text-[11px] text-muted-foreground font-mono mt-2">
                       Or scan this QR using owner phone camera
                     </p>
                   </div>
                 )}
-              </div>
+              </DoubleBezelCard>
             </motion.div>
           )}
 
@@ -612,9 +622,10 @@ export default function SingleScreenVoiceKioskPage() {
           {stage === 'ambient_idle' && (
             <motion.div
               key="idle"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={appleSpringTransition}
               className="text-center space-y-3 max-w-md mx-auto"
             >
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
@@ -625,17 +636,18 @@ export default function SingleScreenVoiceKioskPage() {
               </p>
 
               <div className="pt-2">
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
+                  size="pill"
                   onClick={() => {
                     kioskAudio.playTap();
                     setStage('guest_detected');
                   }}
-                  className="px-5 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-mono text-indigo-400 flex items-center gap-2 mx-auto active:scale-95"
+                  className="mx-auto border-border/80 bg-zinc-900/90 text-indigo-300 hover:text-white hover:border-indigo-500/50 shadow-sm"
                 >
-                  <UserCheck className="size-4" />
-                  <span>Tap to Register Manually</span>
-                </button>
+                  <UserCheck className="size-4 text-indigo-400" />
+                  <span className="text-xs font-mono">Tap to Register Manually</span>
+                </Button>
               </div>
             </motion.div>
           )}
@@ -647,30 +659,34 @@ export default function SingleScreenVoiceKioskPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="p-6 rounded-3xl bg-zinc-900/90 border border-emerald-500/30 text-center space-y-4 max-w-sm mx-auto shadow-2xl"
+              transition={appleSpringTransition}
+              className="w-full max-w-sm mx-auto"
             >
-              <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-white">{matchedMember.name}</h3>
-                <p className="text-xs font-mono text-zinc-400">ID: {matchedMember.memberCode}</p>
-                <p className="text-xs font-medium text-emerald-400 pt-1">
-                  Attendance Marked • Enjoy your workout!
+              <DoubleBezelCard className="p-1.5 border-emerald-500/30" innerClassName="p-6 text-center space-y-4">
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-bold tracking-tight text-white">{matchedMember.name}</h3>
+                  <p className="text-xs font-mono text-muted-foreground">ID: {matchedMember.memberCode}</p>
+                  <p className="text-xs font-medium text-emerald-400 pt-1 flex items-center justify-center gap-1.5">
+                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Attendance Marked • Enjoy your workout!
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 font-mono text-xs text-left">
+                  <div className="p-3 rounded-xl bg-zinc-950/80 border border-border/70">
+                    <span className="text-zinc-500 block text-[10px] uppercase tracking-wider">Validity</span>
+                    <span className="font-bold text-white text-sm">{matchedMember.daysRemaining} days</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-zinc-950/80 border border-border/70">
+                    <span className="text-zinc-500 block text-[10px] uppercase tracking-wider">Locker</span>
+                    <span className="font-bold text-white text-sm">{matchedMember.lockerNumber || 'General'}</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] font-mono text-zinc-500 pt-1">
+                  Resetting in {autoResetSeconds}s...
                 </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 font-mono text-xs text-left">
-                <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
-                  <span className="text-zinc-500 block">Validity</span>
-                  <span className="font-bold text-white">{matchedMember.daysRemaining} days</span>
-                </div>
-                <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
-                  <span className="text-zinc-500 block">Locker</span>
-                  <span className="font-bold text-white">{matchedMember.lockerNumber || 'General'}</span>
-                </div>
-              </div>
-
-              <p className="text-[11px] font-mono text-zinc-500 pt-1">
-                Resetting in {autoResetSeconds}s...
-              </p>
+              </DoubleBezelCard>
             </motion.div>
           )}
 
@@ -678,13 +694,14 @@ export default function SingleScreenVoiceKioskPage() {
           {stage === 'guest_detected' && (
             <motion.div
               key="guest"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={appleSpringTransition}
               className="text-center space-y-4 max-w-md mx-auto"
             >
               <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-white">Welcome!</h3>
+                <h3 className="text-2xl font-bold tracking-tight text-white">Welcome!</h3>
                 <p className="text-xs text-zinc-400">
                   You are not in our roster yet. Join membership or grab a free trial pass:
                 </p>
@@ -697,12 +714,12 @@ export default function SingleScreenVoiceKioskPage() {
                     kioskAudio.playTap();
                     setStage('portrait_capture');
                   }}
-                  className="p-5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-indigo-500 text-left space-y-2 active:scale-95 transition-all shadow-lg"
+                  className="p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800/90 border border-border/80 hover:border-indigo-500 text-left space-y-2 active:scale-[0.97] transition-[transform,background-color,border-color] duration-150 shadow-lg cursor-pointer"
                 >
                   <UserCheck className="size-6 text-indigo-400" />
                   <div>
                     <h4 className="font-bold text-sm text-white">Join Gym</h4>
-                    <p className="text-[11px] text-zinc-400">Auto-fill via ID scan & printed plans</p>
+                    <p className="text-[11px] text-zinc-400">Auto-fill via ID scan and printed plans</p>
                   </div>
                 </button>
 
@@ -712,7 +729,7 @@ export default function SingleScreenVoiceKioskPage() {
                     kioskAudio.playTap();
                     router.push('/kiosk');
                   }}
-                  className="p-5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500 text-left space-y-2 active:scale-95 transition-all shadow-lg"
+                  className="p-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800/90 border border-border/80 hover:border-amber-500 text-left space-y-2 active:scale-[0.97] transition-[transform,background-color,border-color] duration-150 shadow-lg cursor-pointer"
                 >
                   <Flame className="size-6 text-amber-400" />
                   <div>
@@ -725,7 +742,7 @@ export default function SingleScreenVoiceKioskPage() {
               <button
                 type="button"
                 onClick={resetToIdle}
-                className="text-xs font-mono text-zinc-500 hover:text-zinc-300"
+                className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
               >
                 Back to Idle
               </button>
@@ -736,24 +753,30 @@ export default function SingleScreenVoiceKioskPage() {
           {stage === 'portrait_capture' && (
             <motion.div
               key="portrait"
-              initial={{ opacity: 0, scale: 0.98 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={appleSpringTransition}
               className="text-center space-y-4 max-w-xs mx-auto"
             >
-              <div className="space-y-1">
-                <span className="text-[11px] font-mono text-indigo-400">Step 1 of 4 • Photo</span>
-                <h3 className="text-xl font-bold">Look Into Camera</h3>
-              </div>
+              <DoubleBezelCard className="p-1.5" innerClassName="p-6 text-center space-y-4">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-mono text-indigo-400 font-semibold tracking-wider uppercase">Step 1 of 4: Photo</span>
+                  <h3 className="text-xl font-bold tracking-tight text-white">Look Into Camera</h3>
+                </div>
 
-              <button
-                type="button"
-                onClick={snapPortrait}
-                className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
-              >
-                <Camera className="size-4" />
-                <span>Snap Portrait</span>
-              </button>
+                <Button
+                  size="lg"
+                  onClick={snapPortrait}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm shadow-md"
+                >
+                  <Camera className="size-4" />
+                  <span>Snap Portrait</span>
+                  <ButtonIslandIcon className="ml-auto">
+                    <ChevronRight className="size-3.5" />
+                  </ButtonIslandIcon>
+                </Button>
+              </DoubleBezelCard>
             </motion.div>
           )}
 
@@ -761,14 +784,15 @@ export default function SingleScreenVoiceKioskPage() {
           {stage === 'kyc_document_scan' && (
             <motion.div
               key="kyc_scan"
-              initial={{ opacity: 0, scale: 0.98 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={appleSpringTransition}
               className="w-full max-w-md text-center space-y-3"
             >
               <div className="space-y-1">
-                <span className="text-[11px] font-mono text-indigo-400">Step 2 of 4 • Auto-KYC</span>
-                <h3 className="text-xl font-bold">Scan Aadhaar or ID Card</h3>
+                <span className="text-[11px] font-mono text-indigo-400 font-semibold tracking-wider uppercase">Step 2 of 4: Auto-KYC</span>
+                <h3 className="text-xl font-bold tracking-tight text-white">Scan Aadhaar or ID Card</h3>
               </div>
 
               <KioskDocumentScanner
@@ -783,24 +807,25 @@ export default function SingleScreenVoiceKioskPage() {
           {stage === 'fitness_profiling' && (
             <motion.div
               key="profiling"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={appleSpringTransition}
               className="w-full max-w-lg space-y-4"
             >
               <div className="text-center space-y-1">
-                <span className="text-[11px] font-mono text-indigo-400">Step 3 of 4 • Fitness Profile</span>
-                <h3 className="text-xl font-bold">Personalize Nutrition & Workout</h3>
+                <span className="text-[11px] font-mono text-indigo-400 font-semibold tracking-wider uppercase">Step 3 of 4: Fitness Profile</span>
+                <h3 className="text-xl font-bold tracking-tight text-white">Personalize Nutrition and Workout</h3>
               </div>
 
-              <div className="p-5 rounded-3xl bg-zinc-900/90 border border-zinc-800 space-y-3">
+              <DoubleBezelCard className="p-1.5" innerClassName="p-5 space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
                     placeholder="Your Full Name"
-                    className="h-10 rounded-xl bg-zinc-950 border border-zinc-800 px-3 text-xs text-white"
+                    className="h-10 rounded-xl bg-zinc-950 border border-border/80 px-3 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                   <input
                     type="tel"
@@ -808,13 +833,13 @@ export default function SingleScreenVoiceKioskPage() {
                     onChange={(e) => setPhoneInput(e.target.value)}
                     placeholder="10-digit Phone"
                     maxLength={10}
-                    className="h-10 rounded-xl bg-zinc-950 border border-zinc-800 px-3 text-xs font-mono text-white"
+                    className="h-10 rounded-xl bg-zinc-950 border border-border/80 px-3 text-xs font-mono text-white focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
 
                 {/* Goal Selector */}
                 <div className="space-y-1">
-                  <label className="text-[11px] font-mono text-zinc-400 block">Goal</label>
+                  <label className="text-[11px] font-mono text-zinc-400 block uppercase tracking-wider">Goal</label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {[
                       { id: 'fat_loss', label: 'Fat Loss' },
@@ -827,10 +852,10 @@ export default function SingleScreenVoiceKioskPage() {
                         type="button"
                         onClick={() => setGoal(g.id as any)}
                         className={cn(
-                          'py-2 rounded-xl text-xs font-medium border text-center transition-all',
+                          'py-2 rounded-xl text-xs font-medium border text-center transition-[transform,background-color,border-color] duration-120 active:scale-[0.97] cursor-pointer',
                           goal === g.id
-                            ? 'bg-indigo-600 border-indigo-500 text-white'
-                            : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+                            ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm'
+                            : 'bg-zinc-950 border-border/80 text-zinc-400 hover:text-zinc-200'
                         )}
                       >
                         {g.label}
@@ -841,7 +866,7 @@ export default function SingleScreenVoiceKioskPage() {
 
                 {/* Diet Selector */}
                 <div className="space-y-1">
-                  <label className="text-[11px] font-mono text-zinc-400 block">Dietary Choice</label>
+                  <label className="text-[11px] font-mono text-zinc-400 block uppercase tracking-wider">Dietary Choice</label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {[
                       { id: 'vegetarian', label: 'Pure Veg' },
@@ -854,10 +879,10 @@ export default function SingleScreenVoiceKioskPage() {
                         type="button"
                         onClick={() => setDiet(d.id as any)}
                         className={cn(
-                          'py-2 rounded-xl text-xs font-medium border text-center transition-all',
+                          'py-2 rounded-xl text-xs font-medium border text-center transition-[transform,background-color,border-color] duration-120 active:scale-[0.97] cursor-pointer',
                           diet === d.id
-                            ? 'bg-emerald-600 border-emerald-500 text-white'
-                            : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+                            ? 'bg-emerald-600 border-emerald-500 text-white shadow-sm'
+                            : 'bg-zinc-950 border-border/80 text-zinc-400 hover:text-zinc-200'
                         )}
                       >
                         {d.label}
@@ -865,7 +890,7 @@ export default function SingleScreenVoiceKioskPage() {
                     ))}
                   </div>
                 </div>
-              </div>
+              </DoubleBezelCard>
 
               {/* Plan Options */}
               <div className="grid grid-cols-2 gap-2">
@@ -874,7 +899,7 @@ export default function SingleScreenVoiceKioskPage() {
                     key={p.id}
                     type="button"
                     onClick={() => handlePickPlan(p)}
-                    className="p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 flex justify-between items-center active:scale-95"
+                    className="p-3.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800/90 border border-border/80 flex justify-between items-center active:scale-[0.97] transition-[transform,background-color] duration-120 cursor-pointer shadow-md"
                   >
                     <span className="font-bold text-xs text-white">{p.name}</span>
                     <span className="font-mono text-xs font-bold text-emerald-400">
@@ -893,27 +918,30 @@ export default function SingleScreenVoiceKioskPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="text-center space-y-3 max-w-xs mx-auto"
+              transition={appleSpringTransition}
+              className="w-full max-w-xs mx-auto"
             >
-              <div className="space-y-1">
-                <span className="text-[11px] font-mono text-emerald-400">Scan via GPay / PhonePe / Paytm</span>
-                <div className="text-2xl font-mono font-bold text-white">
-                  ₹{chosenPlan.price.toLocaleString('en-IN')}
+              <DoubleBezelCard className="p-1.5" innerClassName="p-6 text-center space-y-4">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-mono text-emerald-400 font-semibold tracking-wider uppercase">Scan via GPay / PhonePe / Paytm</span>
+                  <div className="text-3xl font-mono font-extrabold tracking-tight text-white">
+                    ₹{chosenPlan.price.toLocaleString('en-IN')}
+                  </div>
                 </div>
-              </div>
 
-              <div className="p-4 bg-white rounded-2xl inline-block shadow-xl">
-                <QRCodeSVG value={upiQrUri} size={180} level="M" />
-              </div>
+                <div className="p-3 bg-white rounded-xl inline-block shadow-xl">
+                  <QRCodeSVG value={upiQrUri} size={180} level="M" />
+                </div>
 
-              <button
-                type="button"
-                onClick={handlePaymentAndPrint}
-                className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95"
-              >
-                <CheckCircle2 className="size-4" />
-                <span>I Have Paid • Auto-Print Package</span>
-              </button>
+                <Button
+                  size="lg"
+                  onClick={handlePaymentAndPrint}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-lg"
+                >
+                  <CheckCircle2 className="size-4" />
+                  <span>I Have Paid • Auto-Print Package</span>
+                </Button>
+              </DoubleBezelCard>
             </motion.div>
           )}
 
@@ -924,26 +952,29 @@ export default function SingleScreenVoiceKioskPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="p-6 rounded-3xl bg-zinc-900/90 border border-indigo-500/30 text-center space-y-4 max-w-sm mx-auto shadow-2xl"
+              transition={appleSpringTransition}
+              className="w-full max-w-sm mx-auto"
             >
-              <div className="size-16 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mx-auto animate-pulse">
-                <Printer className="size-8" />
-              </div>
+              <DoubleBezelCard className="p-1.5 border-indigo-500/30" innerClassName="p-6 text-center space-y-4">
+                <div className="size-16 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mx-auto animate-pulse">
+                  <Printer className="size-8" />
+                </div>
 
-              <div className="space-y-1">
-                <h3 className="text-xl font-bold text-white">Printing Documents</h3>
-                <p className="text-xs text-zinc-400">
-                  Tax Invoice, Diet Plan, and Workout Routine are printing now.
-                </p>
-              </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold tracking-tight text-white">Printing Documents</h3>
+                  <p className="text-xs text-zinc-400">
+                    Tax Invoice, Diet Plan, and Workout Routine are printing now.
+                  </p>
+                </div>
 
-              <button
-                type="button"
-                onClick={resetToIdle}
-                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium"
-              >
-                Done • Return to Screen
-              </button>
+                <Button
+                  size="default"
+                  onClick={resetToIdle}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium"
+                >
+                  Done • Return to Screen
+                </Button>
+              </DoubleBezelCard>
             </motion.div>
           )}
 
@@ -954,50 +985,53 @@ export default function SingleScreenVoiceKioskPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-xs mx-auto space-y-4 text-center"
+              transition={appleSpringTransition}
+              className="w-full max-w-xs mx-auto text-center"
             >
-              <div className="space-y-1">
-                <div className="size-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-indigo-400 mx-auto">
-                  <Lock className="size-5" />
+              <DoubleBezelCard className="p-1.5" innerClassName="p-5 text-center space-y-4">
+                <div className="space-y-1">
+                  <div className="size-10 rounded-xl bg-zinc-900 border border-border/80 flex items-center justify-center text-indigo-400 mx-auto">
+                    <Lock className="size-5" />
+                  </div>
+                  <h3 className="text-lg font-bold tracking-tight text-white">Staff Security PIN</h3>
+                  <p className="text-xs text-muted-foreground">Enter 4-digit PIN (Default: 1234)</p>
                 </div>
-                <h3 className="text-lg font-bold">Staff Security PIN</h3>
-                <p className="text-xs text-zinc-400">Enter 4-digit PIN (Default: 1234)</p>
-              </div>
 
-              <div className="flex justify-center gap-3 py-1">
-                {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      'size-3.5 rounded-full border transition-all',
-                      adminPin.length > i
-                        ? pinError
-                          ? 'bg-red-500 border-red-500'
-                          : 'bg-indigo-500 border-indigo-500'
-                        : 'border-zinc-700 bg-zinc-900'
-                    )}
-                  />
-                ))}
-              </div>
+                <div className="flex justify-center gap-3 py-1">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        'size-3.5 rounded-full border transition-all duration-150',
+                        adminPin.length > i
+                          ? pinError
+                            ? 'bg-destructive border-destructive scale-110'
+                            : 'bg-indigo-500 border-indigo-500 scale-105'
+                          : 'border-border/80 bg-zinc-900'
+                      )}
+                    />
+                  ))}
+                </div>
 
-              <KioskKeypad value={adminPin} onChange={handlePinKey} maxLength={4} />
+                <KioskKeypad value={adminPin} onChange={handlePinKey} maxLength={4} />
 
-              <div className="flex justify-between items-center pt-2">
-                <button
-                  type="button"
-                  onClick={handleUnpairDevice}
-                  className="text-[11px] font-mono text-red-400 hover:underline"
-                >
-                  Unpair Tablet
-                </button>
-                <button
-                  type="button"
-                  onClick={resetToIdle}
-                  className="text-[11px] font-mono text-zinc-400 hover:text-white"
-                >
-                  Cancel
-                </button>
-              </div>
+                <div className="flex justify-between items-center pt-2">
+                  <button
+                    type="button"
+                    onClick={handleUnpairDevice}
+                    className="text-[11px] font-mono text-red-400 hover:underline cursor-pointer"
+                  >
+                    Unpair Tablet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetToIdle}
+                    className="text-[11px] font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </DoubleBezelCard>
             </motion.div>
           )}
         </AnimatePresence>

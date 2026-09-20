@@ -10,7 +10,8 @@ import { exportToExcel } from '@/lib/export/excel-export';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Button, ButtonIslandIcon } from '@/components/ui/button';
+import { DoubleBezelCard } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { GradientText } from '@/components/magicui/gradient-text';
 import { GridPattern } from '@/components/magicui/grid-pattern';
@@ -489,37 +490,37 @@ export default function AttendancePage() {
     <div className="space-y-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3">
-        <SpotlightCard className="p-4 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-zinc-400 mb-1">
-            <Users className="w-4 h-4 text-purple-400" />
-            <span className="text-xs font-medium uppercase tracking-wider">Today</span>
+        <DoubleBezelCard className="p-1" innerClassName="p-3.5 flex flex-col gap-1 rounded-xl bg-zinc-950/80">
+          <div className="flex items-center gap-2 text-zinc-400 mb-0.5">
+            <Users className="w-3.5 h-3.5 text-purple-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider">Today</span>
           </div>
-          <span className="text-2xl font-bold text-zinc-100">{stats.todayCount}</span>
-        </SpotlightCard>
+          <span className="text-2xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">{stats.todayCount}</span>
+        </DoubleBezelCard>
         
-        <SpotlightCard className="p-4 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-zinc-400 mb-1">
-            <Activity className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-medium uppercase tracking-wider">Week Avg</span>
+        <DoubleBezelCard className="p-1" innerClassName="p-3.5 flex flex-col gap-1 rounded-xl bg-zinc-950/80">
+          <div className="flex items-center gap-2 text-zinc-400 mb-0.5">
+            <Activity className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider">Week Avg</span>
           </div>
-          <span className="text-2xl font-bold text-zinc-100">{stats.weekAvg}</span>
-        </SpotlightCard>
+          <span className="text-2xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">{stats.weekAvg}</span>
+        </DoubleBezelCard>
         
-        <SpotlightCard className="p-4 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-zinc-400 mb-1">
-            <AlertCircle className="w-4 h-4 text-amber-400" />
-            <span className="text-xs font-medium uppercase tracking-wider">Missing</span>
+        <DoubleBezelCard className="p-1" innerClassName="p-3.5 flex flex-col gap-1 rounded-xl bg-zinc-950/80">
+          <div className="flex items-center gap-2 text-zinc-400 mb-0.5">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider">Missing</span>
           </div>
-          <span className="text-2xl font-bold text-zinc-100">{stats.notCheckedIn}</span>
-        </SpotlightCard>
+          <span className="text-2xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">{stats.notCheckedIn}</span>
+        </DoubleBezelCard>
         
-        <SpotlightCard className="p-4 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-zinc-400 mb-1">
-            <Clock className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs font-medium uppercase tracking-wider">Peak Hr</span>
+        <DoubleBezelCard className="p-1" innerClassName="p-3.5 flex flex-col gap-1 rounded-xl bg-zinc-950/80">
+          <div className="flex items-center gap-2 text-zinc-400 mb-0.5">
+            <Clock className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider">Peak Hr</span>
           </div>
-          <span className="text-2xl font-bold text-zinc-100">{stats.peakHour}</span>
-        </SpotlightCard>
+          <span className="text-2xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">{stats.peakHour}</span>
+        </DoubleBezelCard>
       </div>
 
       {/* Live Log */}
@@ -679,50 +680,84 @@ export default function AttendancePage() {
           <GradientText className="text-3xl font-bold tracking-tight">⚡ Quick Check-In</GradientText>
           <p className="text-zinc-500 mt-1">Search members or scan QR codes to log attendance.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Universal Attendance Station Switcher Segment */}
+          <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs gap-1 shrink-0 shadow-sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs rounded-lg gap-1.5 bg-indigo-600 text-white font-semibold hover:bg-indigo-600 cursor-default"
+            >
+              <Activity className="h-3.5 w-3.5 text-white" />
+              <span>Console</span>
+            </Button>
+
+            <Link href="/dashboard/attendance/face-kiosk">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              >
+                <ScanFace className="h-3.5 w-3.5 text-cyan-400" />
+                <span>AI Face</span>
+              </Button>
+            </Link>
+
+            <Link href="/dashboard/attendance/qr-kiosk">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              >
+                <QrCode className="h-3.5 w-3.5 text-blue-400" />
+                <span>QR Code</span>
+              </Button>
+            </Link>
+
+            <Link href="/dashboard/attendance/kiosk">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              >
+                <Fingerprint className="h-3.5 w-3.5 text-purple-400" />
+                <span>Fingerprint</span>
+              </Button>
+            </Link>
+
+            <Link href="/dashboard/cctv">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              >
+                <Cctv className="h-3.5 w-3.5 text-indigo-400" />
+                <span>CCTV AI</span>
+              </Button>
+            </Link>
+
+            <Link href="/kiosk" target="_blank">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Kiosk</span>
+              </Button>
+            </Link>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
             onClick={handleExportAttendance}
             disabled={todayLogs.length === 0}
-            className="gap-1.5 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            className="gap-1.5 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800/80 text-xs h-9 px-3.5"
           >
             <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
             Export Excel
           </Button>
-          <Link href="/kiosk" target="_blank">
-            <Button className="gap-2 shadow-xl bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-semibold border-0">
-              <Sparkles className="h-4 w-4 text-emerald-200" />
-              Self-Service Kiosk
-              <Badge className="bg-white/20 text-white text-[10px] px-1.5 py-0 border-0 ml-1">Lobby Touch</Badge>
-            </Button>
-          </Link>
-          <Link href="/dashboard/attendance/face-kiosk">
-            <Button className="gap-2 shadow-xl bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:via-indigo-500 hover:to-purple-500 text-white font-semibold border-0">
-              <ScanFace className="h-4 w-4 text-cyan-200" />
-              AI Face Kiosk
-              <Badge className="bg-white/20 text-white text-[10px] px-1.5 py-0 border-0 ml-1">Live</Badge>
-            </Button>
-          </Link>
-          <Link href="/dashboard/cctv">
-            <Button className="gap-2 shadow-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold border-0">
-              <Cctv className="h-4 w-4 text-indigo-200" />
-              CCTV Vigilance
-              <Badge className="bg-white/20 text-white text-[10px] px-1.5 py-0 border-0 ml-1">Live AI</Badge>
-            </Button>
-          </Link>
-          <Link href="/dashboard/attendance/kiosk">
-            <Button variant="outline" className="gap-1.5 border-purple-500/30 text-purple-400 hover:bg-purple-500/10">
-              <Fingerprint className="h-4 w-4" />
-              Fingerprint Station
-            </Button>
-          </Link>
-          <Link href="/dashboard/attendance/qr-kiosk">
-            <Button variant="outline" className="gap-1.5 border-blue-500/30 text-blue-400 hover:bg-blue-500/10">
-              <QrCode className="h-4 w-4" />
-              QR Code Kiosk
-            </Button>
-          </Link>
         </div>
       </div>
 

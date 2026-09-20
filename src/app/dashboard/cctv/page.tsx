@@ -35,8 +35,8 @@ import {
   QrCode,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, DoubleBezelCard } from '@/components/ui/card';
+import { Button, ButtonIslandIcon } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -493,9 +493,10 @@ export default function CctvDashboardPage() {
                 {cameras.map((cam) => {
                   const isOnline = cam.status === 'online';
                   return (
-                    <div
+                    <DoubleBezelCard
                       key={cam.id}
-                      className="group relative rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden shadow-xl hover:border-zinc-700 transition-all"
+                      className="p-1 group hover:border-zinc-700/80 transition-all duration-150"
+                      innerClassName="p-0 overflow-hidden rounded-xl bg-zinc-950"
                     >
                       {/* Video Stream Element / Test Card */}
                       <div className="relative aspect-video w-full bg-zinc-900 flex items-center justify-center overflow-hidden">
@@ -509,15 +510,15 @@ export default function CctvDashboardPage() {
 
                         {/* Top HUD Overlay */}
                         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
-                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/75 backdrop-blur-md border border-white/10 text-[11px] font-medium text-white shadow-sm">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-[11px] font-medium text-white shadow-sm">
                             <span className={`size-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
                             <span className="font-semibold">{cam.name}</span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/75 backdrop-blur-md border border-white/10 text-[10px] font-mono text-zinc-300">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-[10px] font-mono text-zinc-300">
                             <span>{cam.location || 'Entrance'}</span>
                             <span>•</span>
-                            <span className="text-indigo-400">{cam.fps || 15} FPS</span>
+                            <span className="text-indigo-400 font-semibold">{cam.fps || 15} FPS</span>
                           </div>
                         </div>
 
@@ -545,7 +546,7 @@ export default function CctvDashboardPage() {
                       </div>
 
                       {/* Camera Info Footer */}
-                      <div className="p-3 bg-zinc-950 flex items-center justify-between border-t border-zinc-800/60 text-xs">
+                      <div className="p-3 bg-zinc-950/90 flex items-center justify-between border-t border-zinc-800/60 text-xs">
                         <div className="flex items-center gap-2 truncate">
                           <span className="text-zinc-400 text-[11px] truncate font-mono">
                             {cam.rtsp_url.replace(/:[^:@]+@/, ':***@')}
@@ -555,7 +556,7 @@ export default function CctvDashboardPage() {
                           {cam.branches?.name || 'All Branches'}
                         </span>
                       </div>
-                    </div>
+                    </DoubleBezelCard>
                   );
                 })}
               </div>
@@ -564,20 +565,18 @@ export default function CctvDashboardPage() {
 
           {/* Right Area (4 cols on XL): Real-Time Vigilance & Attendance Ticker */}
           <div className="xl:col-span-4 space-y-4">
-            <Card className="border-zinc-800 bg-zinc-950/60">
-              <CardHeader className="pb-3 border-b border-zinc-800/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert className="h-4 w-4 text-indigo-400" />
-                    <CardTitle className="text-sm font-bold text-zinc-100">Live AI Feed</CardTitle>
-                  </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
-                    Real-Time
-                  </span>
+            <DoubleBezelCard className="p-1" innerClassName="p-0 bg-zinc-950/80 rounded-xl overflow-hidden">
+              <div className="p-4 pb-3 border-b border-zinc-800/60 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-indigo-400" />
+                  <h3 className="text-sm font-bold text-zinc-100">Live AI Feed</h3>
                 </div>
-              </CardHeader>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                  Real-Time
+                </span>
+              </div>
 
-              <CardContent className="p-0">
+              <div>
                 <Tabs defaultValue="vigilance" className="w-full">
                   <div className="px-3 pt-3 border-b border-zinc-800/40">
                     <TabsList className="w-full bg-zinc-900/90 h-8 p-0.5">
@@ -802,8 +801,8 @@ export default function CctvDashboardPage() {
                     )}
                   </TabsContent>
                 </Tabs>
-              </CardContent>
-            </Card>
+              </div>
+            </DoubleBezelCard>
           </div>
         </div>
 
