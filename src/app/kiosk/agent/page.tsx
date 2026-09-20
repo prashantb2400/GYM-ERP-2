@@ -34,7 +34,9 @@ import { WaterVoiceOrb, WaterOrbState } from '@/components/kiosk/WaterVoiceOrb';
 import { KioskDocumentScanner } from '@/components/kiosk/KioskDocumentScanner';
 import { KioskKeypad } from '@/components/kiosk/KioskKeypad';
 import { kioskAudio } from '@/components/kiosk/KioskAudio';
-import { voiceAgent } from '@/lib/kiosk/voice-agent';
+import { voiceAgent, type VoiceSpeechEvent } from '@/lib/kiosk/voice-agent';
+import { VoiceCaptionBubble } from '@/components/kiosk/VoiceCaptionBubble';
+import { Ripple } from '@/components/magicui/ripple';
 import { visionWatchdog, WatchdogMatchResult } from '@/lib/kiosk/vision-watchdog';
 import { kioskPrinter } from '@/lib/kiosk/printer-driver';
 import { KycExtractedData, MemberFitnessProfile, GeneratedBlueprint } from '@/lib/server/llm';
@@ -76,6 +78,22 @@ export default function SingleScreenVoiceKioskPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [audioPerturbation, setAudioPerturbation] = useState(0);
+  const [voiceEvent, setVoiceEvent] = useState<VoiceSpeechEvent>({
+    isSpeaking: false,
+    phrase: '',
+    currentWord: '',
+    charIndex: 0,
+    audioLevel: 0,
+  });
+
+  // Subscribe to voice agent real-time speech and acoustic events
+  useEffect(() => {
+    const unsubscribe = voiceAgent.subscribe((event) => {
+      setVoiceEvent(event);
+      setAudioPerturbation(event.audioLevel);
+    });
+    return unsubscribe;
+  }, []);
 
   // Device Pairing State
   const [pairingCode, setPairingCode] = useState<string | null>(null);
@@ -536,12 +554,26 @@ export default function SingleScreenVoiceKioskPage() {
         {/* =========================================================================
             THE LIVING VOICE WATER CIRCLE (Central Living Entity)
            ========================================================================= */}
-        <div className="relative mb-6">
+        <div className="relative mb-6 flex items-center justify-center">
+          {/* Magic UI Hydrodynamic Concentric Ripple Backdrop */}
+          <Ripple
+            numCircles={6}
+            mainCircleSize={220}
+            tintColor={
+              voiceEvent.isSpeaking
+                ? 'rgba(6, 182, 212, 0.32)'
+                : 'rgba(99, 102, 241, 0.16)'
+            }
+            className="w-[520px] h-[520px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          />
+
           <WaterVoiceOrb
             state={getOrbState()}
-            audioLevel={audioPerturbation}
+            audioLevel={voiceEvent.audioLevel}
+            isSpeaking={voiceEvent.isSpeaking}
+            currentWord={voiceEvent.currentWord}
             size={280}
-            className="transition-transform duration-500"
+            className="transition-transform duration-500 relative z-10"
           >
             {/* Contextual Inner Icon / Indicator */}
             {stage === 'pairing' ? (
@@ -574,6 +606,19 @@ export default function SingleScreenVoiceKioskPage() {
               </div>
             )}
           </WaterVoiceOrb>
+        </div>
+
+        {/* =========================================================================
+            DYNAMIC ISLAND REAL-TIME SPEECH KARAOKE PILL
+           ========================================================================= */}
+        <div className="w-full max-w-md mx-auto mb-5 min-h-[42px] flex items-center justify-center">
+          <VoiceCaptionBubble
+            phrase={voiceEvent.phrase}
+            currentWord={voiceEvent.currentWord}
+            charIndex={voiceEvent.charIndex}
+            isSpeaking={voiceEvent.isSpeaking}
+            audioLevel={voiceEvent.audioLevel}
+          />
         </div>
 
         {/* =========================================================================

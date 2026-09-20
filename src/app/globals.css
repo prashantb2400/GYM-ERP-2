@@ -300,6 +300,41 @@ button:hover .btn-island-icon {
   transform: translate(2px, -1px);
 }
 
+/* ==========================================
+   Magic UI Hydrodynamic Ripple
+   ========================================== */
+@keyframes ripple {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+}
+
+.animate-ripple {
+  animation: ripple 3.6s ease-in-out infinite;
+}
+
+/* ==========================================
+   Motion Primitives Sound Wave Equalizer
+   ========================================== */
+@keyframes sound-bar {
+  0%, 100% {
+    transform: scaleY(0.4);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleY(1.3);
+    opacity: 1;
+  }
+}
+
+.animate-sound-bar {
+  animation: sound-bar 0.7s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
 
 /* ==========================================
    Apple Optical Typography (WWDC 2020)

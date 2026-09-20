@@ -15,3 +15,5 @@ export { BlurInText } from './blur-in-text';
 export { TypewriterText } from './typewriter-text';
 export { OrbitingIcons } from './orbiting-icons';
 export { Particles } from './particles';
+export { Ripple } from './ripple';
+export { SoundWave } from './sound-wave';
