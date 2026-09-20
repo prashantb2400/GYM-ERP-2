@@ -50,6 +50,7 @@ export default function AttendancePage() {
     notCheckedIn: 0,
     peakHour: '-'
   });
+  const [methodFilter, setMethodFilter] = useState<'all' | 'face_recognition' | 'fingerprint' | 'qr_scan' | 'cctv' | 'manual'>('all');
 
   // Debounce search
   useEffect(() => {
@@ -523,25 +524,61 @@ export default function AttendancePage() {
 
       {/* Live Log */}
       <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden flex flex-col h-[calc(100vh-320px)] min-h-[400px]">
-        <div className="p-4 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
-          <h3 className="font-semibold text-zinc-100 flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-purple-400" />
-            Today's Log
-          </h3>
-          <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-0">
-            {stats.todayCount} ✓
-          </Badge>
+        <div className="p-3 border-b border-zinc-800 bg-zinc-900/60 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-zinc-100 flex items-center gap-2 text-sm">
+              <Calendar className="w-4 h-4 text-purple-400" />
+              Today's Log
+            </h3>
+            <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-0">
+              {todayLogs.length} ✓
+            </Badge>
+          </div>
+
+          {/* Attendance Method Selection Filters */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none text-[10px]">
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'cctv', label: 'CCTV AI' },
+              { key: 'face_recognition', label: 'AI Face' },
+              { key: 'fingerprint', label: 'Fingerprint' },
+              { key: 'qr_scan', label: 'QR Code' },
+              { key: 'manual', label: 'Manual' },
+            ].map((m) => {
+              const count = m.key === 'all' 
+                ? todayLogs.length 
+                : todayLogs.filter(l => l.method === m.key).length;
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => setMethodFilter(m.key as any)}
+                  className={`px-2 py-0.5 rounded-md font-medium shrink-0 transition-colors ${
+                    methodFilter === m.key
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {m.label} ({count})
+                </button>
+              );
+            })}
+          </div>
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-          {todayLogs.length === 0 ? (
+          {todayLogs.filter(l => methodFilter === 'all' || l.method === methodFilter).length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-zinc-500">
               <Clock className="w-8 h-8 mb-2 opacity-20" />
-              <p className="text-sm">No check-ins today</p>
+              <p className="text-sm">
+                {methodFilter === 'all' ? 'No check-ins today' : `No ${methodFilter === 'cctv' ? 'CCTV' : methodFilter} check-ins`}
+              </p>
             </div>
           ) : (
             <AnimatedList delay={0}>
-              {todayLogs.map((log) => (
+              {todayLogs
+                .filter(l => methodFilter === 'all' || l.method === methodFilter)
+                .map((log) => (
                 <div key={log.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-zinc-700 transition-colors">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9 border border-zinc-800">

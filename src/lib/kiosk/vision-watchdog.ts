@@ -3,7 +3,15 @@
  * Hardware-accelerated continuous face detection and local descriptor Euclidean matching.
  */
 
-import * as faceapi from '@vladmandic/face-api';
+let faceapiInstance: any = null;
+
+async function getFaceApi() {
+  if (typeof window === 'undefined') return null;
+  if (!faceapiInstance) {
+    faceapiInstance = await import('@vladmandic/face-api');
+  }
+  return faceapiInstance;
+}
 
 export interface WatchdogMatchResult {
   matchType: 'member' | 'guest' | 'none';
@@ -42,6 +50,8 @@ export class VisionWatchdog {
   public async loadModels(modelUri = '/models'): Promise<boolean> {
     if (this.modelsLoaded) return true;
     try {
+      const faceapi = await getFaceApi();
+      if (!faceapi) return false;
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(modelUri),
         faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelUri),
@@ -84,6 +94,8 @@ export class VisionWatchdog {
 
       if (this.videoEl.readyState >= 2 && this.modelsLoaded) {
         try {
+          const faceapi = faceapiInstance || await getFaceApi();
+          if (!faceapi) return;
           const now = Date.now();
           if (now - this.lastMatchTime > this.matchCooldownMs) {
             const detection = await faceapi

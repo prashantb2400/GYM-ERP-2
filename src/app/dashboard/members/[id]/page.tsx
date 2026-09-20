@@ -1007,11 +1007,13 @@ export default function MemberDetailPage() {
                     const methodLabel = 
                       entry.method === 'face_recognition' ? 'AI Face' :
                       entry.method === 'fingerprint' ? 'Fingerprint' :
-                      entry.method === 'qr_scan' ? 'QR Code' : 'Manual';
+                      entry.method === 'qr_scan' ? 'QR Code' :
+                      entry.method === 'cctv' ? 'CCTV AI' : 'Manual';
                     const methodColor =
                       entry.method === 'face_recognition' ? 'bg-purple-950/60 text-purple-300 border-purple-800/40' :
                       entry.method === 'fingerprint' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/40' :
                       entry.method === 'qr_scan' ? 'bg-blue-950/60 text-blue-300 border-blue-800/40' :
+                      entry.method === 'cctv' ? 'bg-indigo-950/60 text-indigo-300 border-indigo-800/40' :
                       'bg-zinc-800 text-zinc-400 border-zinc-700';
 
                     return (

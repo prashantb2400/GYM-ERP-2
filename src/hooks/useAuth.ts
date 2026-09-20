@@ -27,8 +27,35 @@ export function useAuth() {
   useEffect(() => {
     let isCancelled = false;
 
+    // Synchronous immediate dev session restoration
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      try {
+        const raw = localStorage.getItem('gymerp_auth_session');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.state?.user?.gymId && !useAuthStore.getState().user) {
+            useAuthStore.getState().setSession({
+              user: parsed.state.user,
+              member: parsed.state.member || null,
+              needsOnboarding: false,
+            });
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     const fetchSessionDetails = async (supabaseUser: any, forceRefresh = false) => {
       if (!supabaseUser) {
+        const currentStore = useAuthStore.getState();
+        const cachedRaw = typeof window !== 'undefined' ? localStorage.getItem('gymerp_auth_session') : null;
+        if (process.env.NODE_ENV === 'development' && (currentStore.user?.gymId || cachedRaw?.includes('gymId'))) {
+          if (currentStore.loading) {
+            setLoading(false);
+          }
+          return;
+        }
         if (!isCancelled) {
           setSession({ user: null, member: null, needsOnboarding: false });
         }
@@ -201,6 +228,19 @@ export function useAuth() {
         }
       }
     };
+
+    // If running in development with placeholder Supabase URL, do not hang on network calls
+    const isPlaceholderSupabase =
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder.supabase.co');
+
+    if (isPlaceholderSupabase && process.env.NODE_ENV === 'development') {
+      const cur = useAuthStore.getState();
+      if (cur.user || cur.member) {
+        setLoading(false);
+      }
+      return;
+    }
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {

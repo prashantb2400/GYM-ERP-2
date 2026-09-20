@@ -87,9 +87,10 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           if (state.user || state.member) {
-            state.loading = false;
+            useAuthStore.setState({ loading: false, isInitialized: true });
+          } else {
+            useAuthStore.setState({ isInitialized: true });
           }
-          state.isInitialized = true;
         }
       },
     }

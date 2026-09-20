@@ -30,7 +30,11 @@ import {
   ChevronRight,
   Activity,
   Loader2,
+  ScanFace,
+  Fingerprint,
+  QrCode,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -331,6 +335,51 @@ export default function CctvDashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Universal Kiosk & Attendance Station Switcher */}
+            <div className="flex items-center bg-zinc-950 p-0.5 sm:p-1 rounded-xl border border-zinc-800 text-xs gap-0.5 sm:gap-1 shrink-0">
+              <Link href="/dashboard/attendance/face-kiosk">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+                >
+                  <ScanFace className="h-3.5 w-3.5 text-cyan-400" />
+                  <span className="hidden md:inline">AI Face</span>
+                </Button>
+              </Link>
+
+              <Link href="/dashboard/attendance/qr-kiosk">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+                >
+                  <QrCode className="h-3.5 w-3.5 text-blue-400" />
+                  <span className="hidden md:inline">QR Code</span>
+                </Button>
+              </Link>
+
+              <Link href="/dashboard/attendance/kiosk">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+                >
+                  <Fingerprint className="h-3.5 w-3.5 text-purple-400" />
+                  <span className="hidden md:inline">Fingerprint</span>
+                </Button>
+              </Link>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 bg-indigo-600 text-white font-semibold hover:bg-indigo-600 cursor-default"
+              >
+                <Cctv className="h-3.5 w-3.5 text-white" />
+                <span className="hidden md:inline">CCTV AI</span>
+              </Button>
+            </div>
+
             {/* Edge AI Health Pill */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900/80 border border-zinc-800 text-xs">
               <span className="relative flex h-2 w-2">

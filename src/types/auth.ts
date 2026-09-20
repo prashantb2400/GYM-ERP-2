@@ -63,6 +63,7 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, Permission[]> = {
     'attendance.view', 'attendance.mark',
     'diet.view', 'diet.manage',
     'exercise.view', 'exercise.manage',
+    'cctv.view',
   ],
 };
 

@@ -23,6 +23,7 @@ import {
   QrCode,
   SwitchCamera,
   FlipHorizontal,
+  Cctv,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
@@ -1089,6 +1090,17 @@ export default function FaceKioskPage() {
               >
                 <Fingerprint className="h-3.5 w-3.5 text-purple-400" />
                 <span className="hidden md:inline">Fingerprint</span>
+              </Button>
+            </Link>
+
+            <Link href="/dashboard/cctv">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 sm:px-2.5 text-xs rounded-lg gap-1.5 text-zinc-400 hover:text-zinc-200"
+              >
+                <Cctv className="h-3.5 w-3.5 text-indigo-400" />
+                <span className="hidden md:inline">CCTV AI</span>
               </Button>
             </Link>
           </div>
