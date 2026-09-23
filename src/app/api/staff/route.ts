@@ -45,21 +45,25 @@ async function resolveCallerGym(
 
   let callerUser = callerUserByAuth || null;
 
-  // 2. If not found by auth_id, fallback to matching by email
+  // 2. If not found by auth_id, fallback to matching by email ONLY if auth_id is unassigned
   if (!callerUser && authEmail) {
     const { data: userByEmail } = await supabaseAdmin
       .from('users')
-      .select('id, gym_id, role, permissions')
+      .select('id, gym_id, role, permissions, auth_id')
       .ilike('email', authEmail.trim())
       .maybeSingle();
 
     if (userByEmail) {
-      callerUser = userByEmail;
-      // Auto-link auth_id for future requests
-      await supabaseAdmin
-        .from('users')
-        .update({ auth_id: authUserId })
-        .eq('id', callerUser.id);
+      if (!userByEmail.auth_id) {
+        callerUser = userByEmail;
+        // Auto-link auth_id for unclaimed staff invitation
+        await supabaseAdmin
+          .from('users')
+          .update({ auth_id: authUserId })
+          .eq('id', callerUser.id);
+      } else if (userByEmail.auth_id === authUserId) {
+        callerUser = userByEmail;
+      }
     }
   }
 
@@ -77,21 +81,6 @@ async function resolveCallerGym(
 
     if (ownedGym) {
       resolvedGymId = ownedGym.id;
-    }
-  }
-
-  // 4. Fallback search by gym email if still unlinked
-  if (!resolvedGymId && authEmail) {
-    const { data: gymByEmail } = await supabaseAdmin
-      .from('gyms')
-      .select('id')
-      .ilike('email', authEmail.trim())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (gymByEmail) {
-      resolvedGymId = gymByEmail.id;
     }
   }
 

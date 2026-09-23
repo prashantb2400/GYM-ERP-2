@@ -24,6 +24,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const jobId = searchParams.get('job');
+
+  // If invoked with a specific job parameter (e.g. Vercel scheduled cron GET), execute the job
+  if (jobId) {
+    try {
+      const result = await executeCronJob(jobId, supabaseAdmin);
+      return NextResponse.json(result);
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  }
+
+  // Otherwise, return recent logs and job configurations for monitoring dashboard
   try {
     const { data: logs } = await supabaseAdmin
       .from('cron_logs')

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getAuthUser } from '@/lib/server/auth-helper';
+import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 
 export async function GET(
   request: Request,
@@ -8,14 +10,43 @@ export async function GET(
   try {
     const { id } = await params;
 
+    // Authenticate caller (staff/owner session or active paired kiosk device)
+    const { user, error: authErr } = await getAuthUser(request);
+    let resolvedGymId: string | null = null;
+
+    if (user && !authErr) {
+      const scope = await getBranchScope(user.id);
+      if (!isBranchScopeError(scope)) {
+        resolvedGymId = scope.gymId;
+      }
+    } else {
+      const deviceToken = request.headers.get('x-device-token');
+      if (deviceToken) {
+        const { data: dev } = await supabaseAdmin
+          .from('kiosk_devices')
+          .select('gym_id')
+          .eq('device_token', deviceToken)
+          .eq('status', 'active')
+          .maybeSingle();
+        if (dev?.gym_id) {
+          resolvedGymId = dev.gym_id;
+        }
+      }
+    }
+
+    if (!resolvedGymId) {
+      return new NextResponse('Unauthorized: Valid session or kiosk token required', { status: 401 });
+    }
+
     const { data: camera } = await supabaseAdmin
       .from('cctv_cameras')
-      .select('id, name, location, status, fps, last_ping_at')
+      .select('id, name, location, status, fps, last_ping_at, gym_id')
       .eq('id', id)
+      .eq('gym_id', resolvedGymId)
       .maybeSingle();
 
     if (!camera) {
-      return new NextResponse('Camera not found', { status: 404 });
+      return new NextResponse('Camera not found or access denied', { status: 404 });
     }
 
     // Try edge daemon snapshot if configured

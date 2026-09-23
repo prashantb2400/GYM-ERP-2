@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { extractKycDocumentData } from '@/lib/server/llm';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+import { verifyKioskOrAuth } from '@/lib/server/kiosk-auth';
 
 export async function POST(request: Request) {
   try {
@@ -18,6 +19,12 @@ export async function POST(request: Request) {
 
     if (!imageBase64) {
       return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
+    }
+
+    // Enforce mandatory kiosk device authentication or staff/owner session
+    const authResult = await verifyKioskOrAuth(request, gymId);
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
     // Process document image securely on server with LLM Vision

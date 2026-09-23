@@ -95,8 +95,17 @@ export class MantraMfs100Driver implements FingerprintScannerDriver {
       const dataNode = xmlDoc.getElementsByTagName('Data')[0];
       const rawTemplate = dataNode?.textContent || '';
 
-      // Parse or synthesize minutiae points from device payload
-      const minutiae = synthesizeMinutiaeFromSeed(rawTemplate || finger, qScore);
+      if (!rawTemplate || rawTemplate.trim().length < 32) {
+        return {
+          success: false,
+          error: 'Mantra scanner returned empty or invalid biometric template data',
+          quality: 0,
+          driverId: this.id,
+        };
+      }
+
+      // Extract minutiae points derived from cryptographic hash of raw hardware template
+      const minutiae = synthesizeMinutiaeFromSeed(rawTemplate, qScore);
 
       const template: FingerprintTemplate = {
         version: '1.0',
@@ -184,8 +193,17 @@ export class SecuGenDriver implements FingerprintScannerDriver {
         };
       }
 
+      if (!data.TemplateBase64 || data.TemplateBase64.trim().length < 32) {
+        return {
+          success: false,
+          error: 'SecuGen scanner returned empty or invalid biometric template data',
+          quality: 0,
+          driverId: this.id,
+        };
+      }
+
       const quality = data.Quality || 75;
-      const minutiae = synthesizeMinutiaeFromSeed(data.TemplateBase64 || finger, quality);
+      const minutiae = synthesizeMinutiaeFromSeed(data.TemplateBase64, quality);
 
       return {
         success: true,

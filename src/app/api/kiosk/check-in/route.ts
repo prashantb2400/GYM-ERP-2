@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+import { verifyKioskOrAuth } from '@/lib/server/kiosk-auth';
 
 export async function POST(request: Request) {
   try {
@@ -17,6 +18,12 @@ export async function POST(request: Request) {
 
     if (!gymId || !query) {
       return NextResponse.json({ error: 'Missing gymId or identifier query' }, { status: 400 });
+    }
+
+    // Enforce mandatory kiosk device authentication or staff/owner session
+    const authResult = await verifyKioskOrAuth(request, gymId);
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
     const cleanQuery = String(query).trim();

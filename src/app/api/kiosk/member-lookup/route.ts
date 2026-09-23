@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+import { verifyKioskOrAuth } from '@/lib/server/kiosk-auth';
 
 export async function POST(request: Request) {
   try {
@@ -20,20 +20,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing gymId or query' }, { status: 400 });
     }
 
-    // Optional kiosk device token verification
-    const deviceToken = request.headers.get('x-device-token');
-    if (deviceToken) {
-      const { data: dev } = await supabaseAdmin
-        .from('kiosk_devices')
-        .select('id, status')
-        .eq('device_token', deviceToken)
-        .eq('gym_id', gymId)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (!dev) {
-        return NextResponse.json({ error: 'Unauthorized or deactivated kiosk device' }, { status: 401 });
-      }
+    // Enforce mandatory kiosk device authentication or staff/owner session
+    const authResult = await verifyKioskOrAuth(request, gymId);
+    if (!authResult.authorized) {
+      return authResult.response;
     }
 
     const cleanQuery = String(query).trim();

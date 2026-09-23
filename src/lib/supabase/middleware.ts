@@ -81,15 +81,9 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  const isDevBypass = process.env.NODE_ENV === 'development' && (
-    request.cookies.get('gymerp_dev_auth')?.value === 'true' ||
-    request.nextUrl.searchParams.get('dev_auth') === 'true'
-  );
+  const isDevBypass = process.env.NODE_ENV === 'development' && request.cookies.get('gymerp_dev_auth')?.value === 'true';
 
   if (isDevBypass) {
-    if (request.nextUrl.searchParams.get('dev_auth') === 'true') {
-      supabaseResponse.cookies.set('gymerp_dev_auth', 'true', { path: '/' });
-    }
     return supabaseResponse;
   }
 
@@ -216,11 +210,27 @@ export async function updateSession(request: NextRequest) {
     path.startsWith('/api/kiosk/');
 
   if (!isExcludedApiRoute) {
-    const authHeader = request.headers.get('authorization');
-    const hasBearerToken = authHeader?.startsWith('Bearer ');
+    let authenticatedUser = user;
 
-    // If no cookie session and no Bearer token in header, reject unauthenticated API requests
-    if (!user && !hasBearerToken) {
+    if (!authenticatedUser) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+        if (token) {
+          try {
+            const { data: verified, error: verifyErr } = await supabase.auth.getUser(token);
+            if (!verifyErr && verified?.user) {
+              authenticatedUser = verified.user;
+            }
+          } catch {
+            // Token verification error
+          }
+        }
+      }
+    }
+
+    // If neither cookie session nor valid Bearer token is verified, reject with 401
+    if (!authenticatedUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }

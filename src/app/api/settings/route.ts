@@ -68,7 +68,7 @@ export async function GET(request: Request) {
     const isOwner = callerUser?.role === 'owner' || (!callerUser && Boolean(resolvedGymId));
     const hasManagePerm = isOwner || callerUser?.permissions?.includes('settings.manage');
 
-    // Redact sensitive secrets and credentials for non-owners
+    // Redact sensitive secrets and credentials for non-owners, and mask for owners
     const sanitizedGym = { ...gym };
     if (!isOwner && !hasManagePerm) {
       delete sanitizedGym.whatsapp_access_token;
@@ -87,6 +87,16 @@ export async function GET(request: Request) {
         delete safeSettings.whatsapp_token;
         delete safeSettings.api_keys;
         sanitizedGym.settings = safeSettings;
+      }
+    } else {
+      if (sanitizedGym.razorpay_key_secret) {
+        sanitizedGym.razorpay_key_secret = `••••••••${sanitizedGym.razorpay_key_secret.slice(-4)}`;
+      }
+      if (sanitizedGym.whatsapp_access_token) {
+        sanitizedGym.whatsapp_access_token = `••••••••${sanitizedGym.whatsapp_access_token.slice(-4)}`;
+      }
+      if (sanitizedGym.cctv_password) {
+        sanitizedGym.cctv_password = '••••••••';
       }
     }
 
@@ -183,6 +193,24 @@ export async function PATCH(request: Request) {
     }
     if (body.settings && typeof body.settings === 'object') {
       updatePayload.settings = body.settings;
+    }
+    if (body.razorpay_key_secret !== undefined) {
+      const val = String(body.razorpay_key_secret).trim();
+      if (!val.startsWith('••')) {
+        updatePayload.razorpay_key_secret = val || null;
+      }
+    }
+    if (body.whatsapp_access_token !== undefined) {
+      const val = String(body.whatsapp_access_token).trim();
+      if (!val.startsWith('••')) {
+        updatePayload.whatsapp_access_token = val || null;
+      }
+    }
+    if (body.cctv_password !== undefined) {
+      const val = String(body.cctv_password);
+      if (!val.startsWith('••')) {
+        updatePayload.cctv_password = val || null;
+      }
     }
 
     // 3. Update gym record

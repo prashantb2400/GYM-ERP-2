@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { gymId: requestedGymId, branchId: requestedBranchId, memberId, confidence, type = 'auto', deviceId } = body;
+    const { gymId: requestedGymId, branchId: requestedBranchId, memberId, confidence, type = 'auto', deviceId, timestamp } = body;
 
     if (!memberId) {
       return NextResponse.json({ error: 'Missing required memberId' }, { status: 400 });
@@ -62,8 +62,10 @@ export async function POST(request: Request) {
       }, { status: 403 });
     }
 
-    const todayString = new Date().toISOString().split('T')[0];
-    const nowIso = new Date().toISOString();
+    const scanDate = timestamp ? new Date(timestamp) : new Date();
+    const validScanDate = isNaN(scanDate.getTime()) ? new Date() : scanDate;
+    const todayString = validScanDate.toISOString().split('T')[0];
+    const scanIso = validScanDate.toISOString();
 
     // 2. Check if an attendance record exists for today
     const { data: existingAttendance } = await supabaseAdmin
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
           member_id: member.id,
           member_name: member.name,
           date: todayString,
-          check_in_time: nowIso,
+          check_in_time: scanIso,
           method: 'face_recognition',
           confidence: confidence || 1.0,
           device_id: deviceId || 'browser-kiosk',
@@ -106,7 +108,7 @@ export async function POST(request: Request) {
         .from('members')
         .update({
           attendance_count: (member.attendance_count || 0) + 1,
-          last_attendance: nowIso,
+          last_attendance: scanIso,
         })
         .eq('id', member.id);
 
@@ -116,7 +118,7 @@ export async function POST(request: Request) {
         member_name: member.name,
         member_photo: member.photo_url,
         member_code: member.member_code,
-        time: new Date().toLocaleTimeString('en-IN'),
+        time: validScanDate.toLocaleTimeString('en-IN'),
         message: 'Checked in successfully',
       });
     }
@@ -137,7 +139,7 @@ export async function POST(request: Request) {
 
     // Member has checked in, but not checked out
     const checkInMs = new Date(existingAttendance.check_in_time).getTime();
-    const elapsedMinutes = (Date.now() - checkInMs) / (1000 * 60);
+    const elapsedMinutes = (validScanDate.getTime() - checkInMs) / (1000 * 60);
 
     // If type is explicitly 'in', or if less than 5 minutes elapsed in auto mode
     if (type === 'in' || (type === 'auto' && elapsedMinutes < 5)) {
@@ -156,7 +158,7 @@ export async function POST(request: Request) {
     const { error: updateErr } = await supabaseAdmin
       .from('attendance')
       .update({
-        check_out_time: nowIso,
+        check_out_time: scanIso,
       })
       .eq('id', existingAttendance.id);
 
@@ -168,7 +170,7 @@ export async function POST(request: Request) {
       member_name: member.name,
       member_photo: member.photo_url,
       member_code: member.member_code,
-      time: new Date().toLocaleTimeString('en-IN'),
+      time: validScanDate.toLocaleTimeString('en-IN'),
       message: 'Checked out successfully',
     });
   } catch (err: unknown) {

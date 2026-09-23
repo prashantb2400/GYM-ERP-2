@@ -132,34 +132,6 @@ export async function GET(request: Request) {
 
     if (gymByOwner) {
       ownerGym = gymByOwner;
-    } else if (authUser.email) {
-      // 3b. Search by gyms.email
-      const { data: gymByEmail } = await supabaseAdmin
-        .from('gyms')
-        .select('id, name')
-        .ilike('email', authUser.email.trim())
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (gymByEmail) {
-        ownerGym = gymByEmail;
-      }
-    }
-
-    // 3c. Search for unowned gym (e.g. seeded demo gym or pre-created workspace)
-    if (!ownerGym) {
-      const { data: unownedGym } = await supabaseAdmin
-        .from('gyms')
-        .select('id, name')
-        .is('owner_id', null)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (unownedGym) {
-        ownerGym = unownedGym;
-      }
     }
 
     if (ownerGym) {
