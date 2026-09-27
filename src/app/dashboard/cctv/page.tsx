@@ -495,8 +495,8 @@ export default function CctvDashboardPage() {
                   return (
                     <DoubleBezelCard
                       key={cam.id}
-                      className="p-1 group hover:border-zinc-700/80 transition-all duration-150"
-                      innerClassName="p-0 overflow-hidden rounded-xl bg-zinc-950"
+                      className="p-1.5 group hover:border-zinc-700/80 transition-[border-color] duration-150"
+                      innerClassName="p-0 overflow-hidden bg-zinc-950"
                     >
                       {/* Video Stream Element / Test Card */}
                       <div className="relative aspect-video w-full bg-zinc-900 flex items-center justify-center overflow-hidden">
@@ -565,7 +565,7 @@ export default function CctvDashboardPage() {
 
           {/* Right Area (4 cols on XL): Real-Time Vigilance & Attendance Ticker */}
           <div className="xl:col-span-4 space-y-4">
-            <DoubleBezelCard className="p-1" innerClassName="p-0 bg-zinc-950/80 rounded-xl overflow-hidden">
+            <DoubleBezelCard className="p-1.5" innerClassName="p-0 bg-zinc-950/80 overflow-hidden">
               <div className="p-4 pb-3 border-b border-zinc-800/60 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ShieldAlert className="h-4 w-4 text-indigo-400" />

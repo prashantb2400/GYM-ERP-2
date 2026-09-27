@@ -135,7 +135,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
             size="icon"
             onClick={onMenuClick}
             aria-label="Open navigation menu"
-            className="lg:hidden text-muted-foreground hover:text-foreground h-8 w-8 rounded-xl"
+            className="lg:hidden text-muted-foreground hover:text-foreground h-9 w-9 rounded-xl active:scale-[0.97]"
           >
             <Menu className="h-4.5 w-4.5" />
           </Button>
@@ -204,7 +204,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           size="icon"
           onClick={() => setCmdOpen(true)}
           aria-label="Open search dialog"
-          className="md:hidden text-muted-foreground hover:text-foreground h-8 w-8 rounded-xl"
+          className="md:hidden text-muted-foreground hover:text-foreground h-9 w-9 rounded-xl active:scale-[0.97]"
         >
           <Search className="h-4 w-4" />
         </Button>
@@ -215,7 +215,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           size="icon"
           onClick={toggleTheme}
           aria-label="Toggle color theme"
-          className="text-muted-foreground hover:text-foreground h-8 w-8 rounded-xl active:scale-95"
+          className="text-muted-foreground hover:text-foreground h-9 w-9 rounded-xl active:scale-[0.97]"
           title="Toggle Theme"
         >
           {theme === 'dark' ? (
@@ -241,7 +241,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
               variant="ghost"
               size="icon"
               aria-label="View notifications"
-              className="text-muted-foreground hover:text-foreground h-8 w-8 rounded-xl relative active:scale-95"
+              className="text-muted-foreground hover:text-foreground h-9 w-9 rounded-xl relative active:scale-[0.97]"
             >
               <Bell className="h-4 w-4" />
               {unreadCount > 0 && (

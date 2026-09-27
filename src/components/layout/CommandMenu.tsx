@@ -22,7 +22,7 @@ import {
   Sparkles,
   Cctv,
 } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
 interface CommandMenuProps {
@@ -127,6 +127,8 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-800 text-white p-0 gap-0 overflow-hidden shadow-2xl">
+        <DialogTitle className="sr-only">Quick Command Menu</DialogTitle>
+        <DialogDescription className="sr-only">Search members, invoices, and system shortcuts</DialogDescription>
         {/* Search Input Bar */}
         <div className="flex items-center border-b border-zinc-800 px-4 py-3 gap-3 bg-zinc-900/60">
           <Search className="h-5 w-5 text-zinc-400 shrink-0" />
@@ -134,7 +136,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
             placeholder="Type member name, phone, or invoice reference..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 border-0 bg-transparent text-sm text-zinc-100 placeholder-zinc-500 focus-visible:ring-0 focus-visible:ring-offset-0 h-9 p-0"
+            className="flex-1 border-0 bg-transparent text-sm text-zinc-100 placeholder-zinc-400 focus-visible:ring-0 focus-visible:ring-offset-0 h-9 p-0"
             autoFocus
           />
           <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 px-1.5 font-mono text-[10px] font-medium text-zinc-400 opacity-100">
@@ -154,12 +156,12 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
           {/* Members Matching Results */}
           {!loading && members.length > 0 && (
             <div className="space-y-1.5">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block px-2">Members</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block px-2">Members</span>
               {members.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => handleNavigate(`/dashboard/members/${m.id}`)}
-                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-zinc-800/60 text-left text-xs transition-colors group"
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-zinc-800/60 active:scale-[0.98] text-left text-xs transition-[background-color,transform] group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-7 w-7 rounded-full bg-purple-950/40 text-purple-400 border border-purple-800/10 flex items-center justify-center font-bold">
@@ -167,7 +169,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
                     </div>
                     <div>
                       <div className="font-semibold text-zinc-200 group-hover:text-white">{m.name}</div>
-                      <div className="text-[10px] text-zinc-500 mt-0.5">{m.member_code} • {m.phone}</div>
+                      <div className="text-xs text-zinc-400 mt-0.5">{m.member_code} • {m.phone}</div>
                     </div>
                   </div>
                   <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border uppercase ${
@@ -185,12 +187,12 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
           {/* Invoices Matching Results */}
           {!loading && invoices.length > 0 && (
             <div className="space-y-1.5">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block px-2">Invoices</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block px-2">Invoices</span>
               {invoices.map((inv) => (
                 <button
                   key={inv.id}
                   onClick={() => handleNavigate(`/dashboard/invoices`)}
-                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-zinc-800/60 text-left text-xs transition-colors group"
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-zinc-800/60 active:scale-[0.98] text-left text-xs transition-[background-color,transform] group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-7 w-7 rounded bg-zinc-800 text-zinc-400 flex items-center justify-center">
@@ -198,7 +200,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
                     </div>
                     <div>
                       <div className="font-semibold text-zinc-200 group-hover:text-white">{inv.invoice_number}</div>
-                      <div className="text-[10px] text-zinc-500 mt-0.5">{inv.member_name}</div>
+                      <div className="text-xs text-zinc-400 mt-0.5">{inv.member_name}</div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -219,7 +221,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
           {/* Navigation/Shortcuts Area */}
           {query.trim().length < 2 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block col-span-2 px-2">Navigation Shortcuts</span>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block col-span-2 px-2">Navigation Shortcuts</span>
               {navItems.map((item) => {
                 if (item.permission && !can(item.permission)) return null;
                 const Icon = item.icon;
@@ -227,7 +229,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
                   <button
                     key={item.href}
                     onClick={() => handleNavigate(item.href)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-zinc-800/40 text-left text-xs text-zinc-300 hover:text-white transition-colors"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-zinc-800/40 active:scale-[0.98] text-left text-xs text-zinc-300 hover:text-white transition-[background-color,transform]"
                   >
                     <Icon className="h-4 w-4 text-purple-400 shrink-0" />
                     <span>{item.label}</span>
@@ -239,7 +241,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
 
           {/* No results indicator */}
           {!loading && query.trim().length >= 2 && members.length === 0 && invoices.length === 0 && (
-            <div className="text-center py-8 text-xs text-zinc-500">
+            <div className="text-center py-8 text-xs text-zinc-400">
               No matching members or invoices found for "{query}"
             </div>
           )}

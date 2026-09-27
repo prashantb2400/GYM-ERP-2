@@ -406,7 +406,7 @@ export default function DashboardHome() {
 
       {/* Today's Operational Snapshot Bar (Machined Double-Bezel Architecture) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <DoubleBezelCard className="p-1" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
+        <DoubleBezelCard className="p-1.5" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
               {isTrainer ? 'Active Routines' : "Today's Collections"}
@@ -419,7 +419,7 @@ export default function DashboardHome() {
             {isTrainer ? <Dumbbell className="h-4.5 w-4.5" /> : <IndianRupee className="h-4.5 w-4.5" />}
           </div>
         </DoubleBezelCard>
-        <DoubleBezelCard className="p-1" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
+        <DoubleBezelCard className="p-1.5" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
               Check-ins Today
@@ -432,7 +432,7 @@ export default function DashboardHome() {
             <CalendarCheck className="h-4.5 w-4.5" />
           </div>
         </DoubleBezelCard>
-        <DoubleBezelCard className="p-1" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
+        <DoubleBezelCard className="p-1.5" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
               New Members Today
@@ -449,7 +449,7 @@ export default function DashboardHome() {
 
       {/* Primary KPI Metric Cards (Machined Double-Bezel Enclosures) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <DoubleBezelCard className="p-1" innerClassName="p-5 bg-card/60 backdrop-blur-md">
+        <DoubleBezelCard className="p-1.5" innerClassName="p-5 bg-card/60 backdrop-blur-md">
           <div className="flex flex-row items-center justify-between space-y-0 pb-2">
             <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
               {isTrainer ? 'Active Trainees' : 'Active Members'}
@@ -466,7 +466,7 @@ export default function DashboardHome() {
 
         {isTrainer ? (
           <Link href="/dashboard/exercise" className="block group">
-            <DoubleBezelCard className="p-1 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-all">
+            <DoubleBezelCard className="p-1.5 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                   Workout Routines
@@ -482,7 +482,7 @@ export default function DashboardHome() {
             </DoubleBezelCard>
           </Link>
         ) : isOwner ? (
-          <DoubleBezelCard className="p-1" innerClassName="p-5 bg-card/60 backdrop-blur-md">
+          <DoubleBezelCard className="p-1.5" innerClassName="p-5 bg-card/60 backdrop-blur-md">
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                 Monthly Revenue
@@ -497,7 +497,7 @@ export default function DashboardHome() {
             </div>
           </DoubleBezelCard>
         ) : (
-          <DoubleBezelCard className="p-1" innerClassName="p-5 bg-card/60 backdrop-blur-md">
+          <DoubleBezelCard className="p-1.5" innerClassName="p-5 bg-card/60 backdrop-blur-md">
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                 Today's Collections
@@ -515,7 +515,7 @@ export default function DashboardHome() {
 
         {isTrainer ? (
           <Link href="/dashboard/diet" className="block group">
-            <DoubleBezelCard className="p-1 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-all">
+            <DoubleBezelCard className="p-1.5 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                   Diet Charts
@@ -532,7 +532,7 @@ export default function DashboardHome() {
           </Link>
         ) : (
           <Link href="/dashboard/due" className="block group">
-            <DoubleBezelCard className="p-1 group-hover:ring-amber-500/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-all">
+            <DoubleBezelCard className="p-1.5 group-hover:ring-amber-500/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                   Dues Outstanding
@@ -550,7 +550,7 @@ export default function DashboardHome() {
         )}
 
         <Link href={isTrainer ? "/dashboard/attendance" : "/dashboard/members?filter=expiring"} className="block group">
-          <DoubleBezelCard className="p-1 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-all">
+          <DoubleBezelCard className="p-1.5 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                 {isTrainer ? 'Floor Check-ins' : 'Expiring Soon'}

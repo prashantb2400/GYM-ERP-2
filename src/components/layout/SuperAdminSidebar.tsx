@@ -51,7 +51,7 @@ export function SuperAdminSidebar({ collapsed, setCollapsed }: SuperAdminSidebar
   return (
     <aside
       className={cn(
-        'bg-zinc-900/80 backdrop-blur-md border-r border-zinc-800 flex flex-col transition-all duration-300 relative z-30 h-screen',
+        'bg-zinc-900/80 backdrop-blur-md border-r border-zinc-800 flex flex-col transition-[width] duration-200 ease-out relative z-30 h-screen',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
@@ -85,7 +85,7 @@ export function SuperAdminSidebar({ collapsed, setCollapsed }: SuperAdminSidebar
             <Link key={item.href} href={item.href} passHref legacyBehavior>
               <a
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group relative',
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-[background-color,color] duration-150 active:scale-[0.97] group relative',
                   isActive
                     ? 'bg-amber-950/40 text-amber-100 shadow-lg shadow-amber-900/10 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-amber-500 before:rounded-r-full before:shadow-[0_0_10px_2px_rgba(245,158,11,0.5)]'
                     : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100'

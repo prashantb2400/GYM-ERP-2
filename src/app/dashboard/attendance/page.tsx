@@ -259,9 +259,41 @@ export default function AttendancePage() {
           schema: 'public',
           table: 'attendance',
           filter: `gym_id=eq.${user.gymId}`,
-        }, () => {
-          fetchTodayData();
-          loadAbsentees();
+        }, (payload: { new: Attendance & { member_name?: string; snapshot_url?: string } }) => {
+          const newAtt = payload.new;
+          if (!newAtt?.member_id) return;
+
+          // If branch-scoped, ignore records from other branches
+          if (effectiveBranchId && newAtt.branch_id && newAtt.branch_id !== effectiveBranchId) {
+            return;
+          }
+
+          // 1. Mark member as checked in
+          setCheckedInMemberIds(prev => new Set(prev).add(newAtt.member_id));
+
+          // 2. Remove member from absentee roster immediately
+          setAbsentees(prev => prev.filter(m => m.id !== newAtt.member_id));
+
+          // 3. Prepend new log to todayLogs
+          const logEntry = {
+            ...newAtt,
+            members: {
+              name: newAtt.member_name || 'Member',
+              photo_url: newAtt.snapshot_url || null,
+              member_code: null,
+            },
+          };
+          setTodayLogs(prev => {
+            if (prev.some(l => l.id === newAtt.id)) return prev;
+            return [logEntry, ...prev];
+          });
+
+          // 4. Update stats counters atomically without DB hit
+          setStats(prev => ({
+            ...prev,
+            todayCount: prev.todayCount + 1,
+            notCheckedIn: Math.max(0, prev.notCheckedIn - 1),
+          }));
         })
         .subscribe();
         
@@ -274,9 +306,13 @@ export default function AttendancePage() {
   // Realtime callback from BiometricScannerCockpit
   const handleBiometricLogged = useCallback((event: BiometricLoggedEvent) => {
     setCheckedInMemberIds(prev => new Set(prev).add(event.memberId));
-    fetchTodayData();
-    loadAbsentees();
-  }, [fetchTodayData, loadAbsentees]);
+    setAbsentees(prev => prev.filter(m => m.id !== event.memberId));
+    setStats(prev => ({
+      ...prev,
+      todayCount: prev.todayCount + 1,
+      notCheckedIn: Math.max(0, prev.notCheckedIn - 1),
+    }));
+  }, []);
 
   // Export attendance records to Excel
   const handleExportAttendance = () => {
@@ -492,7 +528,7 @@ export default function AttendancePage() {
       {viewMode === 'kiosk' ? (
         /* Full Screen Member-Facing Kiosk View */
         <div className="max-w-5xl mx-auto animate-in fade-in duration-200">
-          <DoubleBezelCard className="p-1.5" innerClassName="p-4 sm:p-6 bg-zinc-950/90 rounded-2xl">
+          <DoubleBezelCard className="p-1.5" innerClassName="p-4 sm:p-6 bg-zinc-950/90">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80 mb-4">
               <div className="flex items-center gap-2">
                 <div className="h-7 w-7 rounded-lg bg-cyan-950/80 border border-cyan-800/60 flex items-center justify-center">
@@ -524,7 +560,7 @@ export default function AttendancePage() {
           {/* Left Column: Live Biometric Scanner & Metrics */}
           <div className="flex flex-col gap-4 col-span-1 lg:col-span-5">
             {/* Live Biometric Scanner Box */}
-            <DoubleBezelCard className="p-1" innerClassName="p-3 bg-zinc-950/90 rounded-xl">
+            <DoubleBezelCard className="p-1.5" innerClassName="p-3 bg-zinc-950/90">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800/60">
                 <div className="flex items-center gap-2">
                   <div className="h-5 w-5 rounded-md bg-cyan-950/80 border border-cyan-800/60 flex items-center justify-center">
@@ -532,7 +568,7 @@ export default function AttendancePage() {
                   </div>
                   <span className="text-xs font-semibold text-zinc-200">Biometric Sensor Cockpit</span>
                 </div>
-                <span className="text-[10px] font-mono text-zinc-500">Autonomous</span>
+                <span className="text-[10px] font-mono text-zinc-400">Autonomous</span>
               </div>
               <BiometricScannerCockpit
                 variant="cockpit"
@@ -542,7 +578,7 @@ export default function AttendancePage() {
 
             {/* Quick 4-Stat Metric Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5">
-              <DoubleBezelCard className="p-1" innerClassName="p-3 flex flex-col gap-0.5 rounded-xl bg-zinc-950/80">
+              <DoubleBezelCard className="p-1.5" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Users className="w-3.5 h-3.5 text-purple-400" />
                   <span className="text-[10px] font-mono uppercase tracking-wider">Today</span>
@@ -552,7 +588,7 @@ export default function AttendancePage() {
                 </span>
               </DoubleBezelCard>
               
-              <DoubleBezelCard className="p-1" innerClassName="p-3 flex flex-col gap-0.5 rounded-xl bg-zinc-950/80">
+              <DoubleBezelCard className="p-1.5" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Activity className="w-3.5 h-3.5 text-blue-400" />
                   <span className="text-[10px] font-mono uppercase tracking-wider">Week Avg</span>
@@ -562,7 +598,7 @@ export default function AttendancePage() {
                 </span>
               </DoubleBezelCard>
               
-              <DoubleBezelCard className="p-1" innerClassName="p-3 flex flex-col gap-0.5 rounded-xl bg-zinc-950/80">
+              <DoubleBezelCard className="p-1.5" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
                   <span className="text-[10px] font-mono uppercase tracking-wider">Missing</span>
@@ -572,7 +608,7 @@ export default function AttendancePage() {
                 </span>
               </DoubleBezelCard>
               
-              <DoubleBezelCard className="p-1" innerClassName="p-3 flex flex-col gap-0.5 rounded-xl bg-zinc-950/80">
+              <DoubleBezelCard className="p-1.5" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Clock className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="text-[10px] font-mono uppercase tracking-wider">Peak Hr</span>
@@ -728,7 +764,7 @@ export default function AttendancePage() {
             </div>
 
             {/* Unified Activity Hub: Today Logs & Absentee Roster */}
-            <DoubleBezelCard className="p-1" innerClassName="p-4 bg-zinc-950/90 rounded-xl flex flex-col min-h-[460px]">
+            <DoubleBezelCard className="p-1.5" innerClassName="p-4 bg-zinc-950/90 flex flex-col min-h-[460px]">
               {/* Header Tabs: Today Log vs Absentees */}
               <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3 mb-3">
                 <div className="flex items-center gap-2">

@@ -64,24 +64,15 @@ export function CCTVLiveView({ cameraId, cameraName, location, rtspUrl, showCont
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'face_recognition_logs',
+          table: 'vigilance_events',
           filter: `camera_id=eq.${cameraId}`,
         },
         async (payload) => {
-          if (payload.new.member_id) {
-            const { data } = await supabase
-              .from('members')
-              .select('first_name, last_name')
-              .eq('id', payload.new.member_id)
-              .single();
-              
-            if (data) {
-              setDetectionEvent({
-                name: `${data.first_name} ${data.last_name}`,
-                time: Date.now()
-              });
-            }
-          }
+          const name = payload.new.member_name || (payload.new.member_id ? 'Member Detected' : 'Unknown Visitor');
+          setDetectionEvent({
+            name,
+            time: Date.now()
+          });
         }
       )
       .subscribe();

@@ -31,51 +31,41 @@ export function AttendanceTicker({ gymId, maxItems = 10, className = '' }: Atten
   const supabase = createClient();
 
   useEffect(() => {
-    // Initial fetch of recent attendance (mocked for now, would be a real query)
-    const fetchRecent = async () => {
-      // Setup realtime subscription
-      const channel = supabase
-        .channel('attendance_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'attendance_logs',
-            filter: gymId ? `gym_id=eq.${gymId}` : undefined,
-          },
-          async (payload) => {
-            // Fetch member details for the new log
-            const { data: memberData } = await supabase
-              .from('members')
-              .select('first_name, last_name, avatar_url')
-              .eq('id', payload.new.member_id)
-              .single();
+    const channel = supabase
+      .channel(`attendance_changes_${gymId || 'all'}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'attendance',
+          filter: gymId ? `gym_id=eq.${gymId}` : undefined,
+        },
+        async (payload) => {
+          // In attendance table, member_name is already denormalized
+          const newEvent: AttendanceEvent = {
+            id: payload.new.id,
+            member_id: payload.new.member_id,
+            check_in_time: payload.new.check_in_time,
+            method: payload.new.method as AttendanceEvent['method'],
+            member: {
+              first_name: payload.new.member_name || 'Member',
+              last_name: '',
+              avatar_url: payload.new.snapshot_url || null,
+            },
+          };
 
-            if (memberData) {
-              const newEvent: AttendanceEvent = {
-                id: payload.new.id,
-                member_id: payload.new.member_id,
-                check_in_time: payload.new.check_in_time,
-                method: payload.new.method as AttendanceEvent['method'],
-                member: memberData,
-              };
+          setEvents((prev) => {
+            const updated = [newEvent, ...prev];
+            return updated.slice(0, maxItems);
+          });
+        }
+      )
+      .subscribe();
 
-              setEvents((prev) => {
-                const updated = [newEvent, ...prev];
-                return updated.slice(0, maxItems);
-              });
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+    return () => {
+      supabase.removeChannel(channel);
     };
-
-    fetchRecent();
   }, [gymId, maxItems, supabase]);
 
   const getMethodDetails = (method: string) => {

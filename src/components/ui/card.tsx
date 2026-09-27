@@ -91,7 +91,7 @@ function DoubleBezelCard({
     <div
       data-slot="double-bezel-card"
       className={cn(
-        "double-bezel-shell transition-all duration-300",
+        "double-bezel-shell transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out",
         className
       )}
       {...props}
