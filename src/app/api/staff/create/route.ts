@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAuthUser } from '@/lib/server/auth-helper';
+import { validateBody } from '@/lib/server/validate';
+import { createStaffSchema } from '@/lib/schemas/staff';
 
 export async function POST(request: Request) {
   try {
@@ -40,6 +42,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Only gym owners can create staff accounts' }, { status: 403 });
     }
     
+    const validation = await validateBody(request, createStaffSchema);
+    if (!validation.success) {
+      return validation.response;
+    }
+
     const {
       name,
       email,
@@ -49,19 +56,7 @@ export async function POST(request: Request) {
       role,
       permissions,
       branchId,
-    } = await request.json();
-
-    if (!name?.trim() || !loginId?.trim() || !password?.trim() || !role) {
-      return NextResponse.json({ error: 'Missing required fields: Full Name, Login ID, Password, and Role are required' }, { status: 400 });
-    }
-
-    if (password.trim().length < 6) {
-      return NextResponse.json({ error: 'Password must be at least 6 characters long' }, { status: 400 });
-    }
-
-    if (!['receptionist', 'trainer'].includes(role)) {
-      return NextResponse.json({ error: 'Invalid staff role. Allowed: receptionist, trainer' }, { status: 400 });
-    }
+    } = validation.data;
 
     // Check if Login ID is already taken
     const { data: existingUser } = await supabaseAdmin

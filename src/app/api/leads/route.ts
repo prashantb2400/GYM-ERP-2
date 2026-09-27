@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAuthUser } from '@/lib/server/auth-helper';
+import { validateBody } from '@/lib/server/validate';
+import { createLeadSchema, updateLeadSchema } from '@/lib/schemas/leads';
 
 /**
  * Helper to resolve gym_id for the authenticated user.
@@ -104,12 +106,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No gym workspace associated with this user' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { name, phone, email, interest, source, follow_up_date, notes, branchId } = body;
-
-    if (!name?.trim() || !phone?.trim()) {
-      return NextResponse.json({ error: 'Lead name and phone number are required' }, { status: 400 });
+    const validation = await validateBody(request, createLeadSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+
+    const { name, phone, email, interest, source, follow_up_date, notes, branchId } = validation.data;
 
     const cleanPhone = phone.replace(/\D/g, '');
 
@@ -162,12 +164,12 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'No gym workspace associated with this user' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { id, status, notes, follow_up_date, converted_member_id } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: 'Lead ID is required' }, { status: 400 });
+    const validation = await validateBody(request, updateLeadSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+
+    const { id, status, notes, follow_up_date, converted_member_id } = validation.data;
 
     const updates: Record<string, any> = {};
     if (status !== undefined) updates.status = status;

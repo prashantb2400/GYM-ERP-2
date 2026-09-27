@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAuthUser } from '@/lib/server/auth-helper';
 import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
+import { validateBody } from '@/lib/server/validate';
+import { createPlanSchema, updatePlanSchema } from '@/lib/schemas/plans';
 
 // GET /api/plans - List membership plans for caller's gym
 export async function GET(request: Request) {
@@ -52,31 +54,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions to create plans' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const validation = await validateBody(request, createPlanSchema);
+    if (!validation.success) {
+      return validation.response;
+    }
+
     const {
       name,
-      duration_days,
-      price,
+      duration_days: parsedDays,
+      price: parsedPrice,
       features = [],
       highlights = [],
       is_popular = false,
       is_active = true,
       display_order,
-    } = body;
-
-    if (!name || typeof name !== 'string' || !name.trim()) {
-      return NextResponse.json({ error: 'Plan name is required' }, { status: 400 });
-    }
-
-    const parsedDays = parseInt(String(duration_days), 10);
-    if (isNaN(parsedDays) || parsedDays <= 0) {
-      return NextResponse.json({ error: 'Valid duration in days is required' }, { status: 400 });
-    }
-
-    const parsedPrice = parseFloat(String(price));
-    if (isNaN(parsedPrice) || parsedPrice < 0) {
-      return NextResponse.json({ error: 'Valid plan price is required' }, { status: 400 });
-    }
+    } = validation.data;
 
     // Calculate display order if not provided
     let finalOrder = typeof display_order === 'number' ? display_order : 0;
@@ -131,23 +123,23 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions to update plans' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { id, ...updates } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
+    const validation = await validateBody(request, updatePlanSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+
+    const { id, ...updates } = validation.data;
 
     // Sanitize update fields
     const allowedFields: Record<string, any> = {};
-    if (updates.name !== undefined) allowedFields.name = String(updates.name).trim();
-    if (updates.duration_days !== undefined) allowedFields.duration_days = parseInt(String(updates.duration_days), 10);
-    if (updates.price !== undefined) allowedFields.price = parseFloat(String(updates.price));
+    if (updates.name !== undefined) allowedFields.name = updates.name.trim();
+    if (updates.duration_days !== undefined) allowedFields.duration_days = updates.duration_days;
+    if (updates.price !== undefined) allowedFields.price = updates.price;
     if (updates.features !== undefined && Array.isArray(updates.features)) allowedFields.features = updates.features;
     if (updates.highlights !== undefined && Array.isArray(updates.highlights)) allowedFields.highlights = updates.highlights;
     if (updates.is_popular !== undefined) allowedFields.is_popular = Boolean(updates.is_popular);
     if (updates.is_active !== undefined) allowedFields.is_active = Boolean(updates.is_active);
-    if (updates.display_order !== undefined) allowedFields.display_order = parseInt(String(updates.display_order), 10);
+    if (updates.display_order !== undefined) allowedFields.display_order = updates.display_order;
 
     const { data: updatedPlan, error } = await supabaseAdmin
       .from('plans')

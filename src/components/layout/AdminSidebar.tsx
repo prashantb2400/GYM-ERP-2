@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePermission } from '@/hooks/usePermission';
-import { SIDEBAR_ITEMS } from '@/lib/utils/constants';
+import { SIDEBAR_GROUPS } from '@/lib/utils/constants';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -99,49 +99,65 @@ export function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
       </div>
 
       {/* Navigation List */}
-      <nav className="flex-1 space-y-1 px-2 py-3 overflow-y-auto scrollbar-none">
-        {SIDEBAR_ITEMS.map((item) => {
-          // If the item requires permission, check if user has it
-          if (item.permission && !can(item.permission)) {
-            return null;
-          }
+      <nav className="flex-1 space-y-4 px-2 py-3 overflow-y-auto scrollbar-none">
+        {SIDEBAR_GROUPS.map((group) => {
+          // Filter visible items based on permissions
+          const visibleItems = group.items.filter(
+            (item) => !item.permission || can(item.permission)
+          );
 
-          const IconComponent = iconMap[item.icon];
-          const isActive = item.href === '/dashboard'
-            ? pathname === '/dashboard'
-            : pathname === item.href || pathname.startsWith(item.href + '/');
+          if (visibleItems.length === 0) return null;
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-2.5 px-3 py-1.75 rounded-xl text-xs font-medium transition-[background-color,color,border-color,transform] duration-120 ease-out group relative active:scale-[0.98]',
-                isActive
-                  ? 'bg-white/[0.08] text-white border border-white/[0.1] shadow-2xs font-semibold'
-                  : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200 border border-transparent'
-              )}
-            >
-              {IconComponent && (
-                <IconComponent
-                  className={cn(
-                    'h-4 w-4 shrink-0 transition-colors duration-120',
-                    isActive ? 'text-primary' : 'text-zinc-500 group-hover:text-zinc-300'
-                  )}
-                />
-              )}
+            <div key={group.title} className="space-y-1">
               {!collapsed && (
-                <span className="truncate flex-1">{item.label}</span>
-              )}
-              {!collapsed && isActive && (
-                <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-              )}
-              {collapsed && (
-                <div className="absolute left-14 bg-zinc-900/95 backdrop-blur-md text-zinc-100 text-xs px-2.5 py-1 rounded-lg border border-white/[0.1] opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-xl z-50">
-                  {item.label}
+                <div className="px-3 py-1 text-[10px] font-semibold text-zinc-500 uppercase tracking-widest">
+                  {group.title}
                 </div>
               )}
-            </Link>
+              {collapsed && (
+                <div className="my-1 mx-2 border-t border-white/[0.06]" />
+              )}
+              {visibleItems.map((item) => {
+                const IconComponent = iconMap[item.icon];
+                const isActive = item.href === '/dashboard'
+                  ? pathname === '/dashboard'
+                  : pathname === item.href || pathname.startsWith(item.href + '/');
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3 py-1.75 rounded-xl text-xs font-medium transition-[background-color,color,border-color,transform] duration-120 ease-out group relative active:scale-[0.98]',
+                      isActive
+                        ? 'bg-white/[0.08] text-white border border-white/[0.1] shadow-2xs font-semibold'
+                        : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200 border border-transparent'
+                    )}
+                  >
+                    {IconComponent && (
+                      <IconComponent
+                        className={cn(
+                          'h-4 w-4 shrink-0 transition-colors duration-120',
+                          isActive ? 'text-primary' : 'text-zinc-500 group-hover:text-zinc-300'
+                        )}
+                      />
+                    )}
+                    {!collapsed && (
+                      <span className="truncate flex-1">{item.label}</span>
+                    )}
+                    {!collapsed && isActive && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                    )}
+                    {collapsed && (
+                      <div className="absolute left-14 bg-zinc-900/95 backdrop-blur-md text-zinc-100 text-xs px-2.5 py-1 rounded-lg border border-white/[0.1] opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-xl z-50">
+                        {item.label}
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
           );
         })}
       </nav>

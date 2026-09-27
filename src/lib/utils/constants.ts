@@ -2,28 +2,64 @@ export const APP_NAME = 'GymERP';
 export const APP_DESCRIPTION = 'Enterprise Gym Management Platform';
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-export const SIDEBAR_ITEMS = [
-  { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard', permission: null },
-  { label: 'Members', href: '/dashboard/members', icon: 'Users', permission: 'members.view' as const },
-  { label: 'Leads', href: '/dashboard/leads', icon: 'Target', permission: 'leads.view' as const },
-  { label: 'Plans', href: '/dashboard/plans', icon: 'CreditCard', permission: 'plans.view' as const },
-  { label: 'Staff', href: '/dashboard/staff', icon: 'UserCog', permission: 'staff.view' as const },
-  { label: 'Branches', href: '/dashboard/branches', icon: 'Building2', permission: 'branches.view' as const },
-  { label: 'Invoices', href: '/dashboard/invoices', icon: 'Receipt', permission: 'invoices.view' as const },
-  { label: 'Attendance', href: '/dashboard/attendance', icon: 'CalendarCheck', permission: 'attendance.view' as const },
-  { label: 'CCTV & Vigilance', href: '/dashboard/cctv', icon: 'Cctv', permission: null },
-  { label: 'Analytics', href: '/dashboard/analytics', icon: 'BarChart3', permission: 'analytics.view' as const },
-  { label: 'Follow-ups', href: '/dashboard/followups', icon: 'PhoneCall', permission: 'followups.view' as const },
-  { label: 'Due Collection', href: '/dashboard/due', icon: 'IndianRupee', permission: 'due.view' as const },
-  { label: 'Expenses', href: '/dashboard/expenses', icon: 'Wallet', permission: 'expenses.view' as const },
-  { label: 'Inventory', href: '/dashboard/inventory', icon: 'Package', permission: 'inventory.view' as const },
-  { label: 'WhatsApp', href: '/dashboard/whatsapp', icon: 'MessageCircle', permission: 'whatsapp.send' as const },
-  { label: 'Diet Charts', href: '/dashboard/diet', icon: 'Apple', permission: 'diet.view' as const },
-  { label: 'Exercise Plans', href: '/dashboard/exercise', icon: 'Dumbbell', permission: 'exercise.view' as const },
-  { label: 'KYC', href: '/dashboard/kyc', icon: 'FileCheck', permission: 'kyc.view' as const },
-  { label: 'Cron Jobs', href: '/dashboard/cron', icon: 'Clock', permission: 'settings.manage' as const },
-  { label: 'Settings', href: '/dashboard/settings', icon: 'Settings', permission: 'settings.view' as const },
-] as const;
+import { Permission } from '@/types/auth';
+
+export interface SidebarItem {
+  label: string;
+  href: string;
+  icon: string;
+  permission: Permission | null;
+}
+
+export interface SidebarGroup {
+  title: string;
+  items: SidebarItem[];
+}
+
+export const SIDEBAR_GROUPS: SidebarGroup[] = [
+  {
+    title: 'Operations',
+    items: [
+      { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard', permission: null },
+      { label: 'Members', href: '/dashboard/members', icon: 'Users', permission: 'members.view' },
+      { label: 'Attendance', href: '/dashboard/attendance', icon: 'CalendarCheck', permission: 'attendance.view' },
+      { label: 'CCTV & Vigilance', href: '/dashboard/cctv', icon: 'Cctv', permission: null },
+      { label: 'KYC Checks', href: '/dashboard/kyc', icon: 'FileCheck', permission: 'kyc.view' },
+    ],
+  },
+  {
+    title: 'Finance',
+    items: [
+      { label: 'Invoices', href: '/dashboard/invoices', icon: 'Receipt', permission: 'invoices.view' },
+      { label: 'Due Collection', href: '/dashboard/due', icon: 'IndianRupee', permission: 'due.view' },
+      { label: 'Expenses', href: '/dashboard/expenses', icon: 'Wallet', permission: 'expenses.view' },
+      { label: 'Plans', href: '/dashboard/plans', icon: 'CreditCard', permission: 'plans.view' },
+    ],
+  },
+  {
+    title: 'Engagement',
+    items: [
+      { label: 'Leads', href: '/dashboard/leads', icon: 'Target', permission: 'leads.view' },
+      { label: 'Follow-ups', href: '/dashboard/followups', icon: 'PhoneCall', permission: 'followups.view' },
+      { label: 'WhatsApp', href: '/dashboard/whatsapp', icon: 'MessageCircle', permission: 'whatsapp.send' },
+      { label: 'Diet Charts', href: '/dashboard/diet', icon: 'Apple', permission: 'diet.view' },
+      { label: 'Exercise Plans', href: '/dashboard/exercise', icon: 'Dumbbell', permission: 'exercise.view' },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
+      { label: 'Branches', href: '/dashboard/branches', icon: 'Building2', permission: 'branches.view' },
+      { label: 'Staff', href: '/dashboard/staff', icon: 'UserCog', permission: 'staff.view' },
+      { label: 'Analytics', href: '/dashboard/analytics', icon: 'BarChart3', permission: 'analytics.view' },
+      { label: 'Inventory', href: '/dashboard/inventory', icon: 'Package', permission: 'inventory.view' },
+      { label: 'Cron Jobs', href: '/dashboard/cron', icon: 'Clock', permission: 'settings.manage' },
+      { label: 'Settings', href: '/dashboard/settings', icon: 'Settings', permission: 'settings.view' },
+    ],
+  },
+];
+
+export const SIDEBAR_ITEMS: SidebarItem[] = SIDEBAR_GROUPS.flatMap((group) => group.items);
 
 export const MEMBER_SIDEBAR_ITEMS = [
   { label: 'Dashboard', href: '/member/dashboard', icon: 'LayoutDashboard' },

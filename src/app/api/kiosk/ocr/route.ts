@@ -3,6 +3,8 @@ import { extractKycDocumentData } from '@/lib/server/llm';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 import { verifyKioskOrAuth } from '@/lib/server/kiosk-auth';
+import { validateBody } from '@/lib/server/validate';
+import { kioskOcrSchema } from '@/lib/schemas/kiosk';
 
 export async function POST(request: Request) {
   try {
@@ -15,11 +17,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { imageBase64, docType, gymId } = await request.json();
-
-    if (!imageBase64) {
-      return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
+    const validation = await validateBody(request, kioskOcrSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+
+    const { imageBase64, docType, gymId } = validation.data;
 
     // Enforce mandatory kiosk device authentication or staff/owner session
     const authResult = await verifyKioskOrAuth(request, gymId);

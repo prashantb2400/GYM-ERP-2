@@ -5,6 +5,8 @@ import { isSuperAdmin } from '@/lib/platform/auth';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 import { getAuthUser } from '@/lib/server/auth-helper';
+import { validateBody } from '@/lib/server/validate';
+import { faceCheckinSchema } from '@/lib/schemas/attendance';
 
 export async function POST(request: Request) {
   try {
@@ -22,12 +24,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { gymId: requestedGymId, branchId: requestedBranchId, memberId, confidence, type = 'auto', deviceId, timestamp } = body;
-
-    if (!memberId) {
-      return NextResponse.json({ error: 'Missing required memberId' }, { status: 400 });
+    const validation = await validateBody(request, faceCheckinSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+
+    const { gymId: requestedGymId, branchId: requestedBranchId, memberId, confidence, type = 'auto', deviceId, timestamp } = validation.data;
 
     // Tenant & Branch isolation: resolve scope from caller's account
     const scope = await getBranchScope(sessionUser.id, {

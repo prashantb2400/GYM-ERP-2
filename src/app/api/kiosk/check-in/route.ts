@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 import { verifyKioskOrAuth } from '@/lib/server/kiosk-auth';
+import { validateBody } from '@/lib/server/validate';
+import { kioskCheckInSchema } from '@/lib/schemas/kiosk';
 
 export async function POST(request: Request) {
   try {
@@ -14,11 +16,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { gymId, branchId, query, method = 'keypad' } = await request.json();
-
-    if (!gymId || !query) {
-      return NextResponse.json({ error: 'Missing gymId or identifier query' }, { status: 400 });
+    const validation = await validateBody(request, kioskCheckInSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+
+    const { gymId, branchId, query, method = 'keypad' } = validation.data;
 
     // Enforce mandatory kiosk device authentication or staff/owner session
     const authResult = await verifyKioskOrAuth(request, gymId);
@@ -121,9 +124,9 @@ export async function POST(request: Request) {
 
     // 4. Record new attendance
     const attendanceMethod =
-      method === 'qr_scan'
+      method === 'qr' || method === 'qr_scan'
         ? 'qr_scan'
-        : method === 'face_recognition'
+        : method === 'face' || method === 'face_recognition'
         ? 'face_recognition'
         : 'manual';
 

@@ -5,6 +5,8 @@ import { isSuperAdmin } from '@/lib/platform/auth';
 import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
 import { getAuthUser } from '@/lib/server/auth-helper';
+import { validateBody } from '@/lib/server/validate';
+import { qrCheckinSchema } from '@/lib/schemas/attendance';
 
 export async function POST(request: Request) {
   try {
@@ -23,11 +25,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authErr || 'Unauthorized' }, { status: 401 });
     }
 
-    const { qrToken, gymId: requestedGymId, branchId: requestedBranchId } = await request.json();
-
-    if (!qrToken) {
-      return NextResponse.json({ error: 'Missing qrToken' }, { status: 400 });
+    const validation = await validateBody(request, qrCheckinSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+
+    const { qrToken, gymId: requestedGymId, branchId: requestedBranchId } = validation.data;
 
     // Tenant & Branch isolation: resolve scope from caller's account
     const scope = await getBranchScope(sessionUser.id, {

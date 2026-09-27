@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getAuthUser } from '@/lib/server/auth-helper';
 import { isSuperAdmin } from '@/lib/platform/auth';
 import { getBranchScope, isBranchScopeError } from '@/lib/server/branch-scope';
+import { validateBody } from '@/lib/server/validate';
+import { createBranchSchema, updateBranchSchema } from '@/lib/schemas/branches';
 
 // GET /api/branches - List branches for caller's gym
 export async function GET(request: Request) {
@@ -58,12 +60,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden: Only gym owners can create branches' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { name, phone, address } = body;
-
-    if (!name || !name.trim()) {
-      return NextResponse.json({ error: 'Branch name is required' }, { status: 400 });
+    const validation = await validateBody(request, createBranchSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+
+    const { name, phone, address } = validation.data;
 
     const { data: branch, error } = await supabaseAdmin
       .from('branches')
@@ -103,12 +105,12 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Forbidden: Only gym owners can modify branches' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { id, name, phone, address, is_active } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: 'Branch ID is required' }, { status: 400 });
+    const validation = await validateBody(request, updateBranchSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+
+    const { id, name, phone, address, is_active } = validation.data;
 
     // Verify branch belongs to caller's gym
     const { data: existingBranch } = await supabaseAdmin
