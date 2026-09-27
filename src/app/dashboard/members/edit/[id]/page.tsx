@@ -14,11 +14,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, ArrowLeft, Save, Camera, Upload, User, ScanFace, Fingerprint } from 'lucide-react';
 import { toast } from 'sonner';
+import dynamic from 'next/dynamic';
 import { INDIAN_STATES, BLOOD_GROUPS, GENDER_OPTIONS, FITNESS_LEVELS, MEMBER_STATUSES } from '@/lib/utils/constants';
 import { toSafeUUID } from '@/lib/utils/format';
-import { CameraCaptureModal } from '@/components/shared/CameraCaptureModal';
-import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
-import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
+
+const CameraCaptureModal = dynamic(
+  () => import('@/components/shared/CameraCaptureModal').then((mod) => mod.CameraCaptureModal),
+  { ssr: false }
+);
+
+const FaceEnrollmentModal = dynamic(
+  () => import('@/components/attendance/FaceEnrollmentModal').then((mod) => mod.FaceEnrollmentModal),
+  { ssr: false }
+);
+
+const FingerprintEnrollmentModal = dynamic(
+  () => import('@/components/attendance/FingerprintEnrollmentModal').then((mod) => mod.FingerprintEnrollmentModal),
+  { ssr: false }
+);
 
 export default function EditMemberPage() {
   const supabase = createClient();

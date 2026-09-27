@@ -27,9 +27,19 @@ import {
   LayoutGrid,
   Monitor,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { exportToExcel } from '@/lib/export/excel-export';
-import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
-import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
+
+const FaceEnrollmentModal = dynamic(
+  () => import('@/components/attendance/FaceEnrollmentModal').then((mod) => mod.FaceEnrollmentModal),
+  { ssr: false }
+);
+
+const FingerprintEnrollmentModal = dynamic(
+  () => import('@/components/attendance/FingerprintEnrollmentModal').then((mod) => mod.FingerprintEnrollmentModal),
+  { ssr: false }
+);
+
 import { BiometricScannerCockpit, type BiometricLoggedEvent } from '@/components/attendance/BiometricScannerCockpit';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';

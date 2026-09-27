@@ -9,28 +9,37 @@ import { BorderBeam } from '@/components/magicui/border-beam';
 import { GlowCard } from '@/components/magicui/glow-card';
 import { GradientText } from '@/components/magicui/gradient-text';
 import { Button } from '@/components/ui/button';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
+import dynamic from 'next/dynamic';
 import { formatCurrency } from '@/lib/utils/format';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
 import { RequirePermission } from '@/components/auth/RequirePermission';
 
-const COLORS = ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#6366f1'];
+function ChartSkeleton() {
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-zinc-950/20 animate-pulse rounded-xl">
+      <Loader2 className="h-5 w-5 animate-spin text-zinc-600" />
+    </div>
+  );
+}
+
+const ProfitLossAreaChart = dynamic(
+  () => import('@/components/analytics/AnalyticsCharts').then((m) => m.ProfitLossAreaChart),
+  { ssr: false, loading: () => <ChartSkeleton /> }
+);
+const PlanDistributionPieChart = dynamic(
+  () => import('@/components/analytics/AnalyticsCharts').then((m) => m.PlanDistributionPieChart),
+  { ssr: false, loading: () => <ChartSkeleton /> }
+);
+const AttendanceTrafficBarChart = dynamic(
+  () => import('@/components/analytics/AnalyticsCharts').then((m) => m.AttendanceTrafficBarChart),
+  { ssr: false, loading: () => <ChartSkeleton /> }
+);
+const TrainerPortfolioBarChart = dynamic(
+  () => import('@/components/analytics/AnalyticsCharts').then((m) => m.TrainerPortfolioBarChart),
+  { ssr: false, loading: () => <ChartSkeleton /> }
+);
 
 export default function AnalyticsPage() {
   const supabase = createClient();
@@ -324,30 +333,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent className="relative h-[280px]">
             <BorderBeam />
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueTimeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="month" stroke="#71717a" fontSize={11} tickLine={false} />
-                <YAxis stroke="#71717a" fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
-                  labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
-                />
-                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#a1a1aa' }} />
-                <Area type="monotone" name="Revenue" dataKey="Revenue" stroke="#3b82f6" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
-                <Area type="monotone" name="Expenses" dataKey="Expenses" stroke="#ef4444" fillOpacity={1} fill="url(#colorExp)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <ProfitLossAreaChart data={revenueTimeline} />
           </CardContent>
         </Card>
         </GlowCard>
@@ -362,38 +348,9 @@ export default function AnalyticsPage() {
             </div>
             <CardDescription className="text-zinc-500 text-xs">Distribution of active member plans</CardDescription>
           </CardHeader>
-          <CardContent className="relative h-[240px] flex items-center justify-center relative">
+          <CardContent className="relative h-[240px] flex items-center justify-center">
             <BorderBeam />
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={planDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {planDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px', color: '#fff' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            
-            {/* Custom Legend */}
-            <div className="absolute bottom-0 inset-x-0 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[10px] text-zinc-400">
-              {planDistribution.map((entry, idx) => (
-                <div key={idx} className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                  <span>{entry.name}</span>
-                </div>
-              ))}
-            </div>
+            <PlanDistributionPieChart data={planDistribution} />
           </CardContent>
         </Card>
         </GlowCard>
@@ -407,15 +364,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent className="relative h-[240px]">
             <BorderBeam />
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={attendanceTrend} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="day" stroke="#71717a" fontSize={10} tickLine={false} />
-                <YAxis stroke="#71717a" fontSize={10} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }} />
-                <Bar dataKey="Check-ins" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <AttendanceTrafficBarChart data={attendanceTrend} />
           </CardContent>
         </Card>
         </GlowCard>
@@ -429,15 +378,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent className="relative h-[240px]">
             <BorderBeam />
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trainerAssignments} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis type="number" stroke="#71717a" fontSize={10} tickLine={false} />
-                <YAxis type="category" dataKey="name" stroke="#71717a" fontSize={10} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }} />
-                <Bar dataKey="Members" fill="#10b981" radius={[0, 4, 4, 0]} maxBarSize={25} />
-              </BarChart>
-            </ResponsiveContainer>
+            <TrainerPortfolioBarChart data={trainerAssignments} />
           </CardContent>
         </Card>
         </GlowCard>

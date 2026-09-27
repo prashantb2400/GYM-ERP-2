@@ -44,13 +44,22 @@ import {
   FitnessLevel,
   calculateNutritionTargets,
 } from '@/lib/fitness/plan-generator';
+import dynamic from 'next/dynamic';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
 import { useBranch } from '@/hooks/useBranch';
 import { useGym } from '@/hooks/useGym';
-import { CameraCaptureModal } from '@/components/shared/CameraCaptureModal';
-import { MemberRegistrationSuccessModal } from '@/components/members/MemberRegistrationSuccessModal';
 import { Badge } from '@/components/ui/badge';
+
+const CameraCaptureModal = dynamic(
+  () => import('@/components/shared/CameraCaptureModal').then((mod) => mod.CameraCaptureModal),
+  { ssr: false }
+);
+
+const MemberRegistrationSuccessModal = dynamic(
+  () => import('@/components/members/MemberRegistrationSuccessModal').then((mod) => mod.MemberRegistrationSuccessModal),
+  { ssr: false }
+);
 
 export default function AddMemberPage() {
   const supabase = createClient();
