@@ -14,6 +14,10 @@ import {
   Users,
   Calendar,
   Layers,
+  Settings2,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,6 +55,85 @@ export default function WhatsAppLogsPage() {
   const [messageContent, setMessageContent] = useState('');
   const [members, setMembers] = useState<any[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]); // Array of member IDs
+
+  // Provider Settings & Live Status
+  const [providerStatus, setProviderStatus] = useState<{
+    connected?: boolean;
+    provider?: string;
+    mode?: string;
+    displayPhoneNumber?: string;
+    qualityRating?: string;
+  } | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [openSettingsModal, setOpenSettingsModal] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [whatsappMode, setWhatsappMode] = useState<'cloud_api' | 'local_bridge' | 'disabled'>('cloud_api');
+  const [bridgeUrl, setBridgeUrl] = useState('');
+  const [bridgeToken, setBridgeToken] = useState('');
+
+  const fetchConnectionStatus = async () => {
+    try {
+      setCheckingStatus(true);
+      const res = await fetch('/api/whatsapp/status');
+      const data = await res.json();
+      if (data.success && data.data) {
+        setProviderStatus(data.data);
+      }
+    } catch (e) {
+      console.error('Failed to query WhatsApp connection status', e);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  const fetchGymConfig = async () => {
+    if (!user?.gymId) return;
+    try {
+      const { data } = await supabase
+        .from('gyms')
+        .select('whatsapp_mode, bridge_url, bridge_token')
+        .eq('id', user.gymId)
+        .single();
+      if (data) {
+        setWhatsappMode(data.whatsapp_mode || 'cloud_api');
+        setBridgeUrl(data.bridge_url || '');
+        setBridgeToken(data.bridge_token || '');
+      }
+    } catch (e) {
+      console.error('Failed to fetch gym WhatsApp config', e);
+    }
+  };
+
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.gymId) return;
+    try {
+      setSavingSettings(true);
+      const { error } = await supabase
+        .from('gyms')
+        .update({
+          whatsapp_mode: whatsappMode,
+          bridge_url: bridgeUrl.trim() || null,
+          bridge_token: bridgeToken.trim() || null,
+        })
+        .eq('id', user.gymId);
+
+      if (error) throw error;
+      toast.success('WhatsApp backend configuration updated successfully');
+      setOpenSettingsModal(false);
+      await fetchConnectionStatus();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save configuration';
+      toast.error(msg);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConnectionStatus();
+    fetchGymConfig();
+  }, [user?.gymId]);
 
   const fetchLogs = async () => {
     if (!user?.gymId) {
@@ -206,6 +289,75 @@ export default function WhatsAppLogsPage() {
           </Button>
         )}
       </div>
+
+      {/* Provider Status & Backend Control Banner */}
+      <Card className="border-zinc-800 bg-gradient-to-r from-zinc-900/60 via-zinc-900/40 to-zinc-950/80 p-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-lg border ${
+              providerStatus?.connected
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+            }`}>
+              {providerStatus?.connected ? (
+                <Wifi className="h-5 w-5" />
+              ) : (
+                <WifiOff className="h-5 w-5" />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-zinc-100">
+                  {providerStatus?.provider || (whatsappMode === 'local_bridge' ? 'Baileys Local Bridge' : 'Meta Cloud API')}
+                </span>
+                <Badge className={`text-[10px] px-2 py-0.5 font-semibold ${
+                  providerStatus?.connected
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                }`}>
+                  {providerStatus?.connected ? 'Online' : 'Checking / Offline'}
+                </Badge>
+                {providerStatus?.mode === 'local_bridge' && (
+                  <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-500/30">
+                    Free Self-Hosted
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                {providerStatus?.displayPhoneNumber
+                  ? `Active Phone: ${providerStatus.displayPhoneNumber}`
+                  : whatsappMode === 'local_bridge'
+                  ? 'Connects via desktop app or Cloudflare Tunnel (Zero per-message fees)'
+                  : 'Delivered via official Meta WhatsApp Business API'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchConnectionStatus}
+              disabled={checkingStatus}
+              className="border-zinc-800 bg-zinc-950 text-zinc-300 hover:bg-zinc-800 text-xs gap-1.5 h-8"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${checkingStatus ? 'animate-spin' : ''}`} />
+              Test Connection
+            </Button>
+            {user?.role === 'owner' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOpenSettingsModal(true)}
+                className="border-zinc-800 bg-zinc-950 text-zinc-300 hover:bg-zinc-800 text-xs gap-1.5 h-8"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                Configure Backend
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
 
       {/* Filter Bar */}
       <Card className="border-zinc-800 bg-zinc-900/40 p-4">
@@ -381,6 +533,155 @@ export default function WhatsAppLogsPage() {
               <Button type="submit" disabled={sendingBroadcast} className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2">
                 {sendingBroadcast ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4" />}
                 Trigger Dispatch Campaign
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* WhatsApp Backend Configuration Dialog */}
+      <Dialog open={openSettingsModal} onOpenChange={setOpenSettingsModal}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">Configure WhatsApp Backend</DialogTitle>
+            <DialogDescription className="text-zinc-400 text-xs">
+              Select how this gym dispatches WhatsApp messages. You can use official Meta Cloud API or zero-cost Baileys via Cloudflare Tunnel.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveConfig} className="space-y-4 pt-3">
+            <div className="space-y-3">
+              <Label className="text-zinc-300 text-xs font-semibold">Messaging Engine / Architecture *</Label>
+              <div className="grid grid-cols-1 gap-2.5">
+                {/* Free Local Bridge Option */}
+                <label
+                  onClick={() => setWhatsappMode('local_bridge')}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    whatsappMode === 'local_bridge'
+                      ? 'border-purple-500/60 bg-purple-500/10'
+                      : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="waMode"
+                    value="local_bridge"
+                    checked={whatsappMode === 'local_bridge'}
+                    onChange={() => setWhatsappMode('local_bridge')}
+                    className="mt-1 text-purple-600"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-100">Free Baileys Bridge (Desktop App / Cloudflare Tunnel)</span>
+                      <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        Zero API Fees
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Connects using the gym front-desk WhatsApp number. Messages are routed via local sidecar and encrypted Cloudflare tunnel.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Official Meta Cloud API Option */}
+                <label
+                  onClick={() => setWhatsappMode('cloud_api')}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    whatsappMode === 'cloud_api'
+                      ? 'border-purple-500/60 bg-purple-500/10'
+                      : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="waMode"
+                    value="cloud_api"
+                    checked={whatsappMode === 'cloud_api'}
+                    onChange={() => setWhatsappMode('cloud_api')}
+                    className="mt-1 text-purple-600"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-100">Meta WhatsApp Cloud API</span>
+                      <span className="text-[10px] font-semibold text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">
+                        Official & Compliant
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Uses pre-approved templates and official Meta API endpoints. Standard per-message utility/marketing rates apply.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Disabled Option */}
+                <label
+                  onClick={() => setWhatsappMode('disabled')}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    whatsappMode === 'disabled'
+                      ? 'border-purple-500/60 bg-purple-500/10'
+                      : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="waMode"
+                    value="disabled"
+                    checked={whatsappMode === 'disabled'}
+                    onChange={() => setWhatsappMode('disabled')}
+                    className="mt-1 text-purple-600"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-zinc-100">Disabled</span>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Completely disable automated WhatsApp dispatches and reminders for this gym.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {whatsappMode === 'local_bridge' && (
+              <div className="space-y-3 border-t border-zinc-800 pt-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="bUrl" className="text-zinc-300 text-xs font-semibold">Bridge Public URL *</Label>
+                  <Input
+                    id="bUrl"
+                    placeholder="https://gym-xyz.trycloudflare.com or http://localhost:48291"
+                    value={bridgeUrl}
+                    onChange={(e) => setBridgeUrl(e.target.value)}
+                    className="border-zinc-800 bg-zinc-950 text-zinc-100 text-xs"
+                    required={whatsappMode === 'local_bridge'}
+                  />
+                  <p className="text-[10px] text-zinc-500">
+                    The Cloudflare Tunnel URL or local network address where your desktop app bridge is listening.
+                  </p>
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label htmlFor="bToken" className="text-zinc-300 text-xs font-semibold">Bridge Security Bearer Token *</Label>
+                  <Input
+                    id="bToken"
+                    type="password"
+                    placeholder="Enter the bridge API token generated during setup"
+                    value={bridgeToken}
+                    onChange={(e) => setBridgeToken(e.target.value)}
+                    className="border-zinc-800 bg-zinc-950 text-zinc-100 text-xs"
+                    required={whatsappMode === 'local_bridge'}
+                  />
+                  <p className="text-[10px] text-zinc-500">
+                    Displayed in the desktop bridge terminal output on startup.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="border-t border-zinc-800/60 pt-4 mt-6">
+              <Button type="button" variant="ghost" onClick={() => setOpenSettingsModal(false)} className="text-zinc-400 hover:bg-zinc-800 text-xs">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={savingSettings} className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2">
+                {savingSettings ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Settings2 className="h-4 w-4" />}
+                Save & Apply Backend
               </Button>
             </DialogFooter>
           </form>

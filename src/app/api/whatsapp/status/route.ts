@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { waClient } from '@/lib/whatsapp/client';
+import { getWhatsAppProvider } from '@/lib/whatsapp/factory';
 
 export async function GET(request: Request) {
   try {
@@ -11,9 +11,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const status = await waClient.checkConnection();
+    const { data: userData } = await supabase
+      .from('users')
+      .select('gym_id')
+      .eq('auth_id', user.id)
+      .single();
 
-    return NextResponse.json({ success: true, data: status });
+    const wa = await getWhatsAppProvider(userData?.gym_id);
+    const status = await wa.checkConnection();
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...status,
+        provider: wa.providerName,
+        mode: wa.mode,
+      },
+    });
   } catch (error: any) {
     console.error('Check status error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });

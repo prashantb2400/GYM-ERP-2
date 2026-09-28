@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { waClient } from '@/lib/whatsapp/client';
+import { getWhatsAppProvider } from '@/lib/whatsapp/factory';
 import { TemplateParam } from '@/lib/whatsapp/types';
 import { isSuperAdmin } from '@/lib/platform/auth';
 import { checkRateLimit } from '@/lib/server/rate-limit';
@@ -70,7 +70,8 @@ export async function POST(request: Request) {
     // after response, we must await it if not using a queue like Inngest/BullMQ.
     
     // We await for now, but client should handle large lists properly.
-    const results = await waClient.broadcastTemplate(phones, templateName, paramsPerPhone as TemplateParam[][], targetGymId);
+    const wa = await getWhatsAppProvider(targetGymId);
+    const results = await wa.broadcastTemplate(phones, templateName, paramsPerPhone as TemplateParam[][], targetGymId);
 
     return NextResponse.json({ success: true, results });
   } catch (error: any) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { waClient } from '@/lib/whatsapp/client';
+import { getWhatsAppProvider } from '@/lib/whatsapp/factory';
 import { TemplateParam } from '@/lib/whatsapp/types';
 
 export async function POST(request: Request) {
@@ -40,18 +40,19 @@ export async function POST(request: Request) {
     }
 
     let response;
+    const wa = await getWhatsAppProvider(gymId);
 
     if (type === 'text') {
       if (!text) {
         return NextResponse.json({ error: 'Missing text content' }, { status: 400 });
       }
-      response = await waClient.sendText(to, text, gymId, memberId);
+      response = await wa.sendText(to, text, gymId, memberId);
     } 
     else if (type === 'template') {
       if (!templateName || !params) {
         return NextResponse.json({ error: 'Missing templateName or params' }, { status: 400 });
       }
-      response = await waClient.sendTemplate(to, templateName, params as TemplateParam[], gymId, memberId);
+      response = await wa.sendTemplate(to, templateName, params as TemplateParam[], gymId, memberId);
     }
     else if (type === 'document') {
       // documentParams: { base64: string, filename: string, caption: string }
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Missing documentParams' }, { status: 400 });
       }
       const buffer = Buffer.from(documentParams.base64, 'base64');
-      response = await waClient.sendDocument(to, buffer, documentParams.filename, documentParams.caption, gymId, memberId);
+      response = await wa.sendDocument(to, buffer, documentParams.filename, documentParams.caption, gymId, memberId);
     }
     else {
       return NextResponse.json({ error: 'Invalid message type' }, { status: 400 });

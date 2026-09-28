@@ -228,8 +228,9 @@ export async function POST(request: Request) {
           const gymName = gymProfile.data?.name || 'Your Gym';
           const renewMsg = `Hello ${member.name}! Your membership at ${gymName} has been renewed with the ${plan.name} plan until ${endDate}. Invoice #${invoiceNo}. Thank you for working out with us!`;
 
-          const { waClient } = await import('@/lib/whatsapp/client');
-          await waClient.sendText(recipientPhone, renewMsg, gymId, member.id);
+          const { getWhatsAppProvider } = await import('@/lib/whatsapp/factory');
+          const wa = await getWhatsAppProvider(gymId);
+          await wa.sendText(recipientPhone, renewMsg, gymId, member.id);
           whatsAppSent = true;
 
           await supabaseAdmin

@@ -1,0 +1,30 @@
+{
+  "name": "gymerp-whatsapp-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "bun build --compile --target=bun src/index.ts --outfile dist/baileys-engine",
+    "start": "node dist/index.js",
+    "tunnel": "tsx scripts/start-tunnel.ts",
+    "setup:tunnel": "bash scripts/install-cloudflared.sh"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "hono": "^4.6.0",
+    "@hono/node-server": "^1.13.0",
+    "better-sqlite3": "^11.7.0",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4",
+    "link-preview-js": "^3.0.5",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/qrcode": "^1.5.5",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
