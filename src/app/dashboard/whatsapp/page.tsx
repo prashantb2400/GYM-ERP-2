@@ -32,15 +32,12 @@ import { GradientText, SpotlightCard, NumberTicker, GlowingBadge, BorderBeam } f
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { usePlanLimits } from '@/hooks/usePlanLimits';
-import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
 import { WhatsAppQrModal } from '@/components/whatsapp/WhatsAppQrModal';
 
 export default function WhatsAppLogsPage() {
   const supabase = createClient();
   const { user } = useAuth();
   const { can } = usePermission();
-  const { canUseWhatsApp, planName } = usePlanLimits();
 
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<any[]>([]);
@@ -269,14 +266,6 @@ export default function WhatsAppLogsPage() {
       default: return 'bg-zinc-800 text-zinc-400';
     }
   };
-
-  if (!canUseWhatsApp) {
-    return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <UpgradePrompt feature="WhatsApp Automation" currentPlan={planName} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
