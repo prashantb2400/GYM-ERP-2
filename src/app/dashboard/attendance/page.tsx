@@ -59,6 +59,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { OfflineSyncIndicator } from '@/components/attendance/OfflineSyncIndicator';
+import { enqueueCheckIn } from '@/lib/attendance/offline-queue';
 
 export default function AttendancePage() {
   const supabase = createClient();
@@ -405,6 +407,27 @@ export default function AttendancePage() {
         loadAbsentees();
       }
     } catch (err: unknown) {
+      // Offline fallback: Buffer check-in locally if network offline or server unreachable
+      const isNetworkIssue = typeof navigator !== 'undefined' && (!navigator.onLine || (err instanceof Error && err.message.includes('fetch')));
+      if (isNetworkIssue && user?.gymId) {
+        try {
+          const branchToAssign = effectiveBranchId || member.branch_id || null;
+          await enqueueCheckIn({
+            gymId: user.gymId,
+            branchId: branchToAssign,
+            memberId: member.id,
+            memberName: member.name,
+            method: 'manual',
+            timestamp: new Date().toISOString(),
+            notes: 'Front-desk manual check-in buffer',
+          });
+          toast.info(`${member.name} checked in (saved locally offline)`);
+          setCheckedInMemberIds(prev => new Set(prev).add(member.id));
+          return;
+        } catch (queueErr) {
+          console.error('Failed to buffer check-in locally:', queueErr);
+        }
+      }
       const msg = err instanceof Error ? err.message : 'Check in error';
       toast.error(msg);
     } finally {
@@ -443,6 +466,7 @@ export default function AttendancePage() {
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>AI Biometrics Active</span>
             </div>
+            <OfflineSyncIndicator />
           </div>
           <p className="text-zinc-500 text-xs mt-1">
             Real-time biometric recognition and front-desk check-in cockpit.

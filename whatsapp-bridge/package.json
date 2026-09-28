@@ -8,7 +8,8 @@
     "build": "bun build --compile --target=bun src/index.ts --outfile dist/baileys-engine",
     "start": "node dist/index.js",
     "tunnel": "tsx scripts/start-tunnel.ts",
-    "setup:tunnel": "bash scripts/install-cloudflared.sh"
+    "setup:tunnel": "bash scripts/install-cloudflared.sh",
+    "build:sidecar": "tsx scripts/build-sidecar.ts"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.9",
