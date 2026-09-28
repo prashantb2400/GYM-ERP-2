@@ -18,6 +18,7 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  QrCode,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
+import { WhatsAppQrModal } from '@/components/whatsapp/WhatsAppQrModal';
 
 export default function WhatsAppLogsPage() {
   const supabase = createClient();
@@ -66,6 +68,7 @@ export default function WhatsAppLogsPage() {
   } | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [openSettingsModal, setOpenSettingsModal] = useState(false);
+  const [openQrModal, setOpenQrModal] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [whatsappMode, setWhatsappMode] = useState<'cloud_api' | 'local_bridge' | 'disabled'>('cloud_api');
   const [bridgeUrl, setBridgeUrl] = useState('');
@@ -334,6 +337,16 @@ export default function WhatsAppLogsPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {whatsappMode === 'local_bridge' && (
+              <Button
+                size="sm"
+                onClick={() => setOpenQrModal(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 h-8 font-medium"
+              >
+                <QrCode className="h-3.5 w-3.5" />
+                Link WhatsApp
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -687,6 +700,13 @@ export default function WhatsAppLogsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* WhatsApp QR Pairing Modal */}
+      <WhatsAppQrModal
+        open={openQrModal}
+        onOpenChange={setOpenQrModal}
+        onConnected={fetchConnectionStatus}
+      />
     </div>
   );
 }

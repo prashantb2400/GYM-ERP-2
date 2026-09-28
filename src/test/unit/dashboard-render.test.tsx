@@ -5,6 +5,16 @@ import AdminDashboardLayout from '@/app/dashboard/layout';
 import DashboardHome from '@/app/dashboard/page';
 import { useAuthStore } from '@/store/authStore';
 
+// Mock heavy DashboardHome page to prevent JSDOM memory exhaustion
+vi.mock('@/app/dashboard/page', () => ({
+  default: () => <div data-testid="dashboard-home">Dashboard Home Content</div>,
+}));
+
+// Mock AdminTopbar to isolate whether topbar/commandmenu is causing heap blowout
+vi.mock('@/components/layout/AdminTopbar', () => ({
+  AdminTopbar: () => <div data-testid="admin-topbar">Topbar</div>,
+}));
+
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
