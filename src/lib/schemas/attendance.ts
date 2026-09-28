@@ -27,6 +27,12 @@ export const fingerprintCheckinSchema = z.object({
   branchId: uuidSchema.optional(),
 });
 
+export const manualCheckinSchema = z.object({
+  memberId: uuidSchema,
+  notes: z.string().trim().max(300).optional(),
+});
+
 export type QrCheckinInput = z.infer<typeof qrCheckinSchema>;
 export type FaceCheckinInput = z.infer<typeof faceCheckinSchema>;
 export type FingerprintCheckinInput = z.infer<typeof fingerprintCheckinSchema>;
+export type ManualCheckinInput = z.infer<typeof manualCheckinSchema>;

@@ -37,10 +37,17 @@ import {
   Sparkles,
   ArrowRight,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
 import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
 import { PrintIdCardModal } from '@/components/members/PrintIdCardModal';
+
+const MemberRenewalModal = dynamic(
+  () => import('@/components/members/MemberRenewalModal').then((mod) => mod.MemberRenewalModal),
+  { ssr: false }
+);
 import { QRCodeSVG } from 'qrcode.react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -92,6 +99,7 @@ export default function MemberDetailPage() {
   const [faceEnrollOpen, setFaceEnrollOpen] = useState(false);
   const [fingerprintEnrollOpen, setFingerprintEnrollOpen] = useState(false);
   const [printIdOpen, setPrintIdOpen] = useState(false);
+  const [renewOpen, setRenewOpen] = useState(false);
 
   const loadMemberDetails = async () => {
     if (!user?.gymId || !memberId) return;
@@ -421,6 +429,19 @@ export default function MemberDetailPage() {
             </Button>
           )}
 
+          {/* Renew Plan */}
+          {can('members.edit') && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRenewOpen(true)}
+              className="border-purple-600/40 bg-purple-950/20 text-purple-300 hover:bg-purple-950/40 text-xs gap-1.5"
+            >
+              <RefreshCw className="h-4 w-4 text-purple-400" />
+              Renew Plan
+            </Button>
+          )}
+
           {/* Edit Member */}
           {can('members.edit') && (
             <Link href={`/dashboard/members/edit/${member.id}`}>
@@ -441,9 +462,20 @@ export default function MemberDetailPage() {
             <div className="space-y-1">
               <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">Membership</span>
               <p className="text-base font-bold text-zinc-100 truncate">{member.plans?.name || 'No Plan'}</p>
-              <p className="text-[11px] text-zinc-400">
-                {isPlanActive ? `${daysLeft} days remaining` : <span className="text-red-400 font-semibold">Plan Expired</span>}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-[11px] text-zinc-400">
+                  {isPlanActive ? `${daysLeft} days remaining` : <span className="text-red-400 font-semibold">Plan Expired</span>}
+                </p>
+                {can('members.edit') && (
+                  <button
+                    type="button"
+                    onClick={() => setRenewOpen(true)}
+                    className="text-[10px] font-semibold text-purple-400 hover:text-purple-300 underline underline-offset-2 ml-1"
+                  >
+                    Renew
+                  </button>
+                )}
+              </div>
             </div>
             <div className="h-10 w-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
               <Sparkles className="h-5 w-5 text-purple-400" />
@@ -1252,6 +1284,28 @@ export default function MemberDetailPage() {
             qr_token: member.qr_token,
             status: member.status,
             admission_date: member.admission_date,
+          }}
+        />
+      )}
+
+      {/* 1-Click Membership Renewal Modal */}
+      {member && (
+        <MemberRenewalModal
+          open={renewOpen}
+          onClose={() => setRenewOpen(false)}
+          member={{
+            id: member.id,
+            name: member.name,
+            member_code: member.member_code,
+            phone: member.phone,
+            whatsapp_phone: member.whatsapp_phone,
+            status: member.status,
+            plan_end_date: member.plan_end_date,
+            current_plan_id: member.current_plan_id,
+            photo_url: member.photo_url,
+          }}
+          onSuccess={() => {
+            loadMemberDetails();
           }}
         />
       )}

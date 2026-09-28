@@ -6,3 +6,4 @@ export * from './staff';
 export * from './attendance';
 export * from './kiosk';
 export * from './settings';
+export * from './members';

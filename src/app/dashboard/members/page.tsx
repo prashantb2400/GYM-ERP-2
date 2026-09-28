@@ -23,7 +23,14 @@ import {
   FileSpreadsheet,
   ChevronDown,
   MessageCircle,
+  RefreshCw,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const MemberRenewalModal = dynamic(
+  () => import('@/components/members/MemberRenewalModal').then((mod) => mod.MemberRenewalModal),
+  { ssr: false }
+);
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { GlowingBadge } from '@/components/magicui/glowing-badge';
@@ -69,6 +76,7 @@ export default function MembersListPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [renewalMember, setRenewalMember] = useState<any>(null);
 
   useEffect(() => {
     const filterParam = searchParams.get('filter');
@@ -608,6 +616,18 @@ export default function MembersListPage() {
                         </Button>
                       </Link>
                       {can('members.edit') && (
+                        <Button
+                          aria-label={`Renew ${member.name}`}
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setRenewalMember(member)}
+                          className="h-8 w-8 text-zinc-400 hover:text-purple-400"
+                          title="Renew Membership Plan"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {can('members.edit') && (
                         <Link href={`/dashboard/members/edit/${member.id}`} passHref legacyBehavior>
                           <Button
                             aria-label={`Edit ${member.name}`}
@@ -695,6 +715,18 @@ export default function MembersListPage() {
           await executeBulkWhatsApp();
         }}
       />
+
+      {/* 1-Click Membership Renewal Modal */}
+      {renewalMember && (
+        <MemberRenewalModal
+          open={!!renewalMember}
+          onClose={() => setRenewalMember(null)}
+          member={renewalMember}
+          onSuccess={() => {
+            fetchMembers();
+          }}
+        />
+      )}
     </div>
   );
 }
