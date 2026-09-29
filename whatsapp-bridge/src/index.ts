@@ -10,6 +10,7 @@ import statusRoute from './routes/status.js';
 import qrRoute from './routes/qr.js';
 import messagesRoute from './routes/messages.js';
 import { startQueueWorker, stopQueueWorker } from './queue.js';
+import { startTunnel, stopTunnel } from './tunnel.js';
 import pino from 'pino';
 import fs from 'fs';
 
@@ -65,10 +66,15 @@ async function bootstrap() {
 
   log.info(`Server is running on port ${port}`);
 
+  startTunnel(port).catch((err) => {
+    log.warn(err, 'Failed to launch Cloudflare Tunnel');
+  });
+
   const shutdown = async () => {
     log.info('Shutting down...');
     server.close();
     stopQueueWorker();
+    await stopTunnel();
     await closeConnection();
     process.exit(0);
   };

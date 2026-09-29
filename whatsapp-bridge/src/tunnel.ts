@@ -12,6 +12,8 @@
  */
 
 import { spawn, ChildProcess } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 import pino from 'pino';
 
 const log = pino({ level: 'info' });
@@ -30,6 +32,27 @@ let currentStatus: TunnelStatus = {
   mode: 'none',
 };
 
+function getCloudflaredBin(): string {
+  const localBridgeBin = path.resolve('./bin/cloudflared');
+  if (fs.existsSync(localBridgeBin)) {
+    return localBridgeBin;
+  }
+  const homeBin = path.join(process.env.HOME || '', '.local/bin/cloudflared');
+  if (fs.existsSync(homeBin)) {
+    return homeBin;
+  }
+  return 'cloudflared';
+}
+
+function persistTunnelUrl(url: string) {
+  try {
+    if (!fs.existsSync('./data')) {
+      fs.mkdirSync('./data', { recursive: true });
+    }
+    fs.writeFileSync('./data/tunnel.json', JSON.stringify({ url }, null, 2));
+  } catch {}
+}
+
 /**
  * Start Cloudflare Tunnel.
  * If CLOUDFLARE_TUNNEL_TOKEN is set in process.env, uses token mode.
@@ -41,12 +64,13 @@ export async function startTunnel(port: number = 48291): Promise<TunnelStatus> {
   }
 
   const token = process.env.CLOUDFLARE_TUNNEL_TOKEN;
+  const bin = getCloudflaredBin();
 
   if (token) {
     log.info('Starting Cloudflare Tunnel using token mode');
     return new Promise((resolve) => {
       try {
-        tunnelProcess = spawn('cloudflared', ['tunnel', 'run', '--token', token], {
+        tunnelProcess = spawn(bin, ['tunnel', 'run', '--token', token], {
           stdio: ['ignore', 'pipe', 'pipe'],
         });
 
@@ -56,6 +80,10 @@ export async function startTunnel(port: number = 48291): Promise<TunnelStatus> {
           url: process.env.CLOUDFLARE_TUNNEL_HOSTNAME || undefined,
           pid: tunnelProcess.pid,
         };
+
+        if (currentStatus.url) {
+          persistTunnelUrl(currentStatus.url);
+        }
 
         tunnelProcess.on('exit', (code, signal) => {
           log.warn({ code, signal }, 'Cloudflare tunnel process exited');
@@ -87,7 +115,7 @@ export async function startTunnel(port: number = 48291): Promise<TunnelStatus> {
   log.info(`Starting Cloudflare Quick Tunnel forwarding to http://localhost:${port}`);
   return new Promise((resolve) => {
     try {
-      tunnelProcess = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`], {
+      tunnelProcess = spawn(bin, ['tunnel', '--url', `http://localhost:${port}`], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
 
@@ -104,7 +132,7 @@ export async function startTunnel(port: number = 48291): Promise<TunnelStatus> {
           resolved = true;
           resolve(currentStatus);
         }
-      }, 10000);
+      }, 15000);
 
       const checkUrl = (chunk: Buffer) => {
         const text = chunk.toString();
@@ -114,6 +142,7 @@ export async function startTunnel(port: number = 48291): Promise<TunnelStatus> {
           resolved = true;
           clearTimeout(timeout);
           currentStatus.url = match[0];
+          persistTunnelUrl(currentStatus.url);
           log.info({ tunnelUrl: currentStatus.url }, 'Quick tunnel URL acquired');
           resolve(currentStatus);
         }
