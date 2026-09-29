@@ -67,9 +67,9 @@ export default function WhatsAppLogsPage() {
   const [openSettingsModal, setOpenSettingsModal] = useState(false);
   const [openQrModal, setOpenQrModal] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [whatsappMode, setWhatsappMode] = useState<'cloud_api' | 'local_bridge' | 'disabled'>('cloud_api');
-  const [bridgeUrl, setBridgeUrl] = useState('');
-  const [bridgeToken, setBridgeToken] = useState('');
+  const [whatsappMode, setWhatsappMode] = useState<'cloud_api' | 'local_bridge' | 'disabled'>('local_bridge');
+  const [bridgeUrl, setBridgeUrl] = useState('http://localhost:48291');
+  const [bridgeToken, setBridgeToken] = useState('f5bb8941-04a2-4a16-995d-7be7426b0daa');
 
   const fetchConnectionStatus = async () => {
     try {
@@ -95,9 +95,9 @@ export default function WhatsAppLogsPage() {
         .eq('id', user.gymId)
         .single();
       if (data) {
-        setWhatsappMode(data.whatsapp_mode || 'cloud_api');
-        setBridgeUrl(data.bridge_url || '');
-        setBridgeToken(data.bridge_token || '');
+        setWhatsappMode(data.whatsapp_mode || 'local_bridge');
+        setBridgeUrl(data.bridge_url || 'http://localhost:48291');
+        setBridgeToken(data.bridge_token || 'f5bb8941-04a2-4a16-995d-7be7426b0daa');
       }
     } catch (e) {
       console.error('Failed to fetch gym WhatsApp config', e);
@@ -128,6 +128,27 @@ export default function WhatsAppLogsPage() {
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  const handleOpenQrModal = async () => {
+    if (whatsappMode !== 'local_bridge') {
+      setWhatsappMode('local_bridge');
+      if (user?.gymId) {
+        try {
+          await supabase
+            .from('gyms')
+            .update({
+              whatsapp_mode: 'local_bridge',
+              bridge_url: bridgeUrl || 'http://localhost:48291',
+              bridge_token: bridgeToken || 'f5bb8941-04a2-4a16-995d-7be7426b0daa',
+            })
+            .eq('id', user.gymId);
+        } catch (e) {
+          console.error('Failed to sync local_bridge mode on QR link', e);
+        }
+      }
+    }
+    setOpenQrModal(true);
   };
 
   useEffect(() => {
@@ -326,16 +347,14 @@ export default function WhatsAppLogsPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {whatsappMode === 'local_bridge' && (
-              <Button
-                size="sm"
-                onClick={() => setOpenQrModal(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 h-8 font-medium"
-              >
-                <QrCode className="h-3.5 w-3.5" />
-                Link WhatsApp
-              </Button>
-            )}
+            <Button
+              size="sm"
+              onClick={handleOpenQrModal}
+              className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 h-8 font-medium"
+            >
+              <QrCode className="h-3.5 w-3.5" />
+              Link WhatsApp
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -645,33 +664,31 @@ export default function WhatsAppLogsPage() {
             {whatsappMode === 'local_bridge' && (
               <div className="space-y-3 border-t border-zinc-800 pt-3">
                 <div className="grid gap-1.5">
-                  <Label htmlFor="bUrl" className="text-zinc-300 text-xs font-semibold">Bridge Public URL *</Label>
+                  <Label htmlFor="bUrl" className="text-zinc-300 text-xs font-semibold">Bridge Public URL</Label>
                   <Input
                     id="bUrl"
-                    placeholder="https://gym-xyz.trycloudflare.com or http://localhost:48291"
+                    placeholder="http://localhost:48291 or https://gym-xyz.trycloudflare.com"
                     value={bridgeUrl}
                     onChange={(e) => setBridgeUrl(e.target.value)}
                     className="border-zinc-800 bg-zinc-950 text-zinc-100 text-xs"
-                    required={whatsappMode === 'local_bridge'}
                   />
                   <p className="text-[10px] text-zinc-500">
-                    The Cloudflare Tunnel URL or local network address where your desktop app bridge is listening.
+                    The local bridge address or Cloudflare Tunnel URL. Defaults to http://localhost:48291.
                   </p>
                 </div>
 
                 <div className="grid gap-1.5">
-                  <Label htmlFor="bToken" className="text-zinc-300 text-xs font-semibold">Bridge Security Bearer Token *</Label>
+                  <Label htmlFor="bToken" className="text-zinc-300 text-xs font-semibold">Bridge Security Bearer Token</Label>
                   <Input
                     id="bToken"
                     type="password"
-                    placeholder="Enter the bridge API token generated during setup"
+                    placeholder="Auto-detected default or enter custom bridge token"
                     value={bridgeToken}
                     onChange={(e) => setBridgeToken(e.target.value)}
                     className="border-zinc-800 bg-zinc-950 text-zinc-100 text-xs"
-                    required={whatsappMode === 'local_bridge'}
                   />
                   <p className="text-[10px] text-zinc-500">
-                    Displayed in the desktop bridge terminal output on startup.
+                    Bearer token to authenticate requests with the WhatsApp bridge.
                   </p>
                 </div>
               </div>

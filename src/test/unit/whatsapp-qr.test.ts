@@ -163,4 +163,46 @@ describe('GET /api/whatsapp/qr', () => {
 
     fetchSpy.mockRestore();
   });
+
+  it('falls back to local bridge default URL and token when gym record has nulls', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null });
+    mockUserSelect.mockResolvedValueOnce({
+      data: { gym_id: 'g1', role: 'owner' },
+      error: null,
+    });
+    mockGymSelect.mockResolvedValueOnce({
+      data: {
+        whatsapp_mode: 'local_bridge',
+        bridge_url: null,
+        bridge_token: null,
+      },
+      error: null,
+    });
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'waiting_qr', qr: 'data:image/png;base64,fallback_qr' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    const req = new Request('http://localhost:3000/api/whatsapp/qr');
+    const res = await GET(req);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.qr).toBe('data:image/png;base64,fallback_qr');
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:48291/qr',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: expect.stringContaining('Bearer '),
+        }),
+      })
+    );
+
+    fetchSpy.mockRestore();
+  });
 });

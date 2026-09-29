@@ -46,20 +46,27 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Gym not found' }, { status: 404 });
     }
 
-    if (gym.whatsapp_mode !== 'local_bridge') {
+    const mode = gym.whatsapp_mode || 'local_bridge';
+
+    if (mode !== 'local_bridge') {
       return NextResponse.json({
         error: 'Gym is not configured for local bridge mode. Switch to Free Baileys Bridge first.',
         mode: gym.whatsapp_mode,
       }, { status: 400 });
     }
 
-    if (!gym.bridge_url || !gym.bridge_token) {
-      return NextResponse.json({
-        error: 'Bridge URL or Security Token is not configured for this gym.',
-      }, { status: 400 });
-    }
+    const bridgeBase = (
+      gym.bridge_url ||
+      process.env.WHATSAPP_BRIDGE_URL ||
+      'http://localhost:48291'
+    ).replace(/\/$/, '');
 
-    const bridgeBase = gym.bridge_url.replace(/\/$/, '');
+    const bridgeToken = (
+      gym.bridge_token ||
+      process.env.WHATSAPP_BRIDGE_TOKEN ||
+      'f5bb8941-04a2-4a16-995d-7be7426b0daa'
+    );
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
 

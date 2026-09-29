@@ -132,10 +132,14 @@ export function WhatsAppQrModal({
           )}
 
           {/* State 3: Loading or Generating QR */}
-          {loading && !qrCode && status !== 'connected' && !errorMsg && (
+          {!qrCode && status !== 'connected' && !errorMsg && (
             <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
               <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-              <p className="text-xs text-zinc-400">Requesting pairing QR from local bridge...</p>
+              <p className="text-xs text-zinc-400">
+                {status === 'connecting'
+                  ? 'Connecting to WhatsApp engine...'
+                  : 'Generating pairing QR code...'}
+              </p>
             </div>
           )}
 

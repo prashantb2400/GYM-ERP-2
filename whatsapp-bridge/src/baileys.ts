@@ -13,6 +13,14 @@ let connectionState: 'connecting' | 'connected' | 'disconnected' = 'disconnected
 let currentQr: string | undefined = undefined;
 
 export async function initConnection() {
+  if (sock) {
+    try {
+      (sock.ev as any).removeAllListeners();
+      sock.end(undefined);
+    } catch {}
+    sock = null;
+  }
+
   const { state, saveCreds } = useSqliteAuthState('./data/auth.db');
   const { version, isLatest } = await fetchLatestBaileysVersion();
   

@@ -73,10 +73,17 @@ export async function getWhatsAppProvider(gymId?: string): Promise<IWhatsAppProv
 
   switch (mode) {
     case 'local_bridge': {
-      if (!gym?.bridge_url || !gym?.bridge_token) {
-        console.warn(`Gym ${gymId} is set to local_bridge but missing bridge_url/bridge_token. Falling back to cloud_api.`);
-        return getMetaCloudProvider();
-      }
+      const bridgeUrl = (
+        gym?.bridge_url ||
+        process.env.WHATSAPP_BRIDGE_URL ||
+        'http://localhost:48291'
+      ).replace(/\/$/, '');
+
+      const bridgeToken = (
+        gym?.bridge_token ||
+        process.env.WHATSAPP_BRIDGE_TOKEN ||
+        'f5bb8941-04a2-4a16-995d-7be7426b0daa'
+      );
 
       // Check cache first
       const cached = bridgeProviderCache.get(gymId);
@@ -85,8 +92,8 @@ export async function getWhatsAppProvider(gymId?: string): Promise<IWhatsAppProv
       }
 
       const provider = new BaileysBridgeProvider({
-        bridgeUrl: gym.bridge_url,
-        bridgeToken: gym.bridge_token,
+        bridgeUrl,
+        bridgeToken,
       });
       bridgeProviderCache.set(gymId, provider);
       return provider;
