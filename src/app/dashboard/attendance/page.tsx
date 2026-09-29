@@ -218,7 +218,7 @@ export default function AttendancePage() {
     } catch (err: unknown) {
       console.error('Failed to load today data:', err);
     }
-  }, [user?.gymId, effectiveBranchId, supabase, user?.role, user?.staffRecordId]);
+  }, [user, effectiveBranchId, supabase]);
 
   // Load absentee roster
   const loadAbsentees = useCallback(async () => {

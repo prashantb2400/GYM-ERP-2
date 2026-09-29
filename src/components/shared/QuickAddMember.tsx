@@ -20,8 +20,6 @@ import { Zap, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { calculateGST, formatCurrency, toSafeUUID } from '@/lib/utils/format';
 import Link from 'next/link';
-import { usePlanLimits } from '@/hooks/usePlanLimits';
-import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
 
 interface QuickAddMemberProps {
   open: boolean;
@@ -34,7 +32,6 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
   const supabase = createClient();
   const { user } = useAuth();
   const gymId = user?.gymId;
-  const { canAddMember, maxMembers, usage, planName } = usePlanLimits();
 
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState<any[]>([]);
@@ -306,14 +303,7 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {!canAddMember ? (
-            <div className="p-6">
-              <UpgradePrompt feature={`Adding more than ${maxMembers} members`} currentPlan={planName} />
-              <p className="text-center text-zinc-400 text-sm mt-4">
-                You have {usage.currentMembers}/{maxMembers} members on the {planName} plan.
-              </p>
-            </div>
-          ) : successData ? (
+          {successData ? (
             <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 text-center space-y-4 animate-in zoom-in duration-300">
               <div className="mx-auto w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
                 <Zap className="h-6 w-6 text-green-400" />
@@ -500,7 +490,7 @@ export function QuickAddMember({ open, onClose, onSuccess, initialData }: QuickA
           )}
         </div>
 
-        {!canAddMember ? null : !successData && (
+        {!successData && (
           <div className="p-6 border-t border-zinc-800 bg-zinc-900/50">
             <Button
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white h-12 text-base font-semibold"

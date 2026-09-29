@@ -239,7 +239,9 @@ export default function QrKioskPage() {
     }
   }, [isProcessing, gymId, effectiveBranchId, playBeep]);
 
-  processQrCodeRef.current = processQrCode;
+  useEffect(() => {
+    processQrCodeRef.current = processQrCode;
+  }, [processQrCode]);
 
   // Stop html5-qrcode camera scanner safely
   const stopScanner = useCallback(async () => {

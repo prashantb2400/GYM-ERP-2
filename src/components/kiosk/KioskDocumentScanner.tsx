@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Camera, RefreshCw, CheckCircle2, AlertCircle, Scan } from 'lucide-react';
 import { kioskAudio } from '@/components/kiosk/KioskAudio';
 import { voiceAgent } from '@/lib/kiosk/voice-agent';
@@ -27,16 +27,15 @@ export function KioskDocumentScanner({
   const [isProcessing, setIsProcessing] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
 
-  useEffect(() => {
-    startCamera();
-    voiceAgent.speakScanDocumentPrompt();
-
-    return () => {
-      stopCamera();
-    };
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
   }, []);
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -67,15 +66,16 @@ export function KioskDocumentScanner({
         setCameraError('Camera access denied or unavailable. You can enter details manually.');
       }
     }
-  };
+  }, []);
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    setCameraActive(false);
-  };
+  useEffect(() => {
+    startCamera();
+    voiceAgent.speakScanDocumentPrompt();
+
+    return () => {
+      stopCamera();
+    };
+  }, [startCamera, stopCamera]);
 
   const handleCapture = async () => {
     if (!videoRef.current || !canvasRef.current || isProcessing) return;

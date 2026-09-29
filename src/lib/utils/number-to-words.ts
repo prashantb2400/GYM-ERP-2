@@ -56,16 +56,16 @@ export function numberToIndianWords(amount: number): string {
     return `${isNegative ? 'Minus ' : ''}${convertBelowThousand(paise)} Paise Only`;
   }
 
-  let crore = Math.floor(rupees / 10000000);
+  const crore = Math.floor(rupees / 10000000);
   let remainder = rupees % 10000000;
 
-  let lakh = Math.floor(remainder / 100000);
+  const lakh = Math.floor(remainder / 100000);
   remainder %= 100000;
 
-  let thousand = Math.floor(remainder / 1000);
+  const thousand = Math.floor(remainder / 1000);
   remainder %= 1000;
 
-  let hundredPart = remainder;
+  const hundredPart = remainder;
 
   const parts: string[] = [];
 

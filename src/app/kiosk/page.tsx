@@ -197,34 +197,20 @@ export default function KioskPage() {
     loadKioskConfig();
   }, [loadKioskConfig]);
 
-  // 3. User Activity Reset Handler
-  const resetInactivityTimer = useCallback(() => {
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
+  // Stop QR scanner
+  const stopQrScanner = useCallback(() => {
+    if (qrScannerRef.current) {
+      try {
+        qrScannerRef.current.stop().then(() => {
+          qrScannerRef.current = null;
+        }).catch(() => {});
+      } catch {}
     }
-    // Only auto-reset if NOT on attract screen and NOT waiting on PIN
-    if (screen !== 'attract' && screen !== 'admin-pin') {
-      inactivityTimerRef.current = setTimeout(() => {
-        handleResetToAttract();
-      }, INACTIVITY_TIMEOUT_MS);
-    }
-  }, [screen]);
-
-  useEffect(() => {
-    const events = ['touchstart', 'mousedown', 'keydown'];
-    const handleActivity = () => resetInactivityTimer();
-
-    events.forEach((evt) => window.addEventListener(evt, handleActivity));
-    resetInactivityTimer();
-
-    return () => {
-      events.forEach((evt) => window.removeEventListener(evt, handleActivity));
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-    };
-  }, [resetInactivityTimer]);
+    setQrActive(false);
+  }, []);
 
   // Reset to attract mode completely
-  const handleResetToAttract = () => {
+  const handleResetToAttract = useCallback(() => {
     stopQrScanner();
     setScreen('attract');
     setKeypadInput('');
@@ -238,7 +224,33 @@ export default function KioskPage() {
     setGuestPassIssued(null);
     setEnteredPin('');
     setPinError(false);
-  };
+  }, [stopQrScanner]);
+
+  // 3. User Activity Reset Handler
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    // Only auto-reset if NOT on attract screen and NOT waiting on PIN
+    if (screen !== 'attract' && screen !== 'admin-pin') {
+      inactivityTimerRef.current = setTimeout(() => {
+        handleResetToAttract();
+      }, INACTIVITY_TIMEOUT_MS);
+    }
+  }, [screen, handleResetToAttract]);
+
+  useEffect(() => {
+    const events = ['touchstart', 'mousedown', 'keydown'];
+    const handleActivity = () => resetInactivityTimer();
+
+    events.forEach((evt) => window.addEventListener(evt, handleActivity));
+    resetInactivityTimer();
+
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, handleActivity));
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    };
+  }, [resetInactivityTimer]);
 
   // Fullscreen helper
   const toggleFullscreen = () => {
@@ -350,17 +362,6 @@ export default function KioskPage() {
       console.warn('QR camera could not start:', err);
       setQrActive(false);
     }
-  };
-
-  const stopQrScanner = () => {
-    if (qrScannerRef.current) {
-      try {
-        qrScannerRef.current.stop().then(() => {
-          qrScannerRef.current = null;
-        }).catch(() => {});
-      } catch {}
-    }
-    setQrActive(false);
   };
 
   // 6. Member Account Lookup

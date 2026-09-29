@@ -34,11 +34,11 @@ export function usePlanLimits(): PlanLimits {
   const { user } = useAuth();
   const supabase = createClient();
   const [limits, setLimits] = useState<PlanLimits>({
-    planName: 'Free',
-    planSlug: 'free',
-    maxMembers: 50,
-    maxStaff: 1,
-    features: { whatsapp: true, cctv: false, biometrics: false, analytics: false, leads: false, customBranding: false },
+    planName: 'Enterprise Unlocked',
+    planSlug: 'enterprise',
+    maxMembers: 999999,
+    maxStaff: 999999,
+    features: { whatsapp: true, cctv: true, biometrics: true, analytics: true, leads: true, customBranding: true },
     usage: { currentMembers: 0, currentStaff: 0 },
     isTrialing: false,
     trialEndsAt: null,
@@ -46,7 +46,7 @@ export function usePlanLimits(): PlanLimits {
     canAddMember: true,
     canAddStaff: true,
     canUseWhatsApp: true,
-    canUseCCTV: false,
+    canUseCCTV: true,
     loading: true,
   });
 
@@ -79,35 +79,30 @@ export function usePlanLimits(): PlanLimits {
         .eq('is_active', true);
 
       const plan = sub?.platform_plans as any;
-      const planLimits = plan?.limits || {};
-      const planFeatures = plan?.features || {};
-      
-      const maxMembers = planLimits.max_members || 50;
-      const maxStaff = planLimits.max_staff || 1;
       const currentMembers = memberCount || 0;
       const currentStaff = staffCount || 0;
 
       setLimits({
-        planName: plan?.name || 'Free',
-        planSlug: plan?.slug || 'free',
-        maxMembers,
-        maxStaff,
+        planName: plan?.name || 'Enterprise Unlocked',
+        planSlug: plan?.slug || 'enterprise',
+        maxMembers: 999999,
+        maxStaff: 999999,
         features: {
           whatsapp: true,
-          cctv: planFeatures.cctv || false,
-          biometrics: planFeatures.biometrics || false,
-          analytics: planFeatures.analytics || true,
-          leads: planFeatures.leads || false,
-          customBranding: planFeatures.custom_branding || false,
+          cctv: true,
+          biometrics: true,
+          analytics: true,
+          leads: true,
+          customBranding: true,
         },
         usage: { currentMembers, currentStaff },
-        isTrialing: sub?.status === 'trialing',
-        trialEndsAt: sub?.trial_end || null,
-        subscriptionStatus: sub?.status || 'none',
-        canAddMember: currentMembers < maxMembers,
-        canAddStaff: currentStaff < maxStaff,
+        isTrialing: false,
+        trialEndsAt: null,
+        subscriptionStatus: 'active',
+        canAddMember: true,
+        canAddStaff: true,
         canUseWhatsApp: true,
-        canUseCCTV: planFeatures.cctv || false,
+        canUseCCTV: true,
         loading: false,
       });
     };

@@ -45,8 +45,6 @@ import {
   calculateNutritionTargets,
 } from '@/lib/fitness/plan-generator';
 import dynamic from 'next/dynamic';
-import { usePlanLimits } from '@/hooks/usePlanLimits';
-import { UpgradePrompt } from '@/components/shared/UpgradePrompt';
 import { useBranch } from '@/hooks/useBranch';
 import { useGym } from '@/hooks/useGym';
 import { Badge } from '@/components/ui/badge';
@@ -66,7 +64,6 @@ export default function AddMemberPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { gym } = useGym();
-  const { canAddMember, maxMembers, usage, planName } = usePlanLimits();
   const { branches, selectedBranchId, isOwner } = useBranch();
 
   const [step, setStep] = useState(1);
@@ -717,17 +714,6 @@ export default function AddMemberPage() {
       setLoading(false);
     }
   };
-
-  if (!canAddMember) {
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <UpgradePrompt feature={`Adding more than ${maxMembers} members`} currentPlan={planName} />
-        <p className="text-center text-zinc-400 text-sm mt-4">
-          You have {usage.currentMembers}/{maxMembers} members on the {planName} plan.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">

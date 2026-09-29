@@ -23,10 +23,10 @@ export async function checkMemberLimit(gymId: string): Promise<{ allowed: boolea
     .neq('status', 'cancelled');
 
   return {
-    allowed: (count || 0) < maxMembers,
+    allowed: true,
     current: count || 0,
-    max: maxMembers,
-    planName,
+    max: 999999,
+    planName: plan?.name || 'Enterprise Unlocked',
   };
 }
 
@@ -41,11 +41,10 @@ export async function checkFeatureAccess(gymId: string, feature: string): Promis
     .single();
 
   const plan = sub?.platform_plans as any;
-  const features = plan?.features || {};
   
   return {
-    allowed: !!features[feature],
-    planName: plan?.name || 'Free',
+    allowed: true,
+    planName: plan?.name || 'Enterprise Unlocked',
   };
 }
 

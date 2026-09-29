@@ -142,7 +142,64 @@ export default function SingleScreenVoiceKioskPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // 2. Check Device Pairing on Mount
+  // 2. Kiosk Pairing & Configuration
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadGymConfig = useCallback(async (gymId?: string, branchId?: string) => {
+    try {
+      const url = gymId ? `/api/kiosk/config?gymId=${gymId}${branchId ? `&branchId=${branchId}` : ''}` : '/api/kiosk/config';
+      const res = await fetch(url);
+      if (res.ok) {
+        const cfg = await res.json();
+        setGymConfig(cfg);
+      }
+    } catch {}
+  }, []);
+
+  const startPairingPoll = useCallback((code: string) => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/kiosk/pair/status?code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+
+        if (res.ok && data.status === 'active' && data.deviceToken) {
+          clearInterval(pollTimerRef.current!);
+          localStorage.setItem(KIOSK_TOKEN_KEY, data.deviceToken);
+          setDeviceInfo(data);
+          loadGymConfig(data.gymId, data.branchId);
+
+          kioskAudio.playCelebration();
+          voiceAgent.speak(`Tablet successfully connected to ${data.gymName}!`);
+          setStage('ambient_idle');
+        }
+      } catch {}
+    }, 3000);
+  }, [loadGymConfig]);
+
+  const initNewPairing = useCallback(async () => {
+    setStage('pairing');
+    try {
+      const res = await fetch('/api/kiosk/pair/init', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.pairingCode) {
+        setPairingCode(data.pairingCode);
+        setPairingQr(data.qrPayload);
+        startPairingPoll(data.pairingCode);
+      }
+    } catch (e) {
+      console.error('Pairing init failure:', e);
+    }
+  }, [startPairingPoll]);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, []);
+
+  // 3. Check Device Pairing on Mount
   useEffect(() => {
     async function verifyPairing() {
       const savedToken = typeof window !== 'undefined' ? localStorage.getItem(KIOSK_TOKEN_KEY) : null;
@@ -172,64 +229,7 @@ export default function SingleScreenVoiceKioskPage() {
     }
 
     verifyPairing();
-  }, []);
-
-  // 3. Initiate New Pairing Code
-  const initNewPairing = async () => {
-    setStage('pairing');
-    try {
-      const res = await fetch('/api/kiosk/pair/init', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok && data.pairingCode) {
-        setPairingCode(data.pairingCode);
-        setPairingQr(data.qrPayload);
-        startPairingPoll(data.pairingCode);
-      }
-    } catch (e) {
-      console.error('Pairing init failure:', e);
-    }
-  };
-
-  // 4. Poll Pairing Status
-  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const startPairingPoll = (code: string) => {
-    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-
-    pollTimerRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/kiosk/pair/status?code=${encodeURIComponent(code)}`);
-        const data = await res.json();
-
-        if (res.ok && data.status === 'active' && data.deviceToken) {
-          clearInterval(pollTimerRef.current!);
-          localStorage.setItem(KIOSK_TOKEN_KEY, data.deviceToken);
-          setDeviceInfo(data);
-          loadGymConfig(data.gymId, data.branchId);
-
-          kioskAudio.playCelebration();
-          voiceAgent.speak(`Tablet successfully connected to ${data.gymName}!`);
-          setStage('ambient_idle');
-        }
-      } catch {}
-    }, 3000);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    };
-  }, []);
-
-  const loadGymConfig = async (gymId?: string, branchId?: string) => {
-    try {
-      const url = gymId ? `/api/kiosk/config?gymId=${gymId}${branchId ? `&branchId=${branchId}` : ''}` : '/api/kiosk/config';
-      const res = await fetch(url);
-      if (res.ok) {
-        const cfg = await res.json();
-        setGymConfig(cfg);
-      }
-    } catch {}
-  };
+  }, [initNewPairing, loadGymConfig]);
 
   // 5. Initialize Camera & Vision Watchdog
   useEffect(() => {
@@ -283,6 +283,19 @@ export default function SingleScreenVoiceKioskPage() {
     };
   }, [stage, gymConfig]);
 
+  const resetToIdle = useCallback(() => {
+    setStage('ambient_idle');
+    setMatchedMember(null);
+    setMemberPhoto(null);
+    setKycResult(null);
+    setChosenPlan(null);
+    setUpiQrUri(null);
+    setNameInput('');
+    setPhoneInput('');
+    setAdminPin('');
+    setPinError(false);
+  }, []);
+
   // Auto reset timer
   useEffect(() => {
     if (autoResetSeconds <= 0) return;
@@ -294,20 +307,7 @@ export default function SingleScreenVoiceKioskPage() {
       }
     }, 1000);
     return () => clearTimeout(t);
-  }, [autoResetSeconds]);
-
-  const resetToIdle = () => {
-    setStage('ambient_idle');
-    setMatchedMember(null);
-    setMemberPhoto(null);
-    setKycResult(null);
-    setChosenPlan(null);
-    setUpiQrUri(null);
-    setNameInput('');
-    setPhoneInput('');
-    setAdminPin('');
-    setPinError(false);
-  };
+  }, [autoResetSeconds, resetToIdle]);
 
   // Determine current water orb state for fluid animation
   const getOrbState = (): WaterOrbState => {

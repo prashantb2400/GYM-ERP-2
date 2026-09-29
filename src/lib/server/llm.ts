@@ -188,8 +188,8 @@ export async function generateDietAndExerciseBlueprint(
   const isMale = profile.gender !== 'female';
 
   // Mifflin-St Jeor Equation
-  let bmr = 10 * weight + 6.25 * height - 5 * age + (isMale ? 5 : -161);
-  let tdee = bmr * 1.45; // Moderately active gym routine
+  const bmr = 10 * weight + 6.25 * height - 5 * age + (isMale ? 5 : -161);
+  const tdee = bmr * 1.45; // Moderately active gym routine
 
   let caloricTarget = Math.round(tdee);
   let proteinRatio = 1.6; // g/kg

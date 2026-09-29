@@ -62,24 +62,16 @@ export function usePlanFeatures() {
     return () => { isMounted = false; };
   }, [user?.gymId]);
 
-  const canUse = (feature: keyof PlanFeatures): boolean => {
-    if (!plan) return false;
-    return !!plan.features[feature];
+  const canUse = (_feature: keyof PlanFeatures): boolean => {
+    return true;
   };
   
-  const getLimit = (limitKey: keyof PlanLimits): number => {
-    if (!plan) return 0;
-    return plan.limits[limitKey] || 0;
+  const getLimit = (_limitKey: keyof PlanLimits): number => {
+    return 999999;
   };
   
-  const isTrialing = subscription?.status === 'trialing';
-  
-  let daysLeft = 0;
-  if (isTrialing && subscription?.trial_end) {
-    const end = new Date(subscription.trial_end).getTime();
-    const now = new Date().getTime();
-    daysLeft = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
-  }
+  const isTrialing = false;
+  const daysLeft = 999;
 
   return {
     canUse,

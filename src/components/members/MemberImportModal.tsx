@@ -143,16 +143,12 @@ export function MemberImportModal({
     }
   };
 
-  // Quota calculation
+  // Quota calculation - Unlocked for testing
   const remainingQuota = useMemo(() => {
     return Math.max(0, maxMembers - (usage?.currentMembers || 0));
   }, [maxMembers, usage?.currentMembers]);
 
-  const wouldExceedQuota = useMemo(() => {
-    if (!parseResult) return false;
-    // When skipping duplicates, only new records count towards quota
-    return parseResult.validRows.length > remainingQuota;
-  }, [parseResult, remainingQuota]);
+  const wouldExceedQuota = false;
 
   // 2. Batch Execution
   const executeBatchImport = async () => {
@@ -365,8 +361,8 @@ export function MemberImportModal({
 
               {/* SaaS Quota Summary */}
               <div className="flex items-center justify-between text-[11px] text-zinc-500 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
-                <span>Active Subscription: <strong className="text-zinc-300">{planName} Tier</strong></span>
-                <span>Remaining Quota: <strong className="text-purple-400">{remainingQuota}</strong> of {maxMembers} Members</span>
+                <span>Active Plan: <strong className="text-zinc-300">{planName}</strong></span>
+                <span>Member Quota: <strong className="text-purple-400">Unlimited</strong> (Testing Mode)</span>
               </div>
             </div>
           )}
@@ -427,7 +423,7 @@ export function MemberImportModal({
                         <td className="p-2.5 text-zinc-500">{m.rowNumber}</td>
                         <td className="p-2.5 font-sans font-medium text-zinc-100">{m.name}</td>
                         <td className="p-2.5">{m.phone}</td>
-                        <td className="p-2.5 font-sans text-purple-400">{m.plan_name || '—'}</td>
+                        <td className="p-2.5 font-sans text-purple-400">{m.plan_name || '-'}</td>
                         <td className="p-2.5 font-sans capitalize">
                           <span className={m.status === 'active' ? 'text-green-400' : 'text-amber-400'}>
                             {m.status}

@@ -96,28 +96,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. SaaS Subscription Quota Protection
-    const [subRes, memberCountRes] = await Promise.all([
-      supabaseAdmin
-        .from('platform_subscriptions')
-        .select('*, platform_plans(*)')
-        .eq('gym_id', scope.gymId)
-        .in('status', ['active', 'trialing'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single(),
-      supabaseAdmin
-        .from('members')
-        .select('id', { count: 'exact', head: true })
-        .eq('gym_id', scope.gymId)
-        .neq('status', 'cancelled'),
-    ]);
-
-    const plan = subRes.data?.platform_plans as any;
-    const maxMembers = plan?.limits?.max_members || 50; // default 50 for free tier
-    const currentMemberCount = memberCountRes.count || 0;
-
-    // 3. Pre-fetch existing members to detect duplicates
+    // 2. Pre-fetch existing members to detect duplicates
     const phoneList = members.map(m => m.phone).filter(Boolean);
     const { data: existingMembers, error: existingErr } = await supabaseAdmin
       .from('members')
@@ -132,25 +111,7 @@ export async function POST(request: Request) {
       if (em.phone) existingPhoneMap.set(em.phone, em);
     });
 
-    // Check quota against genuinely new members to be added
-    let newMembersCount = 0;
-    for (const m of members) {
-      if (!existingPhoneMap.has(m.phone)) {
-        newMembersCount++;
-      }
-    }
-
-    if (currentMemberCount + newMembersCount > maxMembers) {
-      const allowed = Math.max(0, maxMembers - currentMemberCount);
-      return NextResponse.json(
-        {
-          error: `Plan quota exceeded: Your subscription tier (${plan?.name || 'Free'}) permits up to ${maxMembers} members. You currently have ${currentMemberCount} members. Adding ${newMembersCount} new members would exceed your limit by ${currentMemberCount + newMembersCount - maxMembers}. (Remaining quota: ${allowed}). Please upgrade your plan or reduce the list.`,
-        },
-        { status: 403 }
-      );
-    }
-
-    // 4. Pre-fetch gym plans to resolve plan_name -> current_plan_id
+    // 3. Pre-fetch gym plans to resolve plan_name -> current_plan_id
     const { data: plansData } = await supabaseAdmin
       .from('plans')
       .select('id, name, duration_days')
