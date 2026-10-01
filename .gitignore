@@ -40,8 +40,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Nested duplicate — should not be committed
+# Nested duplicate -- should not be committed
 GYM-ERP-2/
 
 # Local agent skills & assistant configs
 .agents/
+
+# Desktop / Tauri build output
+desktop/src-tauri/target/
+desktop/dist/
+desktop/node_modules/
+whatsapp-bridge/node_modules/
+whatsapp-bridge/dist/
+whatsapp-bridge/data/

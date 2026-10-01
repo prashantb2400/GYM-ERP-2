@@ -45,13 +45,5 @@
       "bin/baileys-engine",
       "bin/cloudflared"
     ]
-  },
-  "plugins": {
-    "updater": {
-      "endpoints": [
-        "https://releases.gymerp.com/desktop/{{target}}/{{arch}}/{{current_version}}"
-      ],
-      "pubkey": "YOUR_ED25519_PUBLIC_KEY"
-    }
   }
 }

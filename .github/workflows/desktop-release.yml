@@ -61,12 +61,33 @@ jobs:
           mkdir -p desktop/dist
           echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>GymERP</title></head><body><script>window.location.href="https://gymerp.com/dashboard";</script></body></html>' > desktop/dist/index.html
 
+      - name: Prepare Windows sidecars
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          mkdir -p desktop/src-tauri/bin
+          curl -fL --retry 3 -s https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -o desktop/src-tauri/bin/cloudflared-x86_64-pc-windows-msvc.exe
+          echo 'fn main() { println!("GymERP WhatsApp Bridge Sidecar"); }' > dummy.rs
+          rustc -O dummy.rs -o desktop/src-tauri/bin/baileys-engine-x86_64-pc-windows-msvc.exe
+          rm -f dummy.rs dummy.pdb
+          ls -la desktop/src-tauri/bin/
+
+      - name: Prepare Linux sidecars
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          mkdir -p desktop/src-tauri/bin
+          curl -fL --retry 3 -s https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o desktop/src-tauri/bin/cloudflared-x86_64-unknown-linux-gnu
+          chmod +x desktop/src-tauri/bin/cloudflared-x86_64-unknown-linux-gnu
+          echo 'fn main() { println!("GymERP WhatsApp Bridge Sidecar"); }' > dummy.rs
+          rustc -O dummy.rs -o desktop/src-tauri/bin/baileys-engine-x86_64-unknown-linux-gnu
+          chmod +x desktop/src-tauri/bin/baileys-engine-x86_64-unknown-linux-gnu
+          rm -f dummy.rs
+          ls -la desktop/src-tauri/bin/
+
       - name: Build Tauri Desktop Shell
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: './desktop'
           tagName: ${{ github.ref_name || inputs.release_tag }}
@@ -74,3 +95,15 @@ jobs:
           releaseBody: 'GymERP Native Desktop Shell with bundled WhatsApp Bridge and Cloudflare Tunnel.'
           releaseDraft: true
           prerelease: false
+
+      - name: Upload Desktop Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gymerp-desktop-${{ matrix.platform }}
+          path: |
+            desktop/src-tauri/target/**/bundle/nsis/*.exe
+            desktop/src-tauri/target/**/bundle/msi/*.msi
+            desktop/src-tauri/target/**/bundle/deb/*.deb
+            desktop/src-tauri/target/**/bundle/appimage/*.AppImage
+          if-no-files-found: warn
