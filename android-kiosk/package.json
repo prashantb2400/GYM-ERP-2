@@ -1,0 +1,17 @@
+{
+  "name": "android-kiosk",
+  "version": "1.0.0",
+  "description": "GymERP Kiosk App",
+  "scripts": {
+    "build": "tsc",
+    "sync": "npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "typescript": "^5.0.0"
+  }
+}
