@@ -61,3 +61,11 @@ android-kiosk/android/app/build/
 android-kiosk/android/.gradle/
 android-kiosk/android/build/
 android-kiosk/.capacitor/
+
+# Android Manager build output
+android-manager/node_modules/
+android-manager/dist/
+android-manager/android/app/build/
+android-manager/android/.gradle/
+android-manager/android/build/
+android-manager/.capacitor/

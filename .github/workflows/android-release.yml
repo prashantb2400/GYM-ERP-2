@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag name (e.g. v1.0.1)'
+        description: 'Release tag name (e.g. v1.0.2)'
         required: true
-        default: 'v1.0.1'
+        default: 'v1.0.2'
 
 jobs:
   build-apk:
@@ -36,42 +36,72 @@ jobs:
         with:
           packages: 'platforms;android-34 build-tools;34.0.0'
 
-      - name: Install dependencies
+      # 1. Build GymERP Kiosk APK (Tablet Front Desk Kiosk)
+      - name: Install dependencies for Kiosk
         working-directory: ./android-kiosk
         run: npm install
 
-      - name: Sync Capacitor
+      - name: Sync Capacitor for Kiosk
         working-directory: ./android-kiosk
         run: npx cap sync android
 
-      - name: Make Gradle wrapper executable
+      - name: Make Kiosk Gradle wrapper executable
         working-directory: ./android-kiosk/android
         run: chmod +x ./gradlew
 
-      - name: Build Debug APK
+      - name: Build Kiosk APKs (Debug and Release)
         working-directory: ./android-kiosk/android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug assembleRelease
 
-      - name: Build Release APK
-        working-directory: ./android-kiosk/android
-        run: ./gradlew assembleRelease
+      # 2. Build GymERP Manager APK (Owner & Staff Dashboard)
+      - name: Install dependencies for Manager
+        working-directory: ./android-manager
+        run: npm install
 
-      - name: Upload APK Artifacts
+      - name: Sync Capacitor for Manager
+        working-directory: ./android-manager
+        run: npx cap sync android
+
+      - name: Make Manager Gradle wrapper executable
+        working-directory: ./android-manager/android
+        run: chmod +x ./gradlew
+
+      - name: Build Manager APKs (Debug and Release)
+        working-directory: ./android-manager/android
+        run: ./gradlew assembleDebug assembleRelease
+
+      # 3. Collect and Rename All APKs
+      - name: Stage Release APKs
+        run: |
+          mkdir -p release-apks
+          cp android-kiosk/android/app/build/outputs/apk/debug/app-debug.apk release-apks/gymerp-kiosk-debug.apk
+          cp android-kiosk/android/app/build/outputs/apk/release/*.apk release-apks/gymerp-kiosk-release.apk
+          cp android-manager/android/app/build/outputs/apk/debug/app-debug.apk release-apks/gymerp-manager-debug.apk
+          cp android-manager/android/app/build/outputs/apk/release/*.apk release-apks/gymerp-manager-release.apk
+          ls -lh release-apks/
+
+      # 4. Upload GitHub Actions Artifacts
+      - name: Upload Kiosk APK Artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: gymerp-kiosk-apks
-          path: |
-            android-kiosk/android/app/build/outputs/apk/debug/*.apk
-            android-kiosk/android/app/build/outputs/apk/release/*.apk
+          path: release-apks/gymerp-kiosk-*.apk
           if-no-files-found: warn
 
-      - name: Attach APK to GitHub Release
+      - name: Upload Manager APK Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gymerp-manager-apks
+          path: release-apks/gymerp-manager-*.apk
+          if-no-files-found: warn
+
+      # 5. Attach All APKs to GitHub Release
+      - name: Attach All APKs to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            android-kiosk/android/app/build/outputs/apk/debug/*.apk
-            android-kiosk/android/app/build/outputs/apk/release/*.apk
+          files: release-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
