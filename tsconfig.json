@@ -31,5 +31,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "hardware-bridge", "cctv-service", "GYM-ERP-2", "whatsapp-bridge", "desktop"]
+  "exclude": ["node_modules", "hardware-bridge", "cctv-service", "GYM-ERP-2", "whatsapp-bridge", "desktop", "android-kiosk", "android-manager"]
 }
