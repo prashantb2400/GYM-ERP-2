@@ -64,7 +64,7 @@ export function generateMemberReportHTML(data: MemberReportData): string {
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: var(--text);
       line-height: 1.5;
       background-color: #f9fafb;
@@ -258,7 +258,7 @@ export function generateMemberReportHTML(data: MemberReportData): string {
     }
 
     .stat-value {
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Bebas Neue', Impact, 'Arial Black', -apple-system, sans-serif;
       font-size: 2.5rem;
       color: var(--secondary);
       line-height: 1;

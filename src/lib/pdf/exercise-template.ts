@@ -42,6 +42,8 @@ export function generateExercisePlanHTML(data: ExercisePlanData): string {
       --text-muted: #475569;
       --bg-page: #f8fafc;
       --bg-card: #ffffff;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     }
 
     * {
@@ -51,7 +53,7 @@ export function generateExercisePlanHTML(data: ExercisePlanData): string {
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: var(--font-sans);
       color: var(--text-main);
       background-color: var(--bg-page);
       line-height: 1.45;
@@ -280,7 +282,7 @@ export function generateExercisePlanHTML(data: ExercisePlanData): string {
     }
 
     .kpi-value {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 20px;
       font-weight: 700;
       color: var(--primary);
@@ -364,7 +366,7 @@ export function generateExercisePlanHTML(data: ExercisePlanData): string {
       font-weight: 800;
       padding: 2px 8px;
       border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       text-transform: uppercase;
     }
 
@@ -375,7 +377,7 @@ export function generateExercisePlanHTML(data: ExercisePlanData): string {
     }
 
     .day-exercise-count {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 11px;
       font-weight: 600;
       color: #cbd5e1;
@@ -442,7 +444,7 @@ export function generateExercisePlanHTML(data: ExercisePlanData): string {
 
     .exercise-table td.num {
       text-align: center;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-weight: 700;
     }
 

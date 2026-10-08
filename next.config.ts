@@ -18,7 +18,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://*.supabase.co https://api.qrserver.com https://www.googletagmanager.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://graph.facebook.com https://www.google-analytics.com",
+      "connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:* http://*.local:* ws://*.local:* https://*.supabase.co wss://*.supabase.co https://graph.facebook.com https://www.google-analytics.com",
       "worker-src 'self' blob:",
       "frame-src https://checkout.razorpay.com",
       "object-src 'none'",

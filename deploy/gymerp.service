@@ -1,0 +1,22 @@
+[Unit]
+Description=GymERP Local Appliance Server
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/gymerp
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=NEXT_PUBLIC_APP_URL=http://localhost:3000
+Environment=NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+Environment=NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder
+Environment=SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder
+Environment=DATABASE_URL=postgres://postgres:postgres@localhost:5432/gymerp
+
+[Install]
+WantedBy=multi-user.target

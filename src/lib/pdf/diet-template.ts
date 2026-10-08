@@ -49,6 +49,8 @@ export function generateDietChartHTML(data: DietChartData): string {
       --bg-page: #f8fafc;
       --bg-card: #ffffff;
       --bg-accent: #f1f5f9;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     }
 
     * {
@@ -58,7 +60,7 @@ export function generateDietChartHTML(data: DietChartData): string {
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: var(--text-main);
       background-color: var(--bg-page);
       line-height: 1.45;
@@ -287,7 +289,7 @@ export function generateDietChartHTML(data: DietChartData): string {
     }
 
     .kpi-value {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 20px;
       font-weight: 700;
       color: var(--primary);
@@ -375,7 +377,7 @@ export function generateDietChartHTML(data: DietChartData): string {
       font-weight: 800;
       padding: 2px 7px;
       border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       text-transform: uppercase;
     }
 
@@ -386,7 +388,7 @@ export function generateDietChartHTML(data: DietChartData): string {
     }
 
     .meal-time-badge {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
@@ -397,7 +399,7 @@ export function generateDietChartHTML(data: DietChartData): string {
     }
 
     .meal-subtotal-badge {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 11.5px;
       font-weight: 700;
       color: var(--primary);
@@ -460,7 +462,7 @@ export function generateDietChartHTML(data: DietChartData): string {
 
     .meal-table td.num {
       text-align: right;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--font-mono);
       font-weight: 600;
     }
 
