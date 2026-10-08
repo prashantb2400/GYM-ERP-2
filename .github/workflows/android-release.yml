@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag name (e.g. v1.0.2)'
+        description: 'Release tag name (e.g. v1.0.4)'
         required: true
-        default: 'v1.0.2'
+        default: 'v1.0.4'
 
 jobs:
   build-apk:
@@ -70,14 +70,42 @@ jobs:
         working-directory: ./android-manager/android
         run: ./gradlew assembleDebug assembleRelease
 
-      # 3. Collect and Rename All APKs
+      # 3. Collect, Sign Fallback, and Stage All APKs
       - name: Stage Release APKs
         run: |
           mkdir -p release-apks
-          cp android-kiosk/android/app/build/outputs/apk/debug/app-debug.apk release-apks/gymerp-kiosk-debug.apk
-          cp android-kiosk/android/app/build/outputs/apk/release/*.apk release-apks/gymerp-kiosk-release.apk
-          cp android-manager/android/app/build/outputs/apk/debug/app-debug.apk release-apks/gymerp-manager-debug.apk
-          cp android-manager/android/app/build/outputs/apk/release/*.apk release-apks/gymerp-manager-release.apk
+          DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
+
+          # 3a. Stage Kiosk Debug APK
+          if [ -f android-kiosk/android/app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp android-kiosk/android/app/build/outputs/apk/debug/app-debug.apk release-apks/gymerp-kiosk-debug.apk
+          fi
+
+          # 3b. Stage Kiosk Release APK (signed)
+          if [ -f android-kiosk/android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android-kiosk/android/app/build/outputs/apk/release/app-release.apk release-apks/gymerp-kiosk-release.apk
+          elif [ -f android-kiosk/android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks "$DEBUG_KEYSTORE" --ks-pass pass:android --out release-apks/gymerp-kiosk-release.apk android-kiosk/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          else
+            cp android-kiosk/android/app/build/outputs/apk/release/*.apk release-apks/gymerp-kiosk-release.apk || true
+          fi
+
+          # 3c. Stage Manager Debug APK
+          if [ -f android-manager/android/app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp android-manager/android/app/build/outputs/apk/debug/app-debug.apk release-apks/gymerp-manager-debug.apk
+          fi
+
+          # 3d. Stage Manager Release APK (signed)
+          if [ -f android-manager/android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android-manager/android/app/build/outputs/apk/release/app-release.apk release-apks/gymerp-manager-release.apk
+          elif [ -f android-manager/android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks "$DEBUG_KEYSTORE" --ks-pass pass:android --out release-apks/gymerp-manager-release.apk android-manager/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          else
+            cp android-manager/android/app/build/outputs/apk/release/*.apk release-apks/gymerp-manager-release.apk || true
+          fi
+
+          # Verify all files
+          echo "Staged APK artifacts:"
           ls -lh release-apks/
 
       # 4. Upload GitHub Actions Artifacts
@@ -99,9 +127,10 @@ jobs:
 
       # 5. Attach All APKs to GitHub Release
       - name: Attach All APKs to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release_tag != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.event.inputs.release_tag }}
           files: release-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

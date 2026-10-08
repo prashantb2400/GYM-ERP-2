@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'GymERP Manager',
   webDir: 'www',
   server: {
-    url: 'https://gymerp.com/dashboard',
+    allowNavigation: ['*'],
     cleartext: true
   }
 };
