@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,14 +8,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dumbbell, Loader2, Mail, Lock, User, CheckCircle2 } from 'lucide-react';
+import {
+  Dumbbell,
+  Loader2,
+  Mail,
+  Lock,
+  User,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Check,
+  ShieldCheck,
+} from 'lucide-react';
 import Link from 'next/link';
 import { GridPattern } from '@/components/magicui/grid-pattern';
 import { Meteors } from '@/components/magicui/meteors';
 import { BorderBeam } from '@/components/magicui/border-beam';
 import { useAuthStore } from '@/store/authStore';
 
-// ── Google SVG Icon ──────────────────────────────────────────────────────────
+// Google SVG Icon
 function GoogleIcon() {
   return (
     <svg className="h-4 w-4 mr-2 shrink-0" aria-hidden="true" viewBox="0 0 488 512" xmlns="http://www.w3.org/2000/svg">
@@ -24,7 +36,7 @@ function GoogleIcon() {
   );
 }
 
-// ── Divider ──────────────────────────────────────────────────────────────────
+// Divider
 function OrDivider() {
   return (
     <div className="relative my-4">
@@ -38,7 +50,7 @@ function OrDivider() {
   );
 }
 
-// ── Main login form (needs useSearchParams so wrapped in Suspense) ────────────
+// Main login form (wrapped in Suspense for useSearchParams)
 function OwnerLoginForm() {
   const supabase = createClient();
   const router = useRouter();
@@ -46,6 +58,12 @@ function OwnerLoginForm() {
 
   // Read error forwarded from /api/auth/callback
   const callbackError = searchParams.get('error');
+
+  // Destination preservation
+  const rawNext = searchParams.get('next');
+  const safeNext = (rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\'))
+    ? rawNext
+    : '/dashboard';
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(
@@ -58,14 +76,44 @@ function OwnerLoginForm() {
   // Sign-in state
   const [signInEmail, setSignInEmail] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
 
   // Sign-up state
   const [signUpName, setSignUpName] = useState('');
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpConfirm, setSignUpConfirm] = useState('');
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+  const [showSignUpConfirm, setShowSignUpConfirm] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(true);
 
-  // ── Sign In ──────────────────────────────────────────────────────────────
+  // Caps Lock detection
+  const [capsLockActive, setCapsLockActive] = useState(false);
+
+  const handleKeyEvent = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (typeof e.getModifierState === 'function') {
+      setCapsLockActive(e.getModifierState('CapsLock'));
+    }
+  };
+
+  // Password strength evaluation
+  const passwordStrength = useMemo(() => {
+    const pwd = signUpPassword;
+    if (!pwd) return { score: 0, label: '', color: '' };
+    let score = 0;
+    if (pwd.length >= 6) score += 1;
+    if (pwd.length >= 8) score += 1;
+    if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score += 1;
+    if (/[0-9]/.test(pwd)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pwd)) score += 1;
+
+    if (score <= 1) return { score: 1, label: 'Weak', color: 'bg-red-500' };
+    if (score <= 3) return { score: 2, label: 'Fair', color: 'bg-amber-500' };
+    if (score === 4) return { score: 3, label: 'Good', color: 'bg-blue-500' };
+    return { score: 4, label: 'Strong', color: 'bg-green-500' };
+  }, [signUpPassword]);
+
+  // Sign In handler
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signInEmail.trim() || !signInPassword.trim()) {
@@ -100,7 +148,7 @@ function OwnerLoginForm() {
                 localStorage.setItem('gymerp_cached_gym_id', meData.user.gymId);
               }
               useAuthStore.getState().setSession({ user: meData.user, member: null, needsOnboarding: false });
-              router.push('/dashboard');
+              router.push(safeNext);
               return;
             }
           }
@@ -115,7 +163,7 @@ function OwnerLoginForm() {
           .maybeSingle();
 
         if (userData?.gym_id) {
-          router.push('/dashboard');
+          router.push(safeNext);
         } else {
           router.push('/dashboard/onboarding');
         }
@@ -132,11 +180,15 @@ function OwnerLoginForm() {
     }
   };
 
-  // ── Sign Up ──────────────────────────────────────────────────────────────
+  // Sign Up handler
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signUpName.trim() || !signUpEmail.trim() || !signUpPassword || !signUpConfirm) {
       setError('Please fill in all fields.');
+      return;
+    }
+    if (!agreedToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy to register.');
       return;
     }
     if (signUpPassword.length < 6) {
@@ -183,7 +235,7 @@ function OwnerLoginForm() {
     }
   };
 
-  // ── Google OAuth ─────────────────────────────────────────────────────────
+  // Google OAuth
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
@@ -191,7 +243,7 @@ function OwnerLoginForm() {
       const { error: loginError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(safeNext)}`,
         },
       });
       if (loginError) throw loginError;
@@ -202,7 +254,7 @@ function OwnerLoginForm() {
     }
   };
 
-  // ── Email verification sent screen ───────────────────────────────────────
+  // Email verification sent screen
   if (signUpSuccess) {
     return (
       <Card className="border-zinc-800 bg-zinc-900/60 backdrop-blur-xl">
@@ -249,8 +301,17 @@ function OwnerLoginForm() {
         <CardContent>
           {/* Global error */}
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400 mb-4">
-              {error}
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400 mb-4 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Caps lock warning banner */}
+          {capsLockActive && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 text-xs text-amber-400 mb-4 flex items-center gap-2">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>Caps Lock is ON</span>
             </div>
           )}
 
@@ -264,7 +325,7 @@ function OwnerLoginForm() {
               </TabsTrigger>
             </TabsList>
 
-            {/* ── Sign In Tab ── */}
+            {/* Sign In Tab */}
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="grid gap-4">
                 <div className="grid gap-2">
@@ -297,14 +358,24 @@ function OwnerLoginForm() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                     <Input
                       id="signInPassword"
-                      type="password"
+                      type={showSignInPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       placeholder="••••••••"
                       disabled={loading}
                       value={signInPassword}
                       onChange={(e) => setSignInPassword(e.target.value)}
-                      className="pl-10 border-zinc-800 bg-zinc-950 text-zinc-100 focus:border-purple-600 focus:ring-purple-600"
+                      onKeyDown={handleKeyEvent}
+                      onKeyUp={handleKeyEvent}
+                      className="pl-10 pr-10 border-zinc-800 bg-zinc-950 text-zinc-100 focus:border-purple-600 focus:ring-purple-600"
                     />
+                    <button
+                      type="button"
+                      aria-label={showSignInPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowSignInPassword(!showSignInPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                      {showSignInPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
                 <Button
@@ -331,7 +402,7 @@ function OwnerLoginForm() {
               </Button>
             </TabsContent>
 
-            {/* ── Sign Up Tab ── */}
+            {/* Sign Up Tab */}
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="grid gap-4">
                 <div className="grid gap-2">
@@ -367,37 +438,113 @@ function OwnerLoginForm() {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="signUpPassword" className="text-zinc-300 text-sm">Password <span className="text-zinc-500 font-normal">(min 6 characters)</span></Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signUpPassword" className="text-zinc-300 text-sm">Password</Label>
+                    {passwordStrength.label && (
+                      <span className="text-xs text-zinc-400">
+                        Strength: <span className="font-medium text-zinc-200">{passwordStrength.label}</span>
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                     <Input
                       id="signUpPassword"
-                      type="password"
+                      type={showSignUpPassword ? 'text' : 'password'}
                       autoComplete="new-password"
-                      placeholder="••••••••"
+                      placeholder="At least 6 characters"
                       disabled={loading}
                       value={signUpPassword}
                       onChange={(e) => setSignUpPassword(e.target.value)}
-                      className="pl-10 border-zinc-800 bg-zinc-950 text-zinc-100 focus:border-purple-600 focus:ring-purple-600"
+                      onKeyDown={handleKeyEvent}
+                      onKeyUp={handleKeyEvent}
+                      className="pl-10 pr-10 border-zinc-800 bg-zinc-950 text-zinc-100 focus:border-purple-600 focus:ring-purple-600"
                     />
+                    <button
+                      type="button"
+                      aria-label={showSignUpPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                      {showSignUpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
+                  {/* Password Strength Indicator Bar */}
+                  {signUpPassword && (
+                    <div className="grid grid-cols-4 gap-1.5 mt-1">
+                      {[1, 2, 3, 4].map((step) => (
+                        <div
+                          key={step}
+                          className={`h-1 rounded-full transition-all duration-200 ${
+                            step <= passwordStrength.score ? passwordStrength.color : 'bg-zinc-800'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="signUpConfirm" className="text-zinc-300 text-sm">Confirm Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signUpConfirm" className="text-zinc-300 text-sm">Confirm Password</Label>
+                    {signUpConfirm && (
+                      <span className="text-xs flex items-center gap-1">
+                        {signUpPassword === signUpConfirm ? (
+                          <span className="text-green-400 flex items-center gap-1">
+                            <Check className="h-3 w-3" /> Matched
+                          </span>
+                        ) : (
+                          <span className="text-red-400">Mismatch</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                     <Input
                       id="signUpConfirm"
-                      type="password"
+                      type={showSignUpConfirm ? 'text' : 'password'}
                       autoComplete="new-password"
-                      placeholder="••••••••"
+                      placeholder="Re-enter password"
                       disabled={loading}
                       value={signUpConfirm}
                       onChange={(e) => setSignUpConfirm(e.target.value)}
-                      className="pl-10 border-zinc-800 bg-zinc-950 text-zinc-100 focus:border-purple-600 focus:ring-purple-600"
+                      onKeyDown={handleKeyEvent}
+                      onKeyUp={handleKeyEvent}
+                      className="pl-10 pr-10 border-zinc-800 bg-zinc-950 text-zinc-100 focus:border-purple-600 focus:ring-purple-600"
                     />
+                    <button
+                      type="button"
+                      aria-label={showSignUpConfirm ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowSignUpConfirm(!showSignUpConfirm)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                      {showSignUpConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
+
+                {/* Terms of Service and Privacy Policy consent */}
+                <div className="flex items-start gap-2 pt-1">
+                  <input
+                    id="termsAgreement"
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    className="mt-1 h-3.5 w-3.5 rounded border-zinc-700 bg-zinc-900 text-purple-600 focus:ring-purple-600 focus:ring-offset-zinc-900"
+                  />
+                  <Label htmlFor="termsAgreement" className="text-xs text-zinc-400 font-normal leading-relaxed cursor-pointer">
+                    I agree to the{' '}
+                    <Link href="/terms" target="_blank" className="text-purple-400 hover:underline">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link href="/privacy" target="_blank" className="text-purple-400 hover:underline">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </Label>
+                </div>
+
                 <Button
                   type="submit"
                   disabled={loading}
@@ -443,14 +590,14 @@ function OwnerLoginForm() {
   );
 }
 
-// ── Page wrapper (Suspense required for useSearchParams) ─────────────────────
+// Page wrapper (Suspense required for useSearchParams)
 export default function OwnerLoginPage() {
   return (
     <div className="relative flex min-h-screen bg-zinc-950 text-zinc-50 selection:bg-purple-600 selection:text-white overflow-hidden">
       <GridPattern className="absolute inset-0 z-0 opacity-50" />
       <Meteors number={12} />
 
-      {/* Left panel — decorative, desktop only */}
+      {/* Left panel - decorative, desktop only */}
       <div className="hidden lg:flex lg:w-1/2 bg-zinc-900 border-r border-zinc-800 relative justify-center items-center overflow-hidden z-10">
         <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-purple-700/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-blue-600/5 rounded-full blur-[100px] pointer-events-none" />
@@ -462,12 +609,12 @@ export default function OwnerLoginPage() {
             Build a Stronger Gym Business
           </h2>
           <p className="text-zinc-400 text-lg leading-relaxed">
-            Automate your admin tasks — check-ins, invoices, dues, WhatsApp reminders — and focus on your members&apos; growth.
+            Automate your admin tasks - check-ins, invoices, dues, WhatsApp reminders - and focus on your members&apos; growth.
           </p>
         </div>
       </div>
 
-      {/* Right panel — auth form */}
+      {/* Right panel - auth form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 relative z-10">
         <div className="w-full max-w-md relative z-10">
           {/* Logo */}

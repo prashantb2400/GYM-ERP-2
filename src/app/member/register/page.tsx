@@ -17,7 +17,7 @@ function RegisterForm() {
   const searchParams = useSearchParams();
 
   const [gymId, setGymId] = useState('');
-  const [gyms, setGyms] = useState<{ id: string; name: string }[]>([]);
+  const [gyms, setGyms] = useState<{ id: string; name: string; city?: string }[]>([]);
   const [gymName, setGymName] = useState('');
   
   const [name, setName] = useState('');
@@ -30,16 +30,21 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [createdMemberCode, setCreatedMemberCode] = useState('');
 
   useEffect(() => {
-    // Fetch all gyms to allow selection if gymId is not in searchParams
+    // Fetch all active gyms via public endpoint (bypasses RLS for prospective members)
     const fetchGyms = async () => {
-      const { data, error: gymError } = await supabase
-        .from('gyms')
-        .select('id, name');
-      
-      if (!gymError && data) {
-        setGyms(data);
+      try {
+        const res = await fetch('/api/gyms/public');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.gyms)) {
+            setGyms(data.gyms);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load gyms for self-registration:', err);
       }
     };
     fetchGyms();
@@ -47,17 +52,15 @@ function RegisterForm() {
     const queryGymId = searchParams.get('gym');
     if (queryGymId) {
       setGymId(queryGymId);
-      // Fetch specific gym name
-      supabase
-        .from('gyms')
-        .select('name')
-        .eq('id', queryGymId)
-        .single()
-        .then(({ data }) => {
-          if (data) setGymName(data.name);
-        });
     }
-  }, [searchParams, supabase]);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (gymId && gyms.length > 0) {
+      const match = gyms.find((g) => g.id === gymId);
+      if (match) setGymName(match.name);
+    }
+  }, [gymId, gyms]);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,15 +83,24 @@ function RegisterForm() {
       setLoading(true);
       setError(null);
 
-      // Check if this phone number is already registered
-      const { data: existingMember } = await supabase
-        .from('members')
-        .select('id')
-        .eq('phone', cleanPhone)
-        .eq('gym_id', gymId)
-        .limit(1);
+      // Verify availability via server endpoint
+      const checkRes = await fetch('/api/member/self-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'check',
+          gymId,
+          phone: cleanPhone,
+        }),
+      });
 
-      if (existingMember && existingMember.length > 0) {
+      const checkData = await checkRes.json().catch(() => ({}));
+
+      if (!checkRes.ok) {
+        throw new Error(checkData.error || 'Failed to check phone number');
+      }
+
+      if (checkData.alreadyRegistered) {
         throw new Error('This phone number is already registered at this gym.');
       }
 
@@ -97,7 +109,13 @@ function RegisterForm() {
         phone: `+91${cleanPhone}`,
       });
 
-      if (otpError) throw otpError;
+      if (otpError) {
+        const errorMsg = otpError.message.toLowerCase();
+        if (errorMsg.includes('sms') || errorMsg.includes('provider') || errorMsg.includes('not configured')) {
+          throw new Error('SMS service is not enabled on this server. Please visit the front desk for registration.');
+        }
+        throw otpError;
+      }
 
       setOtpSent(true);
     } catch (err: unknown) {
@@ -131,52 +149,30 @@ function RegisterForm() {
         throw new Error(verifyError?.message || 'Invalid or expired OTP');
       }
 
-      // 1. Resolve gym's primary branch
-      const { data: primaryBranch } = await supabase
-        .from('branches')
-        .select('id')
-        .eq('gym_id', gymId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .single();
-
-      // 2. Generate member code
-      let memberCode = '';
-      try {
-        const { data: codeData, error: codeError } = await supabase.rpc('generate_member_code', {
-          p_gym_id: gymId,
-        });
-        if (!codeError && codeData) {
-          memberCode = codeData;
-        }
-      } catch (err) {
-        console.warn('generate_member_code RPC error, falling back:', err);
-      }
-
-      if (!memberCode) {
-        const { count } = await supabase
-          .from('members')
-          .select('id', { count: 'exact', head: true })
-          .eq('gym_id', gymId);
-        const nextNum = (count || 0) + 1;
-        memberCode = `GYM${String(nextNum).padStart(4, '0')}`;
-      }
-
-      // 3. Insert member profile with branch_id
-      const { error: insertError } = await supabase.from('members').insert({
-        auth_id: authData.user.id,
-        gym_id: gymId,
-        branch_id: primaryBranch?.id || null,
-        member_code: memberCode,
-        qr_token: crypto.randomUUID(),
-        name: name.trim(),
-        phone: cleanPhone,
-        dob: dob || null,
-        gender: gender || null,
-        status: 'pending', // Pending approval / setup by receptionist
+      // Submit registration through server API with authId
+      const regRes = await fetch('/api/member/self-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'register',
+          gymId,
+          name: name.trim(),
+          phone: cleanPhone,
+          dob: dob || null,
+          gender: gender || null,
+          authId: authData.user.id,
+        }),
       });
 
-      if (insertError) throw insertError;
+      const regData = await regRes.json().catch(() => ({}));
+
+      if (!regRes.ok) {
+        throw new Error(regData.error || 'Registration failed');
+      }
+
+      if (regData.member?.memberCode) {
+        setCreatedMemberCode(regData.member.memberCode);
+      }
 
       setSuccess(true);
     } catch (err: unknown) {
@@ -200,7 +196,10 @@ function RegisterForm() {
         </CardHeader>
         <CardContent className="text-center text-sm text-zinc-400 leading-relaxed px-6 pb-6">
           <p>
-            Your profile has been created successfully with status <span className="text-purple-400 font-semibold">Pending</span>.
+            Your profile has been created successfully with status <span className="text-purple-400 font-semibold">Pending</span>
+            {createdMemberCode ? (
+              <> and Member ID <span className="font-mono text-zinc-200 font-bold">{createdMemberCode}</span></>
+            ) : null}.
           </p>
           <p className="mt-4">
             Please visit the gym reception desk to verify your details, select a membership plan, and activate your account.
@@ -244,9 +243,9 @@ function RegisterForm() {
                     <SelectValue placeholder="Choose your gym" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
-                    {gyms.map(g => (
+                    {gyms.map((g) => (
                       <SelectItem key={g.id} value={g.id} className="focus:bg-zinc-800 focus:text-white">
-                        {g.name}
+                        {g.name} {g.city ? `(${g.city})` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>

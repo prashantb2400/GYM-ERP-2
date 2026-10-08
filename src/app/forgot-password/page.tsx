@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
 
       if (resetError) throw resetError;
 
-      // Always show success — don't reveal whether email exists
+      // Always show success - don't reveal whether email exists
       setSubmitted(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';

@@ -90,8 +90,9 @@ export async function updateSession(request: NextRequest) {
   const isKioskRoute = path.includes('/attendance/') && path.includes('kiosk');
 
   if (!user && (isDashboardPage || isMemberPage) && !isKioskRoute) {
-    // Redirect unauthenticated users to landing page or login
+    // Redirect unauthenticated users to login with target destination preserved
     const url = new URL('/login', request.url);
+    url.searchParams.set('next', path);
     return NextResponse.redirect(url);
   }
 
@@ -121,7 +122,7 @@ export async function updateSession(request: NextRequest) {
       if (userData.role === 'owner' || userData.role === 'receptionist') {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       } else if (userData.role === 'trainer') {
-        return NextResponse.redirect(new URL('/dashboard/trainers', request.url));
+        return NextResponse.redirect(new URL('/trainer/dashboard', request.url));
       }
     }
 
