@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
 
 # next.js
 /.next/
@@ -46,13 +48,33 @@ GYM-ERP-2/
 # Local agent skills & assistant configs
 .agents/
 
+# MCP server build output
+mcp-server/dist/
+mcp-server/node_modules/
+
+# Hardware bridge
+hardware-bridge/dist/
+hardware-bridge/node_modules/
+
+# Python cache (CCTV service)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Temporary patch scripts
+patch*.js
+
 # Desktop / Tauri build output
 desktop/src-tauri/target/
 desktop/dist/
 desktop/node_modules/
+
+# WhatsApp bridge
 whatsapp-bridge/node_modules/
 whatsapp-bridge/dist/
 whatsapp-bridge/data/
+whatsapp-bridge/bin/
 
 # Android Kiosk build output
 android-kiosk/node_modules/
