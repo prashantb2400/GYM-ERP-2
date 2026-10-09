@@ -50,6 +50,18 @@ export async function GET(request: Request) {
       }
     }
 
+    // 3. Fallback for standalone appliance mode: if exactly 1 gym exists, auto-select it
+    if (!gymId) {
+      const { data: allGyms, error: listErr } = await supabaseAdmin
+        .from('gyms')
+        .select('id')
+        .limit(2);
+
+      if (!listErr && allGyms && allGyms.length === 1) {
+        gymId = allGyms[0].id;
+      }
+    }
+
     if (!gymId) {
       return NextResponse.json({ error: 'gymId parameter or paired device token required' }, { status: 400 });
     }

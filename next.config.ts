@@ -17,7 +17,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://www.googletagmanager.com https://static.cloudflareinsights.com https://checkout.razorpay.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://*.supabase.co https://api.qrserver.com https://www.googletagmanager.com",
+      "img-src 'self' data: blob: https://*.supabase.co https://www.googletagmanager.com",
       "connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:* http://*.local:* ws://*.local:* https://*.supabase.co wss://*.supabase.co https://graph.facebook.com https://www.google-analytics.com",
       "worker-src 'self' blob:",
       "frame-src https://checkout.razorpay.com",
@@ -68,6 +68,16 @@ const nextConfig: NextConfig = {
           },
         ]
       : [];
+  },
+
+  async rewrites() {
+    const postgrestUrl = process.env.INTERNAL_POSTGREST_URL || 'http://localhost:54321';
+    return [
+      {
+        source: "/rest/v1/:path*",
+        destination: `${postgrestUrl}/:path*`,
+      },
+    ];
   },
 };
 

@@ -26,6 +26,24 @@ export async function getAuthUser(request: Request): Promise<AuthResolutionResul
       } catch (tokenException) {
         console.warn('Bearer token authentication error:', tokenException);
       }
+
+      // 1b. Fallback: Verify local offline token signed with PGRST_JWT_SECRET
+      try {
+        const { verifyLocalToken } = await import('@/lib/server/local-auth');
+        const localPayload = await verifyLocalToken(token);
+        if (localPayload && localPayload.sub) {
+          const offlineUser: User = {
+            id: localPayload.sub as string,
+            app_metadata: { provider: 'email' },
+            user_metadata: (localPayload.user_metadata as any) || {},
+            aud: 'authenticated',
+            created_at: new Date().toISOString(),
+          } as any;
+          return { user: offlineUser, error: null };
+        }
+      } catch (localErr) {
+        console.warn('Local offline token validation error:', localErr);
+      }
     }
   }
 

@@ -1,10 +1,28 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { jwtVerify } from 'jose';
 
 // Admin client for middleware super admin check
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key';
+const DEFAULT_JWT_SECRET = 'gymerp-offline-local-jwt-secret-minimum-32-chars-long';
+
+async function verifyLocalToken(token: string) {
+  try {
+    const secret = process.env.PGRST_JWT_SECRET || DEFAULT_JWT_SECRET;
+    const secretKey = new TextEncoder().encode(secret);
+    const { payload } = await jwtVerify(token, secretKey);
+    return {
+      id: (payload.sub || '') as string,
+      email: (payload.email || '') as string,
+      role: (payload.app_role || 'owner') as string,
+      gym_id: (payload.gym_id || '') as string,
+    };
+  } catch {
+    return null;
+  }
+}
 
 const supabaseAdmin = createClient(
   supabaseUrl,
@@ -41,7 +59,25 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refresh session if expired
-  const { data: { user } } = await supabase.auth.getUser();
+  let { data: { user } } = await supabase.auth.getUser();
+
+  // Local/offline session fallback: resolve user from gymerp_token cookie if present
+  if (!user) {
+    const localToken = request.cookies.get('gymerp_token')?.value;
+    if (localToken) {
+      const verified = await verifyLocalToken(localToken);
+      if (verified) {
+        user = {
+          id: verified.id,
+          email: verified.email,
+          aud: 'authenticated',
+          app_metadata: { role: verified.role },
+          user_metadata: {},
+          created_at: new Date().toISOString(),
+        } as any;
+      }
+    }
+  }
 
   const path = request.nextUrl.pathname;
   const isAuthPage = ['/login', '/staff/login', '/member/login', '/member/register'].some(p => path.startsWith(p));
@@ -85,6 +121,37 @@ export async function updateSession(request: NextRequest) {
 
   if (isDevBypass) {
     return supabaseResponse;
+  }
+
+  const isOfflineAppliance = Boolean(process.env.INTERNAL_POSTGREST_URL || process.env.IS_OFFLINE_APPLIANCE === 'true');
+
+  if (path === '/setup') {
+    if (isOfflineAppliance) {
+      try {
+        const { count, error } = await supabaseAdmin
+          .from('gyms')
+          .select('id', { count: 'exact', head: true });
+        if (!error && count && count > 0) {
+          return NextResponse.redirect(new URL('/login', request.url));
+        }
+      } catch {
+        // Allow setup page if check errors
+      }
+    }
+    return supabaseResponse;
+  }
+
+  if (isOfflineAppliance && !user && (path === '/' || path === '/login')) {
+    try {
+      const { count, error } = await supabaseAdmin
+        .from('gyms')
+        .select('id', { count: 'exact', head: true });
+      if (!error && count === 0) {
+        return NextResponse.redirect(new URL('/setup', request.url));
+      }
+    } catch {
+      // Proceed to normal page
+    }
   }
 
   const isKioskRoute = path.includes('/attendance/') && path.includes('kiosk');
@@ -199,10 +266,11 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Protect API routes (except public webhooks, auth callbacks, edge hardware endpoints, and kiosk endpoints)
+  // Protect API routes (except public webhooks, auth callbacks, setup, edge hardware endpoints, and kiosk endpoints)
   const isExcludedApiRoute = 
     !path.startsWith('/api/') ||
     path.startsWith('/api/auth/') || 
+    path.startsWith('/api/setup/') || 
     path.startsWith('/api/whatsapp/webhook') ||
     path.startsWith('/api/payments/razorpay/webhook') ||
     path.startsWith('/api/cctv/webhook') ||
@@ -215,16 +283,24 @@ export async function updateSession(request: NextRequest) {
 
     if (!authenticatedUser) {
       const authHeader = request.headers.get('authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-        if (token) {
-          try {
-            const { data: verified, error: verifyErr } = await supabase.auth.getUser(token);
-            if (!verifyErr && verified?.user) {
-              authenticatedUser = verified.user;
+      const cookieToken = request.cookies.get('gymerp_token')?.value;
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.replace(/^Bearer\s+/i, '').trim() : cookieToken;
+
+      if (token) {
+        try {
+          const { data: verified, error: verifyErr } = await supabase.auth.getUser(token);
+          if (!verifyErr && verified?.user) {
+            authenticatedUser = verified.user;
+          } else {
+            const local = await verifyLocalToken(token);
+            if (local) {
+              authenticatedUser = { id: local.id, email: local.email } as any;
             }
-          } catch {
-            // Token verification error
+          }
+        } catch {
+          const local = await verifyLocalToken(token);
+          if (local) {
+            authenticatedUser = { id: local.id, email: local.email } as any;
           }
         }
       }

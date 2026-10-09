@@ -1,5 +1,34 @@
 import { InvoiceData } from './types';
 import { numberToIndianWords } from '@/lib/utils/number-to-words';
+import QRCode from 'qrcode';
+
+export function renderQrSvg(text: string, size = 130): string {
+  try {
+    const qr = QRCode.create(text, { errorCorrectionLevel: 'M' });
+    const count = qr.modules.size;
+    const margin = 1;
+    const total = count + margin * 2;
+    const cellSize = size / total;
+
+    let rects = '';
+    for (let r = 0; r < count; r++) {
+      for (let c = 0; c < count; c++) {
+        if (qr.modules.get(r, c)) {
+          const x = ((c + margin) * cellSize).toFixed(2);
+          const y = ((r + margin) * cellSize).toFixed(2);
+          const w = (cellSize + 0.05).toFixed(2);
+          const h = (cellSize + 0.05).toFixed(2);
+          rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#0f172a"/>`;
+        }
+      }
+    }
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#ffffff"/>${rects}</svg>`;
+  } catch (err) {
+    console.warn('QR code generation error:', err);
+    return '';
+  }
+}
 
 export function escapeHtml(str: unknown): string {
   if (str === null || str === undefined) return '';
@@ -81,12 +110,12 @@ export function generateInvoiceHTML(data: InvoiceData): string {
   const isPaid = status === 'PAID' || amountDue <= 0;
   const payableAmount = amountDue > 0 ? amountDue : totalAmount;
 
-  // Real NPCI dynamic UPI QR Code generation
-  let upiQrUrl = '';
+  // Real NPCI dynamic UPI QR Code generation (Offline vector SVG)
+  let upiQrSvg = '';
   let upiPayload = '';
   if (safeGym.upiId && !isPaid) {
     upiPayload = `upi://pay?pa=${encodeURIComponent(safeGym.upiId)}&pn=${encodeURIComponent(safeGym.name)}&am=${payableAmount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Inv-${invoiceNo}`)}`;
-    upiQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(upiPayload)}`;
+    upiQrSvg = renderQrSvg(upiPayload, 130);
   }
 
   const statusColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -434,6 +463,15 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       height: 100px;
       border-radius: 4px;
       border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+    }
+
+    .upi-qr-img svg {
+      width: 100%;
+      height: 100%;
       display: block;
     }
 
@@ -862,10 +900,10 @@ export function generateInvoiceHTML(data: InvoiceData): string {
             Zero Balance Outstanding
           </div>
         </div>
-        ` : upiQrUrl ? `
+        ` : upiQrSvg ? `
         <!-- Real Dynamic NPCI UPI QR Code for Unpaid / Due Invoices -->
         <div class="upi-qr-card">
-          <img class="upi-qr-img" src="${upiQrUrl}" alt="Real UPI Payment QR Code" />
+          <div class="upi-qr-img">${upiQrSvg}</div>
           <div class="upi-qr-info">
             <strong>Scan to Pay Dues (₹${payableAmount.toFixed(2)})</strong>
             <span>Scan with any UPI App (GPay / PhonePe / Paytm)</span>

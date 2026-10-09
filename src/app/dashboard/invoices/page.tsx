@@ -30,6 +30,7 @@ import { formatCurrency, formatDate, formatPhone } from '@/lib/utils/format';
 import { toast } from 'sonner';
 import { SpotlightCard, GradientText, GlowingBadge, BorderBeam, NumberTicker } from '@/components/magicui';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { QRCodeSVG } from 'qrcode.react';
 
 type InvoiceWithMembers = Invoice & {
   members?: {
@@ -512,13 +513,13 @@ export default function InvoicesPage() {
                           <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider mb-1.5 block">
                             Scan to Pay Dues (₹{selectedInvoice.amount_due})
                           </span>
-                          <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(
-                              `upi://pay?pa=${displayGym.settings.upi_id}&pn=${encodeURIComponent(displayGym.name || 'Gym')}&am=${selectedInvoice.amount_due}&cu=INR&tn=Invoice-${selectedInvoice.invoice_number}`
-                            )}`} 
-                            alt="Official UPI QR Code" 
-                            className="h-[110px] w-[110px] border border-zinc-200 p-1 bg-white rounded shadow-sm"
-                          />
+                          <div className="h-[110px] w-[110px] border border-zinc-200 p-1 bg-white rounded shadow-sm flex items-center justify-center">
+                            <QRCodeSVG
+                              value={`upi://pay?pa=${displayGym.settings.upi_id}&pn=${encodeURIComponent(displayGym.name || 'Gym')}&am=${selectedInvoice.amount_due}&cu=INR&tn=Invoice-${selectedInvoice.invoice_number}`}
+                              size={100}
+                              level="M"
+                            />
+                          </div>
                           <span className="text-[9.5px] text-zinc-800 font-mono font-bold mt-1 bg-zinc-200/70 px-2 py-0.5 rounded">
                             {displayGym.settings.upi_id}
                           </span>

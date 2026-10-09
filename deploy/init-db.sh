@@ -26,6 +26,16 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
   -- Create compatibility schema for auth.uid()
   CREATE SCHEMA IF NOT EXISTS auth;
 
+  -- Create compatibility table for auth.users (required for references in migration 004)
+  CREATE TABLE IF NOT EXISTS auth.users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE,
+    encrypted_password TEXT,
+    raw_user_meta_data JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+  );
+
   CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid AS \$\$
     SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid;
   \$\$ LANGUAGE sql STABLE;
