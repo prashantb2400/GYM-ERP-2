@@ -378,4 +378,57 @@ export class BaileysBridgeProvider implements IWhatsAppProvider {
       : [];
     return this.sendTemplate(to, templateName, params, gymId, memberId);
   }
+
+  /**
+   * Request an 8-digit pairing code to link phone without QR scanning.
+   */
+  async requestPairingCode(phone: string): Promise<{ success: boolean; pairingCode?: string; error?: string }> {
+    try {
+      const response = await this.bridgeFetch('/qr/pair', {
+        method: 'POST',
+        body: JSON.stringify({ phone }),
+      });
+      const data = await response.json();
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Send native push-to-talk (PTT) voice note.
+   */
+  async sendVoiceNote(to: string, audioBuffer: Buffer, gymId?: string, memberId?: string): Promise<WAResponse> {
+    const formattedPhone = this.formatPhone(to);
+    const base64 = audioBuffer.toString('base64');
+    try {
+      const response = await this.bridgeFetch('/send', {
+        method: 'POST',
+        body: JSON.stringify({
+          to: formattedPhone,
+          type: 'media',
+          media: {
+            base64,
+            mimeType: 'audio/ogg; codecs=opus',
+            caption: '',
+          },
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send voice note via bridge');
+      }
+      return {
+        messaging_product: 'whatsapp',
+        contacts: [{ input: to, wa_id: formattedPhone }],
+        messages: [{ id: data.messageId || 'bridged_ptt' }],
+      };
+    } catch (err: any) {
+      return {
+        messaging_product: 'whatsapp',
+        contacts: [{ input: to, wa_id: formattedPhone }],
+        messages: [{ id: 'failed_ptt' }],
+      };
+    }
+  }
 }

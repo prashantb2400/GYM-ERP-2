@@ -96,4 +96,14 @@ export interface IWhatsAppProvider {
     gymId?: string,
     memberId?: string
   ): Promise<WAResponse>;
+
+  /**
+   * Optional: Request 8-digit pairing code to link phone without QR scanning.
+   */
+  requestPairingCode?(phone: string): Promise<{ success: boolean; pairingCode?: string; error?: string }>;
+
+  /**
+   * Optional: Send native audio voice note with PTT waveform.
+   */
+  sendVoiceNote?(to: string, audioBuffer: Buffer, gymId?: string, memberId?: string): Promise<WAResponse>;
 }

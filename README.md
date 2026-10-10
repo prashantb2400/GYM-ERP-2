@@ -362,9 +362,12 @@ GymERP supports dual messaging modes to fit any gym's budget and infrastructure:
 - Best for enterprise gyms with pre-approved WhatsApp message templates.
 - Configured via `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID`.
 
-### Mode 2: Self-Hosted WhatsApp Bridge (`whatsapp-bridge/`)
+### Mode 2: Self-Hosted WhatsApp Bridge 2.0 (`whatsapp-bridge/`)
 - Powered by `@whiskeysockets/baileys` multi-device engine.
-- Links directly to any standard WhatsApp number by scanning a QR code.
+- **Dual Linking**: Pair via standard camera QR code scanning OR 8-digit **Phone Pairing Code** (`POST /qr/pair`) directly on screen.
+- **Anti-Ban Typing Simulation**: Emulates human behavior by transmitting randomized `composing` (typing) presence indicators prior to message dispatch.
+- **Push-To-Talk (PTT) Voice Notes**: Transmits audio tips and workout guidance with native green microphone waveforms instead of file attachments.
+- **Built-in Keyword Auto-Responder**: Automatic replies for plans/pricing, gym hours, guest trial passes, and location directions inspired by Zerodha Whatomate.
 - Zero per-conversation Meta messaging fees.
 - Includes SQLite auth persistence, rate-limiting queues, and SSE status streaming on port `48291`.
 
@@ -511,7 +514,7 @@ GymERP uses 17 sequential PostgreSQL migrations located in `supabase/migrations/
 GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run full unit and integration test suite (43 test files, 328 tests)
+# Run full unit and integration test suite (44 test files, 336 tests)
 npm test
 
 # Run TypeScript compiler verification
@@ -522,9 +525,9 @@ npm run build
 ```
 
 ```
-Test Files  43 passed (43)
-     Tests  328 passed (328)
-  Duration  17.80s (43 test suites passed with 0 failures)
+Test Files  44 passed (44)
+     Tests  336 passed (336)
+  Duration  16.45s (44 test suites passed with 0 failures)
 ```
 
 ---
