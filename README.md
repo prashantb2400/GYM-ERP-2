@@ -13,11 +13,12 @@
     <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
     <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Offline_Appliance_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
     <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge" alt="MCP Server" /></a>
-    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-41%2F41_Passing_(319_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
+    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-42%2F42_Passing_(321_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
   </p>
 
   <p align="center">
     <a href="#-visual-interface-tour">🖼️ Visual Tour</a> •
+    <a href="#-1-click-frictionless-setup">⚡ 1-Click Launchers</a> •
     <a href="#-platform-matrix">⚡ Platform Matrix</a> •
     <a href="#-system-architecture">🏛️ Architecture</a> •
     <a href="#-attendance-ecosystem">🎯 4 Attendance Modalities</a> •
@@ -39,6 +40,46 @@
   </p>
 
 </div>
+
+---
+
+## ⚡ 1-Click Frictionless Setup
+
+GymERP is engineered so gym owners with zero technical experience can launch and run their gym in seconds:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        FRICTIONLESS GYM SETUP                          │
+│                                                                        │
+│   [ 🪟 Windows Desktop ]             [ 🐧 Linux / 🍓 Raspberry Pi ]    │
+│   Double-click: start-gymerp.bat     Run: ./start-gymerp.sh            │
+│            │                                    │                      │
+│            ▼                                    ▼                      │
+│   • Auto-detects Docker / Node.js      • Resolves local Wi-Fi IP       │
+│   • Auto-provisions local config       • Auto-opens default browser    │
+│            │                                    │                      │
+│            └─────────────────┬──────────────────┘                      │
+│                              ▼                                         │
+│            [ 🌐 Browser: http://localhost:3000/setup ]                 │
+│            • Step 1: Gym Profile (Name, Phone, UPI QR)                 │
+│            • Step 2: Owner Login Credentials                           │
+│            • Step 3: Starter Membership Plans                          │
+│            • Step 4: Kiosk QR Instant Auto-Pairing                     │
+│                              │                                         │
+│                              ▼                                         │
+│            Scan QR on screen with tablet -> Kiosk is Live!             │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Installation Options for Owners
+
+| Platform | Recommended Method | How It Works |
+| :--- | :--- | :--- |
+| **Windows 10 / 11** | **`start-gymerp.bat`** (or `GymERP-Setup.exe`) | Double-click batch file. Auto-starts Docker or Node, opens firewall ports 3000, 54321, 48291, and launches browser to `/setup`. |
+| **Linux / Raspberry Pi** | **`./start-gymerp.sh`** | 1-line shell launcher. Resolves LAN IP (`http://192.168.x.x:3000`) and launches browser automatically. |
+| **Docker Compose** | **`docker compose -f docker-compose.offline.yml up -d`** | 1-command startup for offline mini-PCs and servers. Includes DB, PostgREST, and WhatsApp bridge. |
+| **Windows Installer** | **`deploy/windows-installer.iss`** | Compiles single-file `GymERP-Setup.exe` with desktop shortcut, start menu entry, and auto-start service via Inno Setup. |
+| **USB Auto-Backup** | **`deploy/usb-backup.sh`** | Plug any USB flash drive into the PC to automatically export a timestamped `.sql.gz` snapshot. |
 
 ---
 
@@ -112,8 +153,8 @@ Experience GymERP's purpose-built interfaces designed for front-desk staff, gym 
 | - Platform Super Admin   | - 6-Digit Pairing PIN    | - CCTV Auto-Attendance    | - Embedded Auth Engine|
 | - GST Tax Invoicing      | - Speech-to-Speech LLM   | - WebGL Face Match (128d) | - PostgREST LAN Proxy |
 | - Razorpay Integration   | - KYC ID Document OCR    | - Mantra/SecuGen Scanner  | - Vector UPI QR Codes |
-| - Dual WhatsApp Engine   | - Thermal ESC/POS Print  | - Dynamic Member QR Pass  | - 3-Step Setup Wizard |
-| - Granular Role RBAC     | - Offline Auto-Pairing   | - Instant Station Switch  | - Raspberry Pi Ready  |
+| - Dual WhatsApp Engine   | - Thermal ESC/POS Print  | - Dynamic Member QR Pass  | - 4-Step Setup Wizard |
+| - Granular Role RBAC     | - Offline Auto-Pairing   | - Instant Station Switch  | - 1-Click USB Backup  |
 +--------------------------+--------------------------+---------------------------+-----------------------+
 ```
 
@@ -136,6 +177,7 @@ flowchart TB
         LocalPGRST["PostgREST 12.2 LAN Bridge<br/>(Zero-Lag Direct DB REST Engine)"]
         LocalPG[("PostgreSQL 16 Alpine<br/>17 Sequential Migrations")]
         WABridge["WhatsApp Bridge (Port 48291)<br/>(Baileys Multi-Device Engine)"]
+        BackupUtil["USB Flash Drive Backup Daemon<br/>(deploy/usb-backup.sh)"]
     end
 
     subgraph CloudLayer["3. Cloud SaaS Layer (Vercel / Supabase Managed)"]
@@ -156,6 +198,7 @@ flowchart TB
     LocalAuth --> LocalPG
     LocalPGRST --> LocalPG
     NextProxy --> WABridge
+    LocalPG -.-> BackupUtil
 
     NextProxy -.->|Optional Cloud Sync| CloudNext
     CloudNext --> CloudSupabase
@@ -201,16 +244,18 @@ GymERP can run completely disconnected from the public internet on a local mini-
 │             |  - PostgREST Direct API Engine (:54321)        |         │
 │             |  - Standalone WhatsApp Baileys Bridge (:48291) |         │
 │             |  - Local PostgreSQL 16 Database (:5432)        |         │
+│             |  - Automated USB Backup Daemon (deploy/)       |         │
 │             +------------------------------------------------+         │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Appliance Capabilities
 1. **Embedded Local Auth Engine**: Serves standard `/auth/v1/token`, `/auth/v1/user`, and `/auth/v1/logout` endpoints directly inside Next.js, eliminating external authentication servers and saving over 300MB of RAM.
-2. **First-Run Setup Wizard (`/setup`)**: Boots cleanly into a guided 3-step setup wizard on uninitialized hardware, configuring gym details, owner credentials, and starter plans in 60 seconds.
-3. **Pure Vector Offline Invoicing**: Generates 100% offline NPCI dynamic UPI QR codes using native vector SVG rendering with zero external network requests.
-4. **PostgREST LAN Gateway**: Automatically maps `/rest/v1/*` to PostgREST and dynamically binds client connections to local LAN hostnames (`192.168.x.x`).
-5. **Single-Gym Auto-Connect**: Kiosks automatically bind to the local gym profile on standalone appliances without requiring manual pairing PINs.
+2. **First-Run Setup Wizard (`/setup`)**: Boots cleanly into a guided setup wizard on uninitialized hardware, configuring gym details, owner credentials, and starter plans in 60 seconds.
+3. **Kiosk QR Instant Auto-Pairing**: Generates a dynamic QR code on the setup completion screen. Pointing a tablet camera at the screen connects and launches the kiosk in 2 seconds.
+4. **Pure Vector Offline Invoicing**: Generates 100% offline NPCI dynamic UPI QR codes using native vector SVG rendering with zero external network requests.
+5. **PostgREST LAN Gateway**: Automatically maps `/rest/v1/*` to PostgREST and dynamically binds client connections to local LAN hostnames (`192.168.x.x`).
+6. **1-Click Database Backup**: Download a complete JSON snapshot of all gym data directly from Dashboard Settings, or plug in a USB flash drive for automated daily backups.
 
 ### Launching the Local Appliance in 1 Command
 
@@ -414,7 +459,7 @@ GymERP uses 17 sequential PostgreSQL migrations located in `supabase/migrations/
 - **BOLA-Hardened Multi-Tenancy**: Every database query and API handler enforces explicit tenant and branch boundaries (`gym_id` and `branch_id`).
 - **Private S3 Storage & Signed URLs**: KYC identity documents and member photographs are kept in private S3 buckets accessible exclusively through short-lived (60-minute) cryptographically signed URLs.
 - **Constant-Time Verification**: Webhooks for Razorpay, WhatsApp, cron endpoints, and CCTV ingestion employ `crypto.timingSafeEqual` to prevent side-channel timing attacks.
-- **Zero-Password Kiosk Pairing**: Kiosk tablets pair using cryptographically randomized 6-digit short codes with a 15-minute TTL, keeping gym master passwords safe from lobby exposure.
+- **Zero-Password Kiosk Pairing**: Kiosk tablets pair using cryptographically randomized 6-digit short codes or on-screen vector QR codes with a 15-minute TTL, keeping gym master passwords safe from lobby exposure.
 
 ---
 
@@ -423,7 +468,7 @@ GymERP uses 17 sequential PostgreSQL migrations located in `supabase/migrations/
 GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run full unit and integration test suite (41 test files, 319 tests)
+# Run full unit and integration test suite (42 test files, 321 tests)
 npm test
 
 # Run TypeScript compiler verification
@@ -434,9 +479,9 @@ npm run build
 ```
 
 ```
-Test Files  41 passed (41)
-     Tests  319 passed (319)
-  Duration  17.45s (41 test suites passed with 0 failures)
+Test Files  42 passed (42)
+     Tests  321 passed (321)
+  Duration  20.24s (42 test suites passed with 0 failures)
 ```
 
 ---
