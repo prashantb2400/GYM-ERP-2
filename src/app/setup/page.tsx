@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dumbbell, ShieldCheck, CreditCard, Sparkles, Loader2, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Dumbbell, ShieldCheck, CreditCard, Sparkles, Loader2, ArrowRight, ArrowLeft, CheckCircle2, QrCode, Copy, Check, Tablet } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface PlanItem {
   name: string;
@@ -24,6 +25,8 @@ export default function SetupWizardPage() {
   const [checking, setChecking] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [kioskUrl, setKioskUrl] = useState<string>('');
+  const [copied, setCopied] = useState(false);
 
   // Step 1: Gym Profile
   const [gymName, setGymName] = useState('');
@@ -158,10 +161,21 @@ export default function SetupWizardPage() {
         needsOnboarding: false,
       });
 
-      router.replace('/dashboard');
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      setKioskUrl(`${origin}/kiosk/agent?gymId=${data.gymId}`);
+      setSubmitting(false);
+      setStep(4);
     } catch (err: any) {
       setError(err.message || 'Failed to complete setup');
       setSubmitting(false);
+    }
+  };
+
+  const handleCopyKioskUrl = () => {
+    if (kioskUrl) {
+      navigator.clipboard.writeText(kioskUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -193,24 +207,31 @@ export default function SetupWizardPage() {
         {/* Step Indicator */}
         <div className="flex items-center justify-between mb-8 px-4">
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step >= 1 ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
-              1
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step > 1 ? 'bg-emerald-600 text-white' : step === 1 ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
+              {step > 1 ? <Check className="w-4 h-4" /> : '1'}
             </div>
-            <span className={`text-xs font-medium ${step >= 1 ? 'text-zinc-200' : 'text-zinc-500'}`}>Gym Profile</span>
+            <span className={`text-xs font-medium ${step >= 1 ? 'text-zinc-200' : 'text-zinc-500'}`}>Profile</span>
           </div>
-          <div className={`h-0.5 flex-1 mx-3 ${step >= 2 ? 'bg-purple-600' : 'bg-zinc-800'}`} />
+          <div className={`h-0.5 flex-1 mx-2 sm:mx-3 ${step >= 2 ? 'bg-purple-600' : 'bg-zinc-800'}`} />
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step >= 2 ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
-              2
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step > 2 ? 'bg-emerald-600 text-white' : step === 2 ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
+              {step > 2 ? <Check className="w-4 h-4" /> : '2'}
             </div>
-            <span className={`text-xs font-medium ${step >= 2 ? 'text-zinc-200' : 'text-zinc-500'}`}>Admin Account</span>
+            <span className={`text-xs font-medium ${step >= 2 ? 'text-zinc-200' : 'text-zinc-500'}`}>Admin</span>
           </div>
-          <div className={`h-0.5 flex-1 mx-3 ${step >= 3 ? 'bg-purple-600' : 'bg-zinc-800'}`} />
+          <div className={`h-0.5 flex-1 mx-2 sm:mx-3 ${step >= 3 ? 'bg-purple-600' : 'bg-zinc-800'}`} />
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step >= 3 ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
-              3
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step > 3 ? 'bg-emerald-600 text-white' : step === 3 ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
+              {step > 3 ? <Check className="w-4 h-4" /> : '3'}
             </div>
             <span className={`text-xs font-medium ${step >= 3 ? 'text-zinc-200' : 'text-zinc-500'}`}>Plans</span>
+          </div>
+          <div className={`h-0.5 flex-1 mx-2 sm:mx-3 ${step >= 4 ? 'bg-purple-600' : 'bg-zinc-800'}`} />
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step === 4 ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
+              {step === 4 ? <Sparkles className="w-4 h-4" /> : '4'}
+            </div>
+            <span className={`text-xs font-medium ${step === 4 ? 'text-emerald-300' : 'text-zinc-500'}`}>Ready</span>
           </div>
         </div>
 
@@ -452,6 +473,71 @@ export default function SetupWizardPage() {
                       Launch GymERP
                     </>
                   )}
+                </Button>
+              </CardFooter>
+            </>
+          )}
+
+          {/* STEP 4: KIOSK PAIRING & COMPLETION */}
+          {step === 4 && (
+            <>
+              <CardHeader className="text-center pb-2">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mx-auto flex items-center justify-center mb-3">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <CardTitle className="text-xl text-white">Gym Setup Completed!</CardTitle>
+                <CardDescription className="text-zinc-400 text-sm">
+                  Your local database, owner credentials, and starter plans are active.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-2">
+                {/* Kiosk Auto-Pairing Card */}
+                <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                    <Tablet className="w-4 h-4 text-purple-400" />
+                    Front-Desk Kiosk Quick Pairing
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Point your front-desk tablet or smartphone camera at this QR code to launch the autonomous AI voice kiosk:
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-6 p-4 rounded-xl bg-zinc-950/80 border border-zinc-800/80">
+                    <div className="p-2.5 bg-white rounded-xl shadow-lg shrink-0">
+                      <QRCodeSVG value={kioskUrl || 'http://localhost:3000/kiosk/agent'} size={140} level="M" />
+                    </div>
+                    <div className="flex-1 space-y-2 text-center sm:text-left min-w-0 w-full">
+                      <div className="text-xs font-semibold text-zinc-300">Lobby Kiosk Direct URL</div>
+                      <div className="text-xs text-zinc-400 font-mono break-all bg-zinc-900/90 p-2 rounded border border-zinc-800">
+                        {kioskUrl || 'http://localhost:3000/kiosk/agent'}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCopyKioskUrl}
+                        className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs flex items-center gap-1.5 w-full sm:w-auto active:scale-98 transition-all"
+                      >
+                        {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copied ? 'Copied to Clipboard' : 'Copy Kiosk Link'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Local Network Info */}
+                <div className="p-3.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-200 flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Local Appliance Ready:</strong> Other devices on your gym Wi-Fi can access this portal using your local network IP or <span className="font-mono text-purple-300">gymerp.local:3000</span>.
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="pt-2 border-t border-zinc-800">
+                <Button
+                  onClick={() => router.replace('/dashboard')}
+                  className="w-full bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center gap-2 py-5 text-sm font-semibold active:scale-98 transition-all"
+                >
+                  Enter Owner Dashboard
+                  <ArrowRight className="w-4 h-4" />
                 </Button>
               </CardFooter>
             </>

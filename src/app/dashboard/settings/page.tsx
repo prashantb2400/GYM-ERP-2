@@ -91,10 +91,35 @@ export default function SettingsPage() {
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
 
-  // Deletion States
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [downloadingBackup, setDownloadingBackup] = useState(false);
+
+  const handleDownloadBackup = async () => {
+    try {
+      setDownloadingBackup(true);
+      toast.info('Generating complete database snapshot...');
+      const res = await fetchWithAuth('/api/backup/export');
+      if (!res.ok) {
+        throw new Error('Failed to generate database backup');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gymerp-backup-${gym?.name ? gym.name.replace(/[^a-zA-Z0-9_-]/g, '_') : 'gym'}-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Database backup downloaded successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to download backup');
+    } finally {
+      setDownloadingBackup(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE MY GYM') {
@@ -759,6 +784,51 @@ export default function SettingsPage() {
           >
             <UploadCloud className="h-4 w-4" />
             Import Members from Excel
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Database Backup & Disaster Recovery */}
+      <Card className="bg-zinc-900 border-zinc-800 text-white mt-10">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <Download className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold">1-Click Full Database Backup</CardTitle>
+              <CardDescription className="text-xs text-zinc-400">
+                Safeguard your gym records by downloading an instant, complete portable backup.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-0">
+          <div className="space-y-1">
+            <p className="text-xs text-zinc-300">
+              Exports all members, payment invoices, attendance logs, plans, and branches in standard JSON format.
+            </p>
+            <p className="text-[11px] text-zinc-500">
+              You can copy this file to a USB flash drive or external hard drive for safe keeping.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={handleDownloadBackup}
+            disabled={downloadingBackup}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 px-4 gap-2 shrink-0 shadow-sm active:scale-98 transition-all"
+          >
+            {downloadingBackup ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating Backup...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download Backup File
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>
