@@ -21,6 +21,8 @@ export interface CSVExportOptions {
   rows: (string | number | boolean | null | undefined)[][];
 }
 
+export { exportToInteractiveHTML, generateInteractiveTableHTML, type InteractiveTableOptions } from './interactive-html-export';
+
 /**
  * Calculates responsive column widths based on maximum string lengths.
  * Uses a safe iteration loop rather than Math.max(...spread) to prevent RangeError call stack overflow on large datasets.

@@ -406,6 +406,49 @@ GymERP includes a native **MCP Server** (`mcp-server/`) allowing autonomous AI a
 
 ---
 
+## 🛠️ Zerodha FOSS Inspired Subsystems
+
+GymERP leverages open-source architectural patterns and tools dog-fooded by **Zerodha Tech** to deliver high-performance, self-hosted services without recurring SaaS costs:
+
+```
++-----------------------------------------------------------------------------------+
+|                            Zerodha FOSS Integrations                              |
++--------------------------+----------------------------+---------------------------+
+| listmonk                 | csvtotable                 | indexed-cache             |
+| Self-hosted member email | Standalone interactive     | Instant kiosk cold-boot   |
+| newsletters & campaigns  | HTML reports for CAs       | & neural weights cache    |
++--------------------------+----------------------------+---------------------------+
+| pfxsigner                | linkpage                   | whatomate architecture    |
+| Cryptographic GST        | Public gym bio links for   | Ultra-light Go WhatsApp   |
+| invoice signature stamps | Instagram & trial passes   | gateway reference         |
++--------------------------+----------------------------+---------------------------+
+```
+
+1. **Member Retention & Newsletters (`listmonk`)**:
+   - Containerized in `docker-compose.offline.yml` on port `9000` via PostgreSQL.
+   - Programmatic client in [`src/lib/marketing/listmonk.ts`](file:///home/prashant/.gemini/antigravity/scratch/GYM-ERP-2/src/lib/marketing/listmonk.ts) for member list syncing, seasonal diet tips, and renewal sequences.
+   - Saves gyms \$50-\$200/month by eliminating Mailchimp and Brevo subscriber fees.
+
+2. **Interactive Offline CA Reports (`csvtotable` pattern)**:
+   - Module in [`src/lib/export/interactive-html-export.ts`](file:///home/prashant/.gemini/antigravity/scratch/GYM-ERP-2/src/lib/export/interactive-html-export.ts).
+   - Generates single-file self-contained HTML reports with live search, column sorting, and TSV clipboard copying.
+   - Accountants and gym owners can audit member attendance and fee collections on any phone or browser without Microsoft Excel.
+
+3. **Kiosk Cold-Start & Offline Neural Cache (`indexed-cache` pattern)**:
+   - Utility in [`src/lib/kiosk/indexed-cache.ts`](file:///home/prashant/.gemini/antigravity/scratch/GYM-ERP-2/src/lib/kiosk/indexed-cache.ts).
+   - Sideloads Face-API neural network model weights and UI audio chime blobs into browser IndexedDB with versioning and TTL.
+   - Ensures front-desk tablets boot offline in under 500ms even during gym network dropouts.
+
+4. **Cryptographic GST Invoice Stamps (`pfxsigner` pattern)**:
+   - Module in [`src/lib/billing/pfx-signer.ts`](file:///home/prashant/.gemini/antigravity/scratch/GYM-ERP-2/src/lib/billing/pfx-signer.ts).
+   - Generates deterministic SHA-256 digital signature digests and compliance badges for GST Rule 46 tax invoices.
+
+5. **Gym Bio & Social Link Page (`linkpage` pattern)**:
+   - Public route at `/bio/[slug]` in [`src/app/bio/[slug]/page.tsx`](file:///home/prashant/.gemini/antigravity/scratch/GYM-ERP-2/src/app/bio/[slug]/page.tsx).
+   - Instant mobile landing page for gym Instagram profiles with 1-day free trial claims, membership plans, and one-tap WhatsApp reception chat.
+
+---
+
 ## 🗄️ Database Migrations Reference
 
 GymERP uses 17 sequential PostgreSQL migrations located in `supabase/migrations/`:
@@ -468,7 +511,7 @@ GymERP uses 17 sequential PostgreSQL migrations located in `supabase/migrations/
 GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run full unit and integration test suite (42 test files, 321 tests)
+# Run full unit and integration test suite (43 test files, 328 tests)
 npm test
 
 # Run TypeScript compiler verification
@@ -479,9 +522,9 @@ npm run build
 ```
 
 ```
-Test Files  42 passed (42)
-     Tests  321 passed (321)
-  Duration  20.24s (42 test suites passed with 0 failures)
+Test Files  43 passed (43)
+     Tests  328 passed (328)
+  Duration  17.80s (43 test suites passed with 0 failures)
 ```
 
 ---

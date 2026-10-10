@@ -67,12 +67,36 @@ services:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder
       SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder
       WHATSAPP_BRIDGE_URL: http://whatsapp-bridge:48291
+      LISTMONK_URL: http://listmonk:9000
       PGRST_JWT_SECRET: gymerp-offline-local-jwt-secret-minimum-32-chars-long
     depends_on:
       db:
         condition: service_healthy
       postgrest:
         condition: service_started
+
+  listmonk:
+    image: listmonk/listmonk:latest
+    container_name: gymerp-listmonk
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      LISTMONK_db__host: db
+      LISTMONK_db__port: 5432
+      LISTMONK_db__user: postgres
+      LISTMONK_db__password: postgres
+      LISTMONK_db__database: gymerp
+      LISTMONK_db__ssl_mode: disable
+      LISTMONK_app__address: "0.0.0.0:9000"
+      LISTMONK_app__admin_username: listmonk
+      LISTMONK_app__admin_password: listmonk
+    profiles:
+      - marketing
+      - full
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:
