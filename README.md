@@ -386,28 +386,6 @@ docker compose -f docker-compose.offline.yml up -d
 - **Private S3 Storage & Signed URLs**: KYC identity documents and member photographs are kept in private S3 buckets accessible exclusively through short-lived signed URLs.
 - **Constant-Time Verification**: Webhooks for Razorpay, WhatsApp, cron endpoints, and CCTV ingestion employ `crypto.timingSafeEqual` to prevent side-channel timing attacks.
 
----
-
-## 🧪 Testing & Automated Verification
-
-GymERP is backed by an automated test suite powered by **Vitest**:
-
-```bash
-# Run full unit and integration test suite (53 test files, 439 tests)
-npm test
-
-# Run TypeScript compiler verification
-npx tsc --noEmit
-
-# Run Next.js production build (129 routes)
-npm run build
-```
-
-```
-Test Files  53 passed (53)
-     Tests  439 passed (439)
-  Duration  23.08s (53 test suites passed with 0 failures)
-```
 
 ---
 
