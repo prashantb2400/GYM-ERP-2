@@ -19,6 +19,7 @@ import {
   SwitchCamera,
   FlipHorizontal,
   Sparkles,
+  Printer,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ import { triggerHapticFeedback } from '@/lib/utils/gesture';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 import { FingerprintScannerManager } from '@/lib/fingerprint/drivers';
 import { identifyMemberFromRoster } from '@/lib/fingerprint/matcher';
+import { kioskPrinter } from '@/lib/kiosk/printer-driver';
 import type { RosterMemberFingerprint, ScannerDeviceInfo, ScannerDriverId, FingerType } from '@/lib/fingerprint/types';
 
 import {
@@ -214,6 +216,37 @@ export function BiometricScannerCockpit({
       console.warn('Failed to enumerate cameras:', e);
     }
     return [];
+  }, []);
+
+  // Print thermal slip on demand
+  const handlePrintSlip = useCallback(async (banner: RecognitionBanner) => {
+    if (!banner.memberName) return;
+    try {
+      const timeStr = banner.time || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const slipPayload = {
+        gymName: 'GymERP Fitness Club',
+        branchName: 'Main Facility',
+        memberName: banner.memberName,
+        memberCode: banner.memberCode || 'M-REC',
+        date: new Date().toISOString().split('T')[0],
+        checkInTime: timeStr,
+        qrPassData: `GYMPASS:${banner.memberCode || banner.memberName}:${Date.now()}`,
+        paperWidth: 80 as const,
+      };
+
+      const escPosData = kioskPrinter.generateEscPosCheckInSlip(slipPayload);
+      const bridgeSent = await kioskPrinter.sendToHardwareBridge(escPosData);
+      if (!bridgeSent) {
+        const usbSent = await kioskPrinter.directWebUsbPrint(escPosData);
+        if (!usbSent) {
+          kioskPrinter.printCheckInSlipA4(slipPayload);
+        }
+      }
+      toast.success('Attendance slip dispatched');
+    } catch (err) {
+      console.warn('Print slip error:', err);
+      toast.error('Printer dispatch failed');
+    }
   }, []);
 
   // Camera start with automatic fallback
@@ -1184,7 +1217,17 @@ export function BiometricScannerCockpit({
                 </div>
               </div>
 
-              <CheckCircle2 className="h-6 w-6 text-emerald-300 shrink-0" />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handlePrintSlip(recognitionBanner)}
+                  title="Print Thermal Attendance Slip"
+                  className="p-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 active:scale-95 text-emerald-200 border border-emerald-500/40 transition-all duration-150 cursor-pointer shadow-xs"
+                >
+                  <Printer className="h-4 w-4" />
+                </button>
+                <CheckCircle2 className="h-6 w-6 text-emerald-300" />
+              </div>
             </div>
           </div>
         )}
@@ -1202,7 +1245,17 @@ export function BiometricScannerCockpit({
                 <p className="text-sm font-bold text-white truncate">{recognitionBanner.memberName}</p>
                 <p className="text-xs text-blue-200">{recognitionBanner.message || 'Already checked in today'}</p>
               </div>
-              <CheckCircle2 className="h-5 w-5 text-blue-300 shrink-0" />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handlePrintSlip(recognitionBanner)}
+                  title="Print Thermal Attendance Slip"
+                  className="p-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 active:scale-95 text-blue-200 border border-blue-500/40 transition-all duration-150 cursor-pointer shadow-xs"
+                >
+                  <Printer className="h-4 w-4" />
+                </button>
+                <CheckCircle2 className="h-5 w-5 text-blue-300" />
+              </div>
             </div>
           </div>
         )}

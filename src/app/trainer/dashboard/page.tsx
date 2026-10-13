@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/utils/format';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import { SpotlightCard, GradientText, GlowingBadge, AnimatedList, BorderBeam } from '@/components/magicui';
 
 export default function TrainerDashboardPage() {
@@ -133,9 +134,18 @@ export default function TrainerDashboardPage() {
             <p className="text-zinc-500 text-xs mt-0.5">Specialization: {trainerUser.specialization}</p>
           )}
         </div>
-        <Badge className="bg-purple-950/40 text-purple-400 border border-purple-800/20 uppercase font-bold text-[9px]">
-          {trainerUser?.role}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/workouts"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 active:scale-95 text-purple-300 border border-purple-500/30 text-xs font-semibold transition-all duration-150 shadow-xs cursor-pointer"
+          >
+            <Dumbbell className="h-3.5 w-3.5" />
+            <span>Workouts Hub</span>
+          </Link>
+          <Badge className="bg-purple-950/40 text-purple-400 border border-purple-800/20 uppercase font-bold text-[9px]">
+            {trainerUser?.role}
+          </Badge>
+        </div>
       </div>
 
       {/* Metrics Banner */}
@@ -211,15 +221,25 @@ export default function TrainerDashboardPage() {
                   </TableCell>
                   <TableCell className="text-center font-bold text-zinc-300 text-xs">{m.attendance_count || 0}</TableCell>
                   <TableCell className="text-right">
-                    {m.status === 'active' && (
-                      <Button
-                        onClick={() => handleMarkAttendance(m)}
-                        size="sm"
-                        className="bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold h-7 px-2.5 rounded gap-1"
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Link
+                        href="/dashboard/workouts"
+                        title="Open Workout Hub & Plate Calculator"
+                        className="inline-flex items-center justify-center h-7 px-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-400 hover:text-purple-300 border border-zinc-800 text-[10px] font-semibold transition-all duration-150 gap-1"
                       >
-                        <CheckCircle className="h-3 w-3" /> Check-in
-                      </Button>
-                    )}
+                        <Dumbbell className="h-3 w-3 text-purple-400" />
+                        <span className="hidden sm:inline">Prescribe</span>
+                      </Link>
+                      {m.status === 'active' && (
+                        <Button
+                          onClick={() => handleMarkAttendance(m)}
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold h-7 px-2.5 rounded-lg gap-1 active:scale-95 transition-all duration-150"
+                        >
+                          <CheckCircle className="h-3 w-3" /> Check-in
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

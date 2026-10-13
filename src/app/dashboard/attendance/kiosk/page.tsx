@@ -508,19 +508,19 @@ export default function FingerprintKioskPage() {
             </Select>
           </div>
 
-          {/* Sensitivity Selector (Desktop) */}
-          <div className="hidden lg:block">
+          {/* Sensitivity Selector (Desktop & Tablet) */}
+          <div className="hidden sm:block">
             <Select
               value={sensitivity}
               onValueChange={(val) => setSensitivity(val as BiometricSensitivityMode)}
             >
-              <SelectTrigger className="h-7 text-xs border-zinc-800 bg-zinc-900 text-zinc-300 w-36">
+              <SelectTrigger className="h-7 text-xs border-zinc-800 bg-zinc-900 text-zinc-300 w-40">
                 <SelectValue placeholder="Sensitivity" />
               </SelectTrigger>
               <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="callus_adapted">Callus-Adapted</SelectItem>
-                <SelectItem value="strict">Strict</SelectItem>
+                <SelectItem value="normal">Normal (Balanced)</SelectItem>
+                <SelectItem value="callus_adapted">Callus-Adapted (Lifters)</SelectItem>
+                <SelectItem value="strict">Strict (High Security)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -660,7 +660,7 @@ export default function FingerprintKioskPage() {
                   type="button"
                   onClick={handlePrintSlip}
                   title="Print Attendance Slip"
-                  className="p-2 rounded-xl bg-green-900/50 hover:bg-green-800/70 text-green-300 border border-green-700/60 transition-colors"
+                  className="p-2.5 rounded-xl bg-green-500/15 hover:bg-green-500/25 active:scale-95 text-green-300 border border-green-500/30 transition-all duration-150 cursor-pointer shadow-xs"
                 >
                   <Printer className="h-5 w-5" />
                 </button>
@@ -682,7 +682,17 @@ export default function FingerprintKioskPage() {
                 <p className="text-blue-400 text-xs">Already checked in today ✓</p>
                 <p className="text-zinc-400 text-[10px] font-mono mt-0.5">{kioskResult.memberCode}</p>
               </div>
-              <UserCheck className="h-8 w-8 text-blue-400 shrink-0" />
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handlePrintSlip}
+                  title="Print Attendance Slip"
+                  className="p-2.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 active:scale-95 text-blue-300 border border-blue-500/30 transition-all duration-150 cursor-pointer shadow-xs"
+                >
+                  <Printer className="h-5 w-5" />
+                </button>
+                <UserCheck className="h-8 w-8 text-blue-400 shrink-0" />
+              </div>
             </div>
           )}
 

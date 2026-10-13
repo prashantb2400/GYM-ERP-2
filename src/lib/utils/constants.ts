@@ -44,6 +44,7 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
       { label: 'WhatsApp', href: '/dashboard/whatsapp', icon: 'MessageCircle', permission: 'whatsapp.send' },
       { label: 'Diet Charts', href: '/dashboard/diet', icon: 'Apple', permission: 'diet.view' },
       { label: 'Exercise Plans', href: '/dashboard/exercise', icon: 'Dumbbell', permission: 'exercise.view' },
+      { label: 'Workouts Hub', href: '/dashboard/workouts', icon: 'Flame', permission: 'exercise.view' },
     ],
   },
   {

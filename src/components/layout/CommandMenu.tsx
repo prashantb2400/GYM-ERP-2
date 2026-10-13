@@ -29,6 +29,7 @@ import {
   ExternalLink,
   Wallet,
   Loader2,
+  Flame,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -209,11 +210,15 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
     { label: 'Create Invoice', command: '> new invoice', href: '/dashboard/invoices', icon: Receipt, permission: 'invoices.create' as const },
     { label: 'Cash Drawer & Dues', command: '> cash drawer', href: '/dashboard/due', icon: Wallet, permission: 'due.view' as const },
     { label: 'Follow-ups CRM', command: '> followups', href: '/dashboard/followups', icon: PhoneCall, permission: 'followups.view' as const },
-    { label: 'Attendance Station', command: '> attendance', href: '/dashboard/attendance', icon: CalendarCheck, permission: 'attendance.view' as const },
-    { label: 'Contactless Kiosk', command: '> kiosk', href: '/kiosk', icon: Sparkles, permission: undefined },
+    { label: 'Attendance Cockpit', command: '> attendance', href: '/dashboard/attendance', icon: CalendarCheck, permission: 'attendance.view' as const },
+    { label: 'Face AI Kiosk', command: '> face kiosk', href: '/dashboard/attendance/face-kiosk', icon: Sparkles, permission: undefined },
+    { label: 'Biometric Fingerprint Kiosk', command: '> fingerprint kiosk', href: '/dashboard/attendance/kiosk', icon: CalendarCheck, permission: undefined },
+    { label: 'Turnstile QR Kiosk', command: '> qr kiosk', href: '/dashboard/attendance/qr-kiosk', icon: CalendarCheck, permission: undefined },
+    { label: 'Voice AI Kiosk Agent', command: '> agent kiosk', href: '/kiosk/agent', icon: Sparkles, permission: undefined },
     { label: 'WhatsApp Broadcasts', command: '> whatsapp', href: '/dashboard/whatsapp', icon: MessageCircle, permission: 'whatsapp.send' as const },
     { label: 'Diet Charts', command: '> diet', href: '/dashboard/diet', icon: Apple, permission: 'diet.view' as const },
     { label: 'Workout Studio', command: '> workout', href: '/dashboard/exercise', icon: Dumbbell, permission: 'exercise.view' as const },
+    { label: 'Workouts Science Hub', command: '> workouts', href: '/dashboard/workouts', icon: Flame, permission: 'exercise.view' as const },
     { label: 'CCTV AI Vigilance', command: '> cctv', href: '/dashboard/cctv', icon: Cctv, permission: 'cctv.view' as const },
     { label: 'Gym Settings', command: '> settings', href: '/dashboard/settings', icon: Settings, permission: 'settings.manage' as const },
   ];

@@ -30,6 +30,7 @@ import {
   Package,
   Building2,
   Cctv,
+  Flame,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -49,6 +50,7 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   MessageCircle,
   Apple,
   Dumbbell,
+  Flame,
   FileCheck,
   Clock,
   Settings,
