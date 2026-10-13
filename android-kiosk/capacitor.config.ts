@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'GymERP Kiosk',
   webDir: 'www',
   server: {
-    allowNavigation: ['*'],
+    allowNavigation: ['*', 'http://*', 'https://*'],
     cleartext: true
   }
 };

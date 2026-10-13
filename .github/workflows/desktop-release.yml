@@ -57,13 +57,11 @@ jobs:
           npm ci
           cd desktop && npm install
 
-      - name: Prepare placeholder frontend dist
+      - name: Prepare desktop frontend dist
         shell: bash
         run: |
           mkdir -p desktop/dist
-          cat > desktop/dist/index.html << 'HTMLEOF'
-          <!DOCTYPE html><html><head><meta charset="utf-8"><title>GymERP</title></head><body><script>window.location.href="https://gymerp.com/dashboard";</script></body></html>
-          HTMLEOF
+          cp desktop/src/index.html desktop/dist/index.html
 
       - name: Prepare Windows sidecars
         if: matrix.platform == 'windows-latest'

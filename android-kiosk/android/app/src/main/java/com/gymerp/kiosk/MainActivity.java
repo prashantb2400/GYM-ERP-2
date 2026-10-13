@@ -4,11 +4,13 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.PermissionRequest;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebChromeClient;
+import com.getcapacitor.BridgeWebViewClient;
 
 public class MainActivity extends BridgeActivity {
 
@@ -59,6 +61,32 @@ public class MainActivity extends BridgeActivity {
                         super.onPermissionRequest(request);
                     }
                 });
+            }
+        });
+
+        // Force all URLs and redirects to stay strictly inside the internal WebView.
+        // Never allow Android OS to open external browsers (Chrome, Edge, Samsung Internet).
+        webView.setWebViewClient(new BridgeWebViewClient(getBridge()) {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (request != null && request.getUrl() != null) {
+                    String scheme = request.getUrl().getScheme();
+                    if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
+                        view.loadUrl(request.getUrl().toString());
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            @Deprecated
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+                    view.loadUrl(url);
+                    return true;
+                }
+                return false;
             }
         });
     }
