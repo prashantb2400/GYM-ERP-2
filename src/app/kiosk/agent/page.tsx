@@ -28,13 +28,19 @@ import {
   X,
   Tablet,
   QrCode,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { WaterVoiceOrb, WaterOrbState } from '@/components/kiosk/WaterVoiceOrb';
 import { KioskDocumentScanner } from '@/components/kiosk/KioskDocumentScanner';
 import { KioskKeypad } from '@/components/kiosk/KioskKeypad';
+import { KioskPlateCalculator } from '@/components/kiosk/KioskPlateCalculator';
 import { kioskAudio } from '@/components/kiosk/KioskAudio';
 import { voiceAgent, type VoiceSpeechEvent } from '@/lib/kiosk/voice-agent';
+import { parseKioskVoiceIntent } from '@/lib/kiosk/voice-intent';
+import { KioskSpeechRecognizer } from '@/lib/kiosk/speech-listener';
+import { calculateBarbellPlates } from '@/lib/workout/plate-calculator';
 import { VoiceCaptionBubble } from '@/components/kiosk/VoiceCaptionBubble';
 import { Ripple } from '@/components/magicui/ripple';
 import { visionWatchdog, WatchdogMatchResult } from '@/lib/kiosk/vision-watchdog';
@@ -106,6 +112,14 @@ export default function SingleScreenVoiceKioskPage() {
   const [cameraActive, setCameraActive] = useState(false);
   const [matchedMember, setMatchedMember] = useState<any | null>(null);
   const [autoResetSeconds, setAutoResetSeconds] = useState(0);
+
+  // Workout, Plate Calculator & Voice Query State
+  const [matchedWorkout, setMatchedWorkout] = useState<any | null>(null);
+  const [isPlateModalOpen, setIsPlateModalOpen] = useState(false);
+  const [plateModalWeight, setPlateModalWeight] = useState(80);
+  const [isListeningSpeech, setIsListeningSpeech] = useState(false);
+  const [recognizedVoiceQuery, setRecognizedVoiceQuery] = useState<string | null>(null);
+  const speechRecognizerRef = useRef<KioskSpeechRecognizer | null>(null);
 
   // Registration & KYC
   const [memberPhoto, setMemberPhoto] = useState<string | null>(null);
@@ -231,7 +245,95 @@ export default function SingleScreenVoiceKioskPage() {
     verifyPairing();
   }, [initNewPairing, loadGymConfig]);
 
-  // 5. Initialize Camera & Vision Watchdog
+  // 4. Fetch Member Workout Routine
+  const fetchMemberWorkout = useCallback(async (memberId: string) => {
+    try {
+      const gymId = gymConfig?.gymId || deviceInfo?.gymId;
+      if (!gymId) return;
+
+      const savedToken = typeof window !== 'undefined' ? localStorage.getItem(KIOSK_TOKEN_KEY) : null;
+      const res = await fetch(`/api/kiosk/today-workout?gymId=${gymId}&memberId=${memberId}`, {
+        headers: {
+          ...(savedToken ? { 'x-device-token': savedToken } : {}),
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setMatchedWorkout(data);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load workout for matched member:', err);
+    }
+  }, [gymConfig, deviceInfo]);
+
+  // 5. Speech Recognition & Voice Intent Handler
+  const handleVoiceTranscript = useCallback((transcript: string, isFinal: boolean) => {
+    if (!isFinal || !transcript) return;
+    setRecognizedVoiceQuery(transcript);
+
+    const intent = parseKioskVoiceIntent(transcript);
+
+    if (intent.type === 'plates') {
+      setPlateModalWeight(intent.targetWeight);
+      setIsPlateModalOpen(true);
+      const calc = calculateBarbellPlates(intent.targetWeight, { unit: intent.unit });
+      voiceAgent.speakPlateLoading(calc);
+    } else if (intent.type === 'workout') {
+      if (matchedMember && matchedWorkout) {
+        voiceAgent.speakTodayWorkout(
+          matchedMember.name,
+          matchedWorkout.routineName,
+          matchedWorkout.dayName,
+          matchedWorkout.exerciseCount,
+          matchedWorkout.firstExercise
+        );
+      } else if (matchedMember) {
+        voiceAgent.speak(`Checking your workout routine, ${matchedMember.name}...`);
+        fetchMemberWorkout(matchedMember.id);
+      } else {
+        voiceAgent.speak('Please look directly at the camera so I can verify your profile and show your workout.');
+      }
+    } else if (intent.type === 'help') {
+      voiceAgent.speakHelp();
+    } else if (intent.type === 'checkin') {
+      voiceAgent.speak('Please look directly at the camera or enter your Member ID on the keypad to check in.');
+    }
+  }, [matchedMember, matchedWorkout, fetchMemberWorkout]);
+
+  const toggleSpeechListening = useCallback(() => {
+    kioskAudio.playTap();
+    if (!speechRecognizerRef.current) {
+      speechRecognizerRef.current = new KioskSpeechRecognizer({ continuous: false, interimResults: false });
+    }
+
+    const recognizer = speechRecognizerRef.current;
+    if (isListeningSpeech) {
+      recognizer.stop();
+      setIsListeningSpeech(false);
+    } else {
+      const started = recognizer.start(
+        (transcript, isFinal) => {
+          handleVoiceTranscript(transcript, isFinal);
+        },
+        (active) => {
+          setIsListeningSpeech(active);
+        },
+        (err) => {
+          console.warn('Speech recognition error:', err);
+          setIsListeningSpeech(false);
+        }
+      );
+
+      if (!started) {
+        voiceAgent.speak('Voice recognition is not supported in this browser. Please use the touch controls on screen.');
+      }
+    }
+  }, [isListeningSpeech, handleVoiceTranscript]);
+
+  // 6. Initialize Camera & Vision Watchdog
   useEffect(() => {
     if (stage === 'pairing') return;
 
@@ -255,6 +357,7 @@ export default function SingleScreenVoiceKioskPage() {
               kioskAudio.playSuccess();
               setMatchedMember(result.member);
               setStage('member_matched');
+              fetchMemberWorkout(result.member.id);
 
               voiceAgent.speakWelcomeMember(
                 result.member.name,
@@ -262,7 +365,7 @@ export default function SingleScreenVoiceKioskPage() {
                 result.member.lockerNumber
               );
 
-              setAutoResetSeconds(6);
+              setAutoResetSeconds(8);
             } else if (result.matchType === 'guest') {
               kioskAudio.playTap();
               setStage('guest_detected');
@@ -281,11 +384,13 @@ export default function SingleScreenVoiceKioskPage() {
       visionWatchdog.stop();
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
-  }, [stage, gymConfig]);
+  }, [stage, gymConfig, fetchMemberWorkout]);
 
   const resetToIdle = useCallback(() => {
     setStage('ambient_idle');
     setMatchedMember(null);
+    setMatchedWorkout(null);
+    setRecognizedVoiceQuery(null);
     setMemberPhoto(null);
     setKycResult(null);
     setChosenPlan(null);
@@ -680,7 +785,35 @@ export default function SingleScreenVoiceKioskPage() {
                 Registered members are checked in automatically. New visitors will be greeted by our voice assistant.
               </p>
 
-              <div className="pt-2">
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="pill"
+                  onClick={toggleSpeechListening}
+                  className={cn(
+                    "border-border/80 text-xs font-mono shadow-sm transition-all",
+                    isListeningSpeech
+                      ? "bg-indigo-600/30 border-indigo-400 text-indigo-200 animate-pulse"
+                      : "bg-zinc-900/90 text-zinc-300 hover:text-white hover:border-zinc-700"
+                  )}
+                >
+                  <Mic className={cn("size-3.5 mr-1.5", isListeningSpeech ? "text-cyan-400 animate-bounce" : "text-indigo-400")} />
+                  <span>{isListeningSpeech ? "Listening... Speak Query" : "Voice Query"}</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="pill"
+                  onClick={() => {
+                    kioskAudio.playTap();
+                    setIsPlateModalOpen(true);
+                  }}
+                  className="border-border/80 bg-zinc-900/90 text-zinc-300 hover:text-white hover:border-zinc-700 text-xs font-mono shadow-sm"
+                >
+                  <Dumbbell className="size-3.5 mr-1.5 text-zinc-400" />
+                  <span>Plate Calc</span>
+                </Button>
+
                 <Button
                   variant="outline"
                   size="pill"
@@ -688,12 +821,21 @@ export default function SingleScreenVoiceKioskPage() {
                     kioskAudio.playTap();
                     setStage('guest_detected');
                   }}
-                  className="mx-auto border-border/80 bg-zinc-900/90 text-indigo-300 hover:text-white hover:border-indigo-500/50 shadow-sm"
+                  className="border-border/80 bg-zinc-900/90 text-indigo-300 hover:text-white hover:border-indigo-500/50 shadow-sm"
                 >
-                  <UserCheck className="size-4 text-indigo-400" />
-                  <span className="text-xs font-mono">Tap to Register Manually</span>
+                  <UserCheck className="size-3.5 mr-1.5 text-indigo-400" />
+                  <span className="text-xs font-mono">Manual Check-In</span>
                 </Button>
               </div>
+
+              {recognizedVoiceQuery && (
+                <div className="pt-1">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-950/80 border border-zinc-800 text-[11px] font-mono text-zinc-400">
+                    <Sparkles className="size-3 text-cyan-400" />
+                    Heard: &quot;{recognizedVoiceQuery}&quot;
+                  </span>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -713,7 +855,7 @@ export default function SingleScreenVoiceKioskPage() {
                   <p className="text-xs font-mono text-muted-foreground">ID: {matchedMember.memberCode}</p>
                   <p className="text-xs font-medium text-emerald-400 pt-1 flex items-center justify-center gap-1.5">
                     <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Attendance Marked • Enjoy your workout!
+                    Attendance Marked - Enjoy your workout!
                   </p>
                 </div>
 
@@ -726,6 +868,65 @@ export default function SingleScreenVoiceKioskPage() {
                     <span className="text-zinc-500 block text-[10px] uppercase tracking-wider">Locker</span>
                     <span className="font-bold text-white text-sm">{matchedMember.lockerNumber || 'General'}</span>
                   </div>
+                </div>
+
+                {/* Today's Workout Split Banner */}
+                {matchedWorkout && (
+                  <div className="p-3 rounded-xl bg-zinc-950/90 border border-indigo-500/30 text-left space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-wider flex items-center gap-1">
+                        <Dumbbell className="size-3" /> Today&apos;s Split
+                      </span>
+                      <span className="text-[10px] font-mono text-zinc-400">
+                        {matchedWorkout.exerciseCount} exercises
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-white leading-tight">
+                      {matchedWorkout.dayName}
+                    </p>
+                    {matchedWorkout.firstExercise && (
+                      <p className="text-[11px] text-zinc-400">
+                        Starts with: <span className="text-zinc-200">{matchedWorkout.firstExercise}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Workout & Plate Voice Actions */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      kioskAudio.playTap();
+                      if (matchedWorkout) {
+                        voiceAgent.speakTodayWorkout(
+                          matchedMember.name,
+                          matchedWorkout.routineName,
+                          matchedWorkout.dayName,
+                          matchedWorkout.exerciseCount,
+                          matchedWorkout.firstExercise
+                        );
+                      }
+                    }}
+                    className="bg-zinc-900 border-indigo-500/30 text-indigo-300 hover:text-white text-xs h-9"
+                  >
+                    <Volume2 className="size-3.5 mr-1 text-indigo-400" />
+                    Speak Routine
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      kioskAudio.playTap();
+                      setIsPlateModalOpen(true);
+                    }}
+                    className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white text-xs h-9"
+                  >
+                    <Dumbbell className="size-3.5 mr-1 text-zinc-400" />
+                    Plate Calc
+                  </Button>
                 </div>
 
                 <p className="text-[11px] font-mono text-zinc-500 pt-1">
@@ -1092,6 +1293,13 @@ export default function SingleScreenVoiceKioskPage() {
         </div>
         <div>{gymConfig?.tagline || 'Every rep counts.'}</div>
       </footer>
+
+      {/* KIOSK BARBELL PLATE CALCULATOR MODAL */}
+      <KioskPlateCalculator
+        isOpen={isPlateModalOpen}
+        initialWeight={plateModalWeight}
+        onClose={() => setIsPlateModalOpen(false)}
+      />
     </div>
   );
 }

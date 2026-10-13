@@ -13,7 +13,7 @@
     <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
     <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Offline_Appliance_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
     <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge" alt="MCP Server" /></a>
-    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-48%2F48_Passing_(366_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
+    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-49%2F49_Passing_(381_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
   </p>
 
   <p align="center">
@@ -252,7 +252,17 @@ GymERP integrates algorithms and workout paradigms from the open-source **[openG
    - Logs completed member workout sessions (`workout_logs` table).
    - Computes total training tonnage (volume in kg) and automatically updates estimated personal records (1RMs).
 
-5. **Self-Hosted openGym Appliance Sidecar (`docker-compose.offline.yml`)**:
+5. **Smart Check-In Auto-Dispatch & WhatsApp Fitness Bot**:
+   - **Auto-Dispatch on Attendance**: Automatically formats and sends today's scheduled training split to member's WhatsApp upon check-in across Face, QR, Fingerprint, or Kiosk modalities.
+   - **Interactive WhatsApp Commands**: Members can text `WORKOUT`, `PLATES <kg>`, or `PR` to get instant routine details, barbell sleeve configurations, or 1RM stats directly in chat.
+
+6. **Kiosk AI Voice Agent Workout & Plate Math Engine (`/kiosk/agent`)**:
+   - **Voice Intent Recognition**: Natural speech parsing detects intents for today's routine ("What is my workout today?"), barbell plate configurations ("Calculate plates for 90 kg"), personal records, and check-in assistance.
+   - **Speech Synthesis**: Speaks tailored audio responses with natural en-IN / hi-IN accents via Web Speech API with real-time acoustic envelope syncing to the fluid visual orb.
+   - **Lobby Tablet Plate Calculator**: Visual Olympic barbell sleeve visualizer with color-coded disk stack (Red 25kg, Blue 20kg, Yellow 15kg, Green 10kg, White 5kg, Black 2.5kg, Silver 1.25kg) and spoken sleeve instructions.
+   - **Check-In Routine Preview**: Displays today's scheduled split on the member verification card with 1-tap "Speak Routine" and "Plate Calc" triggers.
+
+7. **Self-Hosted openGym Appliance Sidecar (`docker-compose.offline.yml`)**:
    - Bundles the openGym container image (`ghcr.io/duartesantos8/opengym-web:latest`) on port `8080` under the `opengym` profile for gyms desiring the full standalone workout tracker UI on their local network.
 
 ---

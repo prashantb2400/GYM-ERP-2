@@ -26,7 +26,13 @@ export const kioskLeadSchema = z.object({
   interest: z.string().trim().max(100).optional(),
 });
 
+export const kioskTodayWorkoutSchema = z.object({
+  gymId: uuidSchema,
+  memberId: uuidSchema,
+});
+
 export type KioskMemberLookupInput = z.infer<typeof kioskMemberLookupSchema>;
 export type KioskCheckInInput = z.infer<typeof kioskCheckInSchema>;
 export type KioskOcrInput = z.infer<typeof kioskOcrSchema>;
 export type KioskLeadInput = z.infer<typeof kioskLeadSchema>;
+export type KioskTodayWorkoutInput = z.infer<typeof kioskTodayWorkoutSchema>;

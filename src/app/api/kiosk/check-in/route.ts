@@ -4,6 +4,7 @@ import { checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 import { verifyKioskOrAuth } from '@/lib/server/kiosk-auth';
 import { validateBody } from '@/lib/server/validate';
 import { kioskCheckInSchema } from '@/lib/schemas/kiosk';
+import { dispatchCheckinWorkoutRoutine } from '@/lib/workout/checkin-dispatcher';
 
 export async function POST(request: Request) {
   try {
@@ -150,6 +151,19 @@ export async function POST(request: Request) {
         last_attendance: new Date().toISOString(),
       })
       .eq('id', member.id);
+
+    // 6. Asynchronously dispatch today's workout split to member's WhatsApp
+    if (member.phone) {
+      dispatchCheckinWorkoutRoutine({
+        memberId: member.id,
+        gymId,
+        memberName: member.name,
+        phone: member.phone,
+        checkinMethod: `kiosk_${method}`,
+      }).catch((dispatchErr) => {
+        console.warn('Kiosk workout WhatsApp dispatch error:', dispatchErr);
+      });
+    }
 
     return NextResponse.json({
       state: 'success',

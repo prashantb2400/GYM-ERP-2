@@ -4,6 +4,15 @@
  * and real-time acoustic speech envelope broadcasting for visual fluid synchronization.
  */
 
+import {
+  formatTodayWorkoutVoice,
+  formatPlateLoadingVoice,
+  formatHelpVoice,
+  parseKioskVoiceIntent,
+  type KioskVoiceIntent,
+} from '@/lib/kiosk/voice-intent';
+import type { PlateCalculationResult } from '@/lib/workout/plate-calculator';
+
 export interface VoiceSpeechEvent {
   isSpeaking: boolean;
   phrase: string;
@@ -219,6 +228,36 @@ class KioskVoiceAgent {
     const text = `Welcome to the family, ${name}! Your membership invoice, personalized diet plan, and workout chart are printing right now. Have an amazing session!`;
     this.speak(text);
   }
+
+  public speakTodayWorkout(
+    name: string,
+    routineName: string,
+    dayName: string,
+    exerciseCount: number,
+    firstExercise?: string,
+    onEnd?: () => void
+  ) {
+    const text = formatTodayWorkoutVoice(name, routineName, dayName, exerciseCount, firstExercise);
+    this.speak(text, onEnd);
+  }
+
+  public speakPlateLoading(result: PlateCalculationResult, onEnd?: () => void) {
+    const text = formatPlateLoadingVoice(result);
+    this.speak(text, onEnd);
+  }
+
+  public speakHelp(onEnd?: () => void) {
+    const text = formatHelpVoice();
+    this.speak(text, onEnd);
+  }
 }
 
 export const voiceAgent = new KioskVoiceAgent();
+
+export {
+  formatTodayWorkoutVoice,
+  formatPlateLoadingVoice,
+  formatHelpVoice,
+  parseKioskVoiceIntent,
+  type KioskVoiceIntent,
+};
