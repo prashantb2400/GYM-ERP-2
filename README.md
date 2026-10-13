@@ -4,17 +4,6 @@
 
   ### **Autonomous Multi-Tenant Gym SaaS • 3D Tactile UI • AI Voice Kiosk • CCTV Vigilance Matrix • Zero-Internet Edge Appliance**
 
-  <p align="center">
-    <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16.2_(Turbopack)-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" /></a>
-    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" /></a>
-    <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
-    <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
-    <a href="https://tauri.app/"><img src="https://img.shields.io/badge/Tauri-2.0_(Desktop_Shell)-24C8D5?style=for-the-badge&logo=tauri&logoColor=white" alt="Tauri 2.0" /></a>
-    <a href="https://capacitorjs.com/"><img src="https://img.shields.io/badge/Capacitor-7.0_(Android_Kiosk)-119EFF?style=for-the-badge&logo=capacitor&logoColor=white" alt="Capacitor" /></a>
-    <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Offline_Appliance-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
-    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-53%2F53_Passing_(439_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
-    <img src="https://img.shields.io/badge/Audit_Rating-Grade_A+_(Investment_Ready)-8A2BE2?style=for-the-badge" alt="Audit Grade" />
-  </p>
 
   <p align="center">
     <a href="#-quick-evaluation-credentials-for-vcs--investors">🔑 Quick Test Fills</a> •
