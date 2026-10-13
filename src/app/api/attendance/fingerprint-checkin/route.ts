@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     // 1. Verify member belongs to this gym
     const { data: member, error: memberErr } = await supabaseAdmin
       .from('members')
-      .select('id, name, member_code, status, photo_url, attendance_count, branch_id, total_due, plan_end_date')
+      .select('id, name, member_code, status, photo_url, attendance_count, branch_id, total_due, plan_end_date, phone, whatsapp_phone')
       .eq('gym_id', gymId)
       .eq('id', memberId)
       .single();
@@ -166,6 +166,20 @@ export async function POST(request: Request) {
         last_attendance: nowIso,
       })
       .eq('id', member.id);
+
+    // Asynchronously dispatch today's workout split via WhatsApp in background
+    const memberPhone = member.whatsapp_phone || member.phone;
+    if (memberPhone) {
+      import('@/lib/workout/checkin-dispatcher').then(({ dispatchCheckinWorkoutRoutine }) => {
+        dispatchCheckinWorkoutRoutine({
+          memberId: member.id,
+          gymId,
+          memberName: member.name,
+          phone: memberPhone,
+          checkinMethod: 'fingerprint',
+        }).catch((err) => console.warn('Background workout dispatch error:', err));
+      }).catch((err) => console.warn('Failed to import workout dispatcher:', err));
+    }
 
     return NextResponse.json({
       success: true,

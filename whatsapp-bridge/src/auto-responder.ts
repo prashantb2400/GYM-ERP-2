@@ -20,7 +20,9 @@ export const DEFAULT_AUTO_REPLY_RULES: AutoReplyRule[] = [
       '2️⃣ *HOURS* - Gym Operating Timings & Peak Hours\n' +
       '3️⃣ *TRIAL* - Claim 1-Day Free Guest Workout Pass\n' +
       '4️⃣ *LOCATION* - Driving Directions & Parking\n' +
-      '5️⃣ *DESK* - Connect with Reception Staff\n\n' +
+      '5️⃣ *DESK* - Connect with Reception Staff\n' +
+      '6️⃣ *WORKOUT* - Today\'s Workout Routine & Logger\n' +
+      '7️⃣ *PLATES* - Olympic Barbell Plate Calculator\n\n' +
       'Type any keyword above for instant details!',
   },
   {
@@ -63,6 +65,22 @@ export const DEFAULT_AUTO_REPLY_RULES: AutoReplyRule[] = [
       '👤 *Front Desk Connected*\n\n' +
       'Our front desk manager has been alerted. We will message you back shortly during operating hours.\n' +
       'For immediate queries, feel free to call our reception directly.',
+  },
+  {
+    keywords: ['6', 'workout', 'routine', 'exercise', 'exercises', 'split', 'train', 'training'],
+    response:
+      '🏋️ *Today\'s Workout Companion*\n\n' +
+      'Track your sets, weights, reps, and RPE live during your session on the member portal:\n' +
+      'https://gymerp.live/member/exercise\n\n' +
+      'Includes built-in rest countdown timers, automated volume tracking, and personal records!',
+  },
+  {
+    keywords: ['7', 'plate', 'plates', 'barbell', 'bar'],
+    response:
+      '📐 *Olympic Barbell Plate Math*\n\n' +
+      'Calculate exact plate sleeve loading (25, 20, 15, 10, 5, 2.5, 1.25 kg) for 20kg Olympic bars:\n' +
+      'https://gymerp.live/member/exercise\n\n' +
+      'Never misload a barbell on the gym floor again!',
   },
 ];
 

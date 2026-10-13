@@ -13,7 +13,7 @@
     <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
     <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Offline_Appliance_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
     <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge" alt="MCP Server" /></a>
-    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-47%2F47_Passing_(358_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
+    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-48%2F48_Passing_(366_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
   </p>
 
   <p align="center">
@@ -415,7 +415,8 @@ GymERP supports dual messaging modes to fit any gym's budget and infrastructure:
 - **Dual Linking**: Pair via standard camera QR code scanning OR 8-digit **Phone Pairing Code** (`POST /qr/pair`) directly on screen.
 - **Anti-Ban Typing Simulation**: Emulates human behavior by transmitting randomized `composing` (typing) presence indicators prior to message dispatch.
 - **Push-To-Talk (PTT) Voice Notes**: Transmits audio tips and workout guidance with native green microphone waveforms instead of file attachments.
-- **Built-in Keyword Auto-Responder**: Automatic replies for plans/pricing, gym hours, guest trial passes, and location directions inspired by Zerodha Whatomate.
+- **Check-In Workout Auto-Dispatch**: Automatically transmits the member's scheduled split, target exercises, sets, and rest intervals directly to their WhatsApp upon front-desk check-in (Face, QR, Fingerprint).
+- **Interactive Fitness Bot Commands**: Members can text `WORKOUT` to receive today's exercises, `PLATES <weight>` for barbell loading math, or `PR` for estimated 1RMs.
 - Zero per-conversation Meta messaging fees.
 - Includes SQLite auth persistence, rate-limiting queues, and SSE status streaming on port `48291`.
 
@@ -566,7 +567,7 @@ GymERP uses 21 sequential PostgreSQL migrations located in `supabase/migrations/
 GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run full unit and integration test suite (47 test files, 358 tests)
+# Run full unit and integration test suite (48 test files, 366 tests)
 npm test
 
 # Run TypeScript compiler verification
@@ -577,9 +578,9 @@ npm run build
 ```
 
 ```
-Test Files  47 passed (47)
-     Tests  358 passed (358)
-  Duration  22.77s (47 test suites passed with 0 failures)
+Test Files  48 passed (48)
+     Tests  366 passed (366)
+  Duration  22.25s (48 test suites passed with 0 failures)
 ```
 
 ---

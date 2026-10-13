@@ -3,13 +3,15 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getDaysRemaining, formatDate } from '@/lib/utils/format';
 import { waClient } from '@/lib/whatsapp/client';
 import { WAWebhookBody } from '@/lib/whatsapp/types';
+import { getTodayWorkoutForMember, formatWorkoutMessage } from '@/lib/workout/checkin-dispatcher';
+import { calculateBarbellPlates } from '@/lib/workout/plate-calculator';
 import crypto from 'crypto';
 
 /** Verify Meta's X-Hub-Signature-256 header */
 async function verifyMetaSignature(request: Request, bodyText: string): Promise<boolean> {
   const appSecret = process.env.WHATSAPP_APP_SECRET;
   if (!appSecret) {
-    console.error('WHATSAPP_APP_SECRET is not configured — rejecting webhook');
+    console.error('WHATSAPP_APP_SECRET is not configured -- rejecting webhook');
     return false;
   }
   const signature = request.headers.get('x-hub-signature-256');
@@ -113,8 +115,22 @@ export async function POST(request: Request) {
       }
     } else if (textBody === '2' || textBody.includes('renew')) {
       replyText = `To renew your membership, please visit the gym desk or use our app. Let us know if you need any assistance!`;
+    } else if (textBody === '3' || textBody.includes('workout') || textBody.includes('routine') || textBody.includes('exercise')) {
+      const workout = await getTodayWorkoutForMember(memberId, gymId);
+      if (workout && workout.exercises.length > 0) {
+        replyText = formatWorkoutMessage(workout.routineName, workout.dayName, workout.exercises, member.name);
+      } else {
+        replyText = `Hi ${member.name}, you do not have an active routine assigned yet. Choose a starter routine on your portal:\nhttps://gymerp.live/member/exercise`;
+      }
+    } else if (textBody.startsWith('plate') || textBody === '4') {
+      const match = textBody.match(/\d+(\.\d+)?/);
+      const targetWeight = match ? parseFloat(match[0]) : 60;
+      const plateResult = calculateBarbellPlates(targetWeight, { barWeight: 20, unit: 'kg' });
+      replyText = `🏋️ *Barbell Plate Loading (${targetWeight} kg)*\n• Bar: 20 kg Olympic\n• Per sleeve: ${plateResult.weightPerSide} kg\n• Disks: ${plateResult.displayString || 'Empty bar'}`;
+    } else if (textBody === '5' || textBody.includes('pr') || textBody.includes('1rm') || textBody.includes('max')) {
+      replyText = `🏆 *Strength & 1RM Tracker*\nLog your sets, calculate your 1-Rep Max, and view strength percentage zones on your portal:\nhttps://gymerp.live/member/exercise`;
     } else {
-      replyText = `Hi ${member.name}, I'm the gym's virtual assistant. Reply with:\n1 - Check membership status\n2 - Renewal info`;
+      replyText = `Hi ${member.name}, I'm your gym's virtual assistant! Reply with a number or keyword:\n\n1 - Check membership status\n2 - Renewal info\n3 - Today's Workout Routine\n4 - Barbell Plate Calculator (e.g. PLATES 80)\n5 - 1RM Strength Standards`;
     }
 
     // 3. Send auto-reply
