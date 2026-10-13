@@ -45,6 +45,7 @@ import { BiometricScannerCockpit, type BiometricLoggedEvent } from '@/components
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DoubleBezelCard } from '@/components/ui/card';
+import { Card3D } from '@/components/magicui/card-3d';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -562,84 +563,92 @@ export default function AttendancePage() {
       {/* 4 Multi-Modality Kiosk Stations Quick-Launch Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {/* Modality 1: Face AI Kiosk */}
-        <Link
-          href="/dashboard/attendance/face-kiosk"
-          className="group relative flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950/80 hover:bg-zinc-900/90 border border-white/[0.08] hover:border-cyan-500/40 shadow-xs transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-9 w-9 shrink-0 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
-              <ScanFace className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-zinc-100 truncate">Face AI Kiosk</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+        <Card3D maxTilt={10} glare={true} scale={1.02} className="rounded-2xl">
+          <Link
+            href="/dashboard/attendance/face-kiosk"
+            className="group relative flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950/80 hover:bg-zinc-900/90 border border-white/[0.08] hover:border-cyan-500/40 shadow-xs transition-all duration-200 active:scale-[0.98] h-full"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 shrink-0 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
+                <ScanFace className="h-4 w-4" />
               </div>
-              <p className="text-[11px] text-zinc-400 truncate">Contactless 3D camera check-in</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-zinc-100 truncate">Face AI Kiosk</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                </div>
+                <p className="text-[11px] text-zinc-400 truncate">Contactless 3D camera check-in</p>
+              </div>
             </div>
-          </div>
-          <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0 ml-2" />
-        </Link>
+            <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0 ml-2" />
+          </Link>
+        </Card3D>
 
         {/* Modality 2: Biometric Fingerprint */}
-        <Link
-          href="/dashboard/attendance/kiosk"
-          className="group relative flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950/80 hover:bg-zinc-900/90 border border-white/[0.08] hover:border-purple-500/40 shadow-xs transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-9 w-9 shrink-0 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
-              <Fingerprint className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-zinc-100 truncate">Fingerprint Kiosk</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shrink-0" />
+        <Card3D maxTilt={10} glare={true} scale={1.02} className="rounded-2xl">
+          <Link
+            href="/dashboard/attendance/kiosk"
+            className="group relative flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950/80 hover:bg-zinc-900/90 border border-white/[0.08] hover:border-purple-500/40 shadow-xs transition-all duration-200 active:scale-[0.98] h-full"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 shrink-0 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
+                <Fingerprint className="h-4 w-4" />
               </div>
-              <p className="text-[11px] text-zinc-400 truncate">Mantra & SecuGen USB sensor</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-zinc-100 truncate">Fingerprint Kiosk</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shrink-0" />
+                </div>
+                <p className="text-[11px] text-zinc-400 truncate">Mantra & SecuGen USB sensor</p>
+              </div>
             </div>
-          </div>
-          <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover:text-purple-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0 ml-2" />
-        </Link>
+            <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover:text-purple-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0 ml-2" />
+          </Link>
+        </Card3D>
 
         {/* Modality 3: Turnstile QR Standee */}
-        <Link
-          href="/dashboard/attendance/qr-kiosk"
-          className="group relative flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950/80 hover:bg-zinc-900/90 border border-white/[0.08] hover:border-blue-500/40 shadow-xs transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-9 w-9 shrink-0 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
-              <QrCode className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-zinc-100 truncate">Turnstile QR</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
+        <Card3D maxTilt={10} glare={true} scale={1.02} className="rounded-2xl">
+          <Link
+            href="/dashboard/attendance/qr-kiosk"
+            className="group relative flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950/80 hover:bg-zinc-900/90 border border-white/[0.08] hover:border-blue-500/40 shadow-xs transition-all duration-200 active:scale-[0.98] h-full"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 shrink-0 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
+                <QrCode className="h-4 w-4" />
               </div>
-              <p className="text-[11px] text-zinc-400 truncate">Tripod gates & digital passes</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-zinc-100 truncate">Turnstile QR</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
+                </div>
+                <p className="text-[11px] text-zinc-400 truncate">Tripod gates & digital passes</p>
+              </div>
             </div>
-          </div>
-          <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0 ml-2" />
-        </Link>
+            <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0 ml-2" />
+          </Link>
+        </Card3D>
 
         {/* Modality 4: CCTV AI Matrix */}
-        <Link
-          href="/dashboard/cctv"
-          className="group relative flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950/80 hover:bg-zinc-900/90 border border-white/[0.08] hover:border-amber-500/40 shadow-xs transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-9 w-9 shrink-0 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
-              <Cctv className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-zinc-100 truncate">CCTV Edge Matrix</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+        <Card3D maxTilt={10} glare={true} scale={1.02} className="rounded-2xl">
+          <Link
+            href="/dashboard/cctv"
+            className="group relative flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950/80 hover:bg-zinc-900/90 border border-white/[0.08] hover:border-amber-500/40 shadow-xs transition-all duration-200 active:scale-[0.98] h-full"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 shrink-0 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
+                <Cctv className="h-4 w-4" />
               </div>
-              <p className="text-[11px] text-zinc-400 truncate">Overhead streams & vigilance</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-zinc-100 truncate">CCTV Edge Matrix</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+                </div>
+                <p className="text-[11px] text-zinc-400 truncate">Overhead streams & vigilance</p>
+              </div>
             </div>
-          </div>
-          <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0 ml-2" />
-        </Link>
+            <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200 shrink-0 ml-2" />
+          </Link>
+        </Card3D>
       </div>
 
       {/* Main Mode View */}
@@ -696,45 +705,53 @@ export default function AttendancePage() {
 
             {/* Quick 4-Stat Metric Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5">
-              <DoubleBezelCard className="p-1.5" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
-                <div className="flex items-center gap-1.5 text-zinc-400">
-                  <Users className="w-3.5 h-3.5 text-purple-400" />
-                  <span className="text-[10px] font-mono uppercase tracking-wider">Today</span>
-                </div>
-                <span className="text-xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">
-                  {stats.todayCount}
-                </span>
-              </DoubleBezelCard>
+              <Card3D maxTilt={8} glare={true} scale={1.02} className="rounded-2xl">
+                <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
+                  <div className="flex items-center gap-1.5 text-zinc-400">
+                    <Users className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-[10px] font-mono uppercase tracking-wider">Today</span>
+                  </div>
+                  <span className="text-xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">
+                    {stats.todayCount}
+                  </span>
+                </DoubleBezelCard>
+              </Card3D>
               
-              <DoubleBezelCard className="p-1.5" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
-                <div className="flex items-center gap-1.5 text-zinc-400">
-                  <Activity className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="text-[10px] font-mono uppercase tracking-wider">Week Avg</span>
-                </div>
-                <span className="text-xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">
-                  {stats.weekAvg}
-                </span>
-              </DoubleBezelCard>
+              <Card3D maxTilt={8} glare={true} scale={1.02} className="rounded-2xl">
+                <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
+                  <div className="flex items-center gap-1.5 text-zinc-400">
+                    <Activity className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-[10px] font-mono uppercase tracking-wider">Week Avg</span>
+                  </div>
+                  <span className="text-xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">
+                    {stats.weekAvg}
+                  </span>
+                </DoubleBezelCard>
+              </Card3D>
               
-              <DoubleBezelCard className="p-1.5" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
-                <div className="flex items-center gap-1.5 text-zinc-400">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-[10px] font-mono uppercase tracking-wider">Missing</span>
-                </div>
-                <span className="text-xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">
-                  {stats.notCheckedIn}
-                </span>
-              </DoubleBezelCard>
+              <Card3D maxTilt={8} glare={true} scale={1.02} className="rounded-2xl">
+                <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
+                  <div className="flex items-center gap-1.5 text-zinc-400">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-[10px] font-mono uppercase tracking-wider">Missing</span>
+                  </div>
+                  <span className="text-xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">
+                    {stats.notCheckedIn}
+                  </span>
+                </DoubleBezelCard>
+              </Card3D>
               
-              <DoubleBezelCard className="p-1.5" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
-                <div className="flex items-center gap-1.5 text-zinc-400">
-                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-[10px] font-mono uppercase tracking-wider">Peak Hr</span>
-                </div>
-                <span className="text-xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">
-                  {stats.peakHour}
-                </span>
-              </DoubleBezelCard>
+              <Card3D maxTilt={8} glare={true} scale={1.02} className="rounded-2xl">
+                <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-3 flex flex-col gap-0.5 bg-zinc-950/80">
+                  <div className="flex items-center gap-1.5 text-zinc-400">
+                    <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[10px] font-mono uppercase tracking-wider">Peak Hr</span>
+                  </div>
+                  <span className="text-xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">
+                    {stats.peakHour}
+                  </span>
+                </DoubleBezelCard>
+              </Card3D>
             </div>
           </div>
 

@@ -17,3 +17,4 @@ export { OrbitingIcons } from './orbiting-icons';
 export { Particles } from './particles';
 export { Ripple } from './ripple';
 export { SoundWave } from './sound-wave';
+export { Card3D } from './card-3d';

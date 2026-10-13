@@ -25,6 +25,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, DoubleBezelCard } from '@/components/ui/card';
+import { Card3D } from '@/components/magicui/card-3d';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils/format';
@@ -320,7 +321,7 @@ export default function DashboardHome() {
             <div className="text-xl">🎯</div>
             <div>
               <p className="font-semibold text-foreground text-xs sm:text-sm">See GymERP in action</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Load sample data — 5 members, plans, invoices & attendance — to explore all features</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Load sample data -- 5 members, plans, invoices & attendance -- to explore all features</p>
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -406,167 +407,189 @@ export default function DashboardHome() {
 
       {/* Today's Operational Snapshot Bar (Machined Double-Bezel Architecture) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <DoubleBezelCard className="p-1.5" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
-              {isTrainer ? 'Active Routines' : "Today's Collections"}
-            </p>
-            <p className="text-2xl font-bold font-mono tracking-tight text-foreground tabular-nums mt-0.5">
-              {isTrainer ? stats.exercisePlans : formatCurrency(todayStats.revenue)}
-            </p>
-          </div>
-          <div className="h-9 w-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-xs">
-            {isTrainer ? <Dumbbell className="h-4.5 w-4.5" /> : <IndianRupee className="h-4.5 w-4.5" />}
-          </div>
-        </DoubleBezelCard>
-        <DoubleBezelCard className="p-1.5" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
-              Check-ins Today
-            </p>
-            <p className="text-2xl font-bold font-mono tracking-tight text-foreground tabular-nums mt-0.5">
-              {todayStats.checkins}
-            </p>
-          </div>
-          <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shadow-xs">
-            <CalendarCheck className="h-4.5 w-4.5" />
-          </div>
-        </DoubleBezelCard>
-        <DoubleBezelCard className="p-1.5" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
-              New Members Today
-            </p>
-            <p className="text-2xl font-bold font-mono tracking-tight text-foreground tabular-nums mt-0.5">
-              {todayStats.newMembers}
-            </p>
-          </div>
-          <div className="h-9 w-9 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center shadow-xs">
-            <UserPlus className="h-4.5 w-4.5" />
-          </div>
-        </DoubleBezelCard>
+        <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+          <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
+                {isTrainer ? 'Active Routines' : "Today's Collections"}
+              </p>
+              <p className="text-2xl font-bold font-mono tracking-tight text-foreground tabular-nums mt-0.5">
+                {isTrainer ? stats.exercisePlans : formatCurrency(todayStats.revenue)}
+              </p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-xs">
+              {isTrainer ? <Dumbbell className="h-4.5 w-4.5" /> : <IndianRupee className="h-4.5 w-4.5" />}
+            </div>
+          </DoubleBezelCard>
+        </Card3D>
+
+        <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+          <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
+                Check-ins Today
+              </p>
+              <p className="text-2xl font-bold font-mono tracking-tight text-foreground tabular-nums mt-0.5">
+                {todayStats.checkins}
+              </p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shadow-xs">
+              <CalendarCheck className="h-4.5 w-4.5" />
+            </div>
+          </DoubleBezelCard>
+        </Card3D>
+
+        <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+          <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-4 bg-card/60 backdrop-blur-md flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
+                New Members Today
+              </p>
+              <p className="text-2xl font-bold font-mono tracking-tight text-foreground tabular-nums mt-0.5">
+                {todayStats.newMembers}
+              </p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center shadow-xs">
+              <UserPlus className="h-4.5 w-4.5" />
+            </div>
+          </DoubleBezelCard>
+        </Card3D>
       </div>
 
       {/* Primary KPI Metric Cards (Machined Double-Bezel Enclosures) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <DoubleBezelCard className="p-1.5" innerClassName="p-5 bg-card/60 backdrop-blur-md">
-          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-              {isTrainer ? 'Active Trainees' : 'Active Members'}
-            </span>
-            <Users className="h-4 w-4 text-muted-foreground/70" />
-          </div>
-          <div className="pt-1">
-            <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
-              {stats.activeMembers}
+        <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+          <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-5 bg-card/60 backdrop-blur-md">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                {isTrainer ? 'Active Trainees' : 'Active Members'}
+              </span>
+              <Users className="h-4 w-4 text-muted-foreground/70" />
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">Currently enrolled profiles</p>
-          </div>
-        </DoubleBezelCard>
+            <div className="pt-1">
+              <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                {stats.activeMembers}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">Currently enrolled profiles</p>
+            </div>
+          </DoubleBezelCard>
+        </Card3D>
 
         {isTrainer ? (
-          <Link href="/dashboard/exercise" className="block group">
-            <DoubleBezelCard className="p-1.5 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                  Workout Routines
-                </span>
-                <Dumbbell className="h-4 w-4 text-muted-foreground/70 group-hover:text-primary transition-colors" />
-              </div>
-              <div className="pt-1">
-                <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
-                  {stats.exercisePlans}
+          <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+            <Link href="/dashboard/exercise" className="block group h-full">
+              <DoubleBezelCard className="p-1.5 group-hover:ring-primary/40 h-full" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
+                <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                    Workout Routines
+                  </span>
+                  <Dumbbell className="h-4 w-4 text-muted-foreground/70 group-hover:text-primary transition-colors" />
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">Active exercise routines</p>
-              </div>
-            </DoubleBezelCard>
-          </Link>
+                <div className="pt-1">
+                  <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                    {stats.exercisePlans}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">Active exercise routines</p>
+                </div>
+              </DoubleBezelCard>
+            </Link>
+          </Card3D>
         ) : isOwner ? (
-          <DoubleBezelCard className="p-1.5" innerClassName="p-5 bg-card/60 backdrop-blur-md">
-            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                Monthly Revenue
-              </span>
-              <IndianRupee className="h-4 w-4 text-emerald-400" />
-            </div>
-            <div className="pt-1">
-              <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
-                {formatCurrency(stats.monthlyRevenue)}
+          <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+            <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-5 bg-card/60 backdrop-blur-md">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Monthly Revenue
+                </span>
+                <IndianRupee className="h-4 w-4 text-emerald-400" />
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1">Invoices issued this month</p>
-            </div>
-          </DoubleBezelCard>
+              <div className="pt-1">
+                <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                  {formatCurrency(stats.monthlyRevenue)}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">Invoices issued this month</p>
+              </div>
+            </DoubleBezelCard>
+          </Card3D>
         ) : (
-          <DoubleBezelCard className="p-1.5" innerClassName="p-5 bg-card/60 backdrop-blur-md">
-            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                Today's Collections
-              </span>
-              <IndianRupee className="h-4 w-4 text-emerald-400" />
-            </div>
-            <div className="pt-1">
-              <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
-                {formatCurrency(todayStats.revenue)}
+          <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+            <DoubleBezelCard className="p-1.5 h-full" innerClassName="p-5 bg-card/60 backdrop-blur-md">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Today's Collections
+                </span>
+                <IndianRupee className="h-4 w-4 text-emerald-400" />
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1">Desk payment collections</p>
-            </div>
-          </DoubleBezelCard>
+              <div className="pt-1">
+                <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                  {formatCurrency(todayStats.revenue)}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">Desk payment collections</p>
+              </div>
+            </DoubleBezelCard>
+          </Card3D>
         )}
 
         {isTrainer ? (
-          <Link href="/dashboard/diet" className="block group">
-            <DoubleBezelCard className="p-1.5 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                  Diet Charts
-                </span>
-                <Apple className="h-4 w-4 text-muted-foreground/70 group-hover:text-emerald-400 transition-colors" />
-              </div>
-              <div className="pt-1">
-                <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
-                  {stats.dietPlans}
+          <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+            <Link href="/dashboard/diet" className="block group h-full">
+              <DoubleBezelCard className="p-1.5 group-hover:ring-primary/40 h-full" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
+                <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                    Diet Charts
+                  </span>
+                  <Apple className="h-4 w-4 text-muted-foreground/70 group-hover:text-emerald-400 transition-colors" />
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">Nutrition & meal charts</p>
-              </div>
-            </DoubleBezelCard>
-          </Link>
+                <div className="pt-1">
+                  <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                    {stats.dietPlans}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">Nutrition & meal charts</p>
+                </div>
+              </DoubleBezelCard>
+            </Link>
+          </Card3D>
         ) : (
-          <Link href="/dashboard/due" className="block group">
-            <DoubleBezelCard className="p-1.5 group-hover:ring-amber-500/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                  Dues Outstanding
-                </span>
-                <CalendarDays className="h-4 w-4 text-muted-foreground/70 group-hover:text-amber-400 transition-colors" />
-              </div>
-              <div className="pt-1">
-                <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
-                  {formatCurrency(stats.duesOutstanding)}
+          <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+            <Link href="/dashboard/due" className="block group h-full">
+              <DoubleBezelCard className="p-1.5 group-hover:ring-amber-500/40 h-full" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
+                <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                    Dues Outstanding
+                  </span>
+                  <CalendarDays className="h-4 w-4 text-muted-foreground/70 group-hover:text-amber-400 transition-colors" />
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">Pending payments to collect</p>
-              </div>
-            </DoubleBezelCard>
-          </Link>
+                <div className="pt-1">
+                  <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                    {formatCurrency(stats.duesOutstanding)}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">Pending payments to collect</p>
+                </div>
+              </DoubleBezelCard>
+            </Link>
+          </Card3D>
         )}
 
-        <Link href={isTrainer ? "/dashboard/attendance" : "/dashboard/members?filter=expiring"} className="block group">
-          <DoubleBezelCard className="p-1.5 group-hover:ring-primary/40" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
-            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                {isTrainer ? 'Floor Check-ins' : 'Expiring Soon'}
-              </span>
-              <Clock className="h-4 w-4 text-muted-foreground/70 group-hover:text-primary transition-colors" />
-            </div>
-            <div className="pt-1">
-              <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
-                {isTrainer ? todayStats.checkins : stats.expiringSoon}
+        <Card3D maxTilt={7} glare={true} scale={1.02} className="rounded-2xl">
+          <Link href={isTrainer ? "/dashboard/attendance" : "/dashboard/members?filter=expiring"} className="block group h-full">
+            <DoubleBezelCard className="p-1.5 group-hover:ring-primary/40 h-full" innerClassName="p-5 bg-card/60 backdrop-blur-md group-hover:bg-card/75 transition-[background-color,box-shadow] duration-150">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  {isTrainer ? 'Floor Check-ins' : 'Expiring Soon'}
+                </span>
+                <Clock className="h-4 w-4 text-muted-foreground/70 group-hover:text-primary transition-colors" />
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1">
-                {isTrainer ? "Today's check-ins" : 'Plans ending in 7 days'}
-              </p>
-            </div>
-          </DoubleBezelCard>
-        </Link>
+              <div className="pt-1">
+                <div className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-foreground tabular-nums">
+                  {isTrainer ? todayStats.checkins : stats.expiringSoon}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {isTrainer ? "Today's check-ins" : 'Plans ending in 7 days'}
+                </p>
+              </div>
+            </DoubleBezelCard>
+          </Link>
+        </Card3D>
       </div>
 
       {/* Grid: Live Ticker & Charts */}
