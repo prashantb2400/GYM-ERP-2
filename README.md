@@ -13,7 +13,7 @@
     <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
     <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Offline_Appliance_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
     <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge" alt="MCP Server" /></a>
-    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-46%2F46_Passing_(353_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
+    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-47%2F47_Passing_(358_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
   </p>
 
   <p align="center">
@@ -241,11 +241,18 @@ GymERP integrates algorithms and workout paradigms from the open-source **[openG
    - **Interactive 1RM Calculator**: Live estimation of maximum single-rep potential based on working sets.
    - **1-Click WhatsApp Routine Dispatch**: Generates clean, formatted training plans and dispatches them directly to members via the WhatsApp engine.
 
-3. **Workout Logging API (`/api/workouts/log`)**:
+3. **Member Workout Companion (`/member/exercise`)**:
+   - **Interactive Live Logger**: Workout logging on mobile with planned sets, live weight/reps inputs, RPE exertion selectors, and set-by-set completion checkboxes.
+   - **Integrated Rest Timer**: Auto-starts countdown rest intervals (60s, 90s, 120s) with synthesized Web Audio chimes.
+   - **Floor-Ready Plate Calculator**: Barbell plate loading solver directly in the athlete portal.
+   - **Power Max Gauges**: Real-time 1RM updates and strength training percentage zones (95% to 70%).
+   - **Workout History**: Expandable timeline of previous gym sessions and historical tonnage lifted.
+
+4. **Workout Logging API (`/api/workouts/log`)**:
    - Logs completed member workout sessions (`workout_logs` table).
    - Computes total training tonnage (volume in kg) and automatically updates estimated personal records (1RMs).
 
-4. **Self-Hosted openGym Appliance Sidecar (`docker-compose.offline.yml`)**:
+5. **Self-Hosted openGym Appliance Sidecar (`docker-compose.offline.yml`)**:
    - Bundles the openGym container image (`ghcr.io/duartesantos8/opengym-web:latest`) on port `8080` under the `opengym` profile for gyms desiring the full standalone workout tracker UI on their local network.
 
 ---
@@ -559,7 +566,7 @@ GymERP uses 21 sequential PostgreSQL migrations located in `supabase/migrations/
 GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run full unit and integration test suite (46 test files, 353 tests)
+# Run full unit and integration test suite (47 test files, 358 tests)
 npm test
 
 # Run TypeScript compiler verification
@@ -570,9 +577,9 @@ npm run build
 ```
 
 ```
-Test Files  46 passed (46)
-     Tests  353 passed (353)
-  Duration  20.89s (46 test suites passed with 0 failures)
+Test Files  47 passed (47)
+     Tests  358 passed (358)
+  Duration  22.77s (47 test suites passed with 0 failures)
 ```
 
 ---

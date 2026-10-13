@@ -12,9 +12,18 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('member_id');
-    const gymId = user.user_metadata?.gym_id || user.app_metadata?.gym_id;
+    let gymId = user.user_metadata?.gym_id || user.app_metadata?.gym_id;
 
     if (memberId) {
+      if (!gymId) {
+        const { data: memberRec } = await supabaseAdmin
+          .from('members')
+          .select('gym_id')
+          .eq('id', memberId)
+          .maybeSingle();
+        gymId = memberRec?.gym_id;
+      }
+
       // Fetch member's currently active assigned routine
       const { data: assignment, error: assignErr } = await supabaseAdmin
         .from('member_assigned_routines')
@@ -35,10 +44,15 @@ export async function GET(request: Request) {
     }
 
     // Fetch custom routines created by this gym
-    const { data: customRoutines, error: routinesErr } = await supabaseAdmin
+    let customRoutinesQuery = supabaseAdmin
       .from('workout_routines')
-      .select('*')
-      .eq('gym_id', gymId)
+      .select('*');
+
+    if (gymId) {
+      customRoutinesQuery = customRoutinesQuery.eq('gym_id', gymId);
+    }
+
+    const { data: customRoutines, error: routinesErr } = await customRoutinesQuery
       .order('created_at', { ascending: false });
 
     if (routinesErr) throw routinesErr;
