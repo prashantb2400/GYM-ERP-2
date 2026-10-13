@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Check,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { GridPattern } from '@/components/magicui/grid-pattern';
@@ -381,11 +382,36 @@ function OwnerLoginForm() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-lg shadow-purple-600/20 mt-1"
+                  className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-lg shadow-purple-600/20 mt-1 cursor-pointer active:scale-[0.99] transition-all"
                 >
                   {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   Sign In
                 </Button>
+
+                {/* Evaluation Demo Account Quick Fill */}
+                <div className="mt-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs flex items-center justify-between gap-2 shadow-xs">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                      <span className="truncate">Evaluation Account</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-400 mt-0.5 truncate">
+                      admin@gymerp.local / admin123
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSignInEmail('admin@gymerp.local');
+                      setSignInPassword('admin123');
+                    }}
+                    className="h-7 text-[11px] px-2.5 bg-purple-950/60 border-purple-800/60 text-purple-200 hover:text-white hover:bg-purple-900/60 active:scale-95 transition-all shrink-0 cursor-pointer"
+                  >
+                    Quick Fill
+                  </Button>
+                </div>
               </form>
 
               <OrDivider />

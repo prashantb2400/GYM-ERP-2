@@ -24,6 +24,7 @@ import {
   AlertCircle,
   HelpCircle,
   ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { GridPattern } from '@/components/magicui/grid-pattern';
@@ -229,6 +230,45 @@ function StaffLoginForm() {
               ) : null}
               Sign In
             </ShinyButton>
+
+            {/* Evaluation Staff Accounts Quick Fill */}
+            <div className="mt-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs flex items-center justify-between gap-2 shadow-xs">
+              <div className="min-w-0">
+                <div className="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                  <span className="truncate">Staff Evaluation</span>
+                </div>
+                <p className="text-[10px] text-zinc-400 mt-0.5 truncate">
+                  Coach: coach_raj / coach123
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIdentifier('coach_raj');
+                    setPassword('coach123');
+                  }}
+                  className="h-7 text-[11px] px-2 bg-purple-950/60 border-purple-800/60 text-purple-200 hover:text-white hover:bg-purple-900/60 active:scale-95 transition-all cursor-pointer"
+                >
+                  Fill Coach
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIdentifier('front_desk_1');
+                    setPassword('staff123');
+                  }}
+                  className="h-7 text-[11px] px-2 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
+                >
+                  Desk
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </form>
 

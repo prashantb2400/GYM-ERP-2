@@ -154,10 +154,10 @@ export default function SuperAdminLoginPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col gap-3">
               <Button
                 type="submit"
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white border-none shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all hover:shadow-[0_0_25px_rgba(245,158,11,0.5)]"
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white border-none shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] active:scale-[0.99] cursor-pointer"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -169,6 +169,31 @@ export default function SuperAdminLoginPage() {
                   'Sign In'
                 )}
               </Button>
+
+              {/* Evaluation SuperAdmin Quick Fill */}
+              <div className="w-full p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs flex items-center justify-between gap-2 shadow-xs">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                    <span className="truncate">SuperAdmin Evaluation</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-400 mt-0.5 truncate">
+                    superadmin@gymerp.com / superadmin123
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEmail('superadmin@gymerp.com');
+                    setPassword('superadmin123');
+                  }}
+                  className="h-7 text-[11px] px-2.5 bg-amber-950/60 border-amber-800/60 text-amber-200 hover:text-white hover:bg-amber-900/60 active:scale-95 transition-all shrink-0 cursor-pointer"
+                >
+                  Quick Fill
+                </Button>
+              </div>
             </CardFooter>
           </form>
         </Card>
