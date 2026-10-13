@@ -13,7 +13,7 @@
     <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
     <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Offline_Appliance_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
     <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge" alt="MCP Server" /></a>
-    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-50%2F50_Passing_(394_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
+    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-51%2F51_Passing_(409_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
   </p>
 
   <p align="center">
@@ -315,6 +315,8 @@ GymERP can run completely disconnected from the public internet on a local mini-
 5. **PostgREST LAN Gateway**: Automatically maps `/rest/v1/*` to PostgREST and dynamically binds client connections to local LAN hostnames (`192.168.x.x`).
 6. **1-Click Database Backup**: Download a complete JSON snapshot of all gym data directly from Dashboard Settings, or plug in a USB flash drive for automated daily backups.
 7. **Zero-Downtime Migration Synchronization**: Automatically applies idempotent migrations (`001` through `021`) via dedicated `db-migrate` orchestration service with mock storage compatibility before API startup, guaranteeing zero race conditions on cold boots.
+8. **Caddy LAN Reverse Proxy & Automatic Local TLS**: Bundles automated Caddy reverse proxy (`caddy:2-alpine`) with internal CA certificate generation (`tls internal`), exposing port 80 (HTTP) and port 443 (HTTPS) for `gymerp.local` and local LAN IPs. Enables mobile and tablet browsers to access `getUserMedia` camera and Web Speech recognition APIs without security restriction dialogs.
+9. **Zero-Touch Cold-Boot Auto-Seed**: Set `AUTO_SEED_DEMO_GYM=true` to automatically provision a full demo gym ("Iron Forge Fitness Club"), primary branch, owner credentials (`admin@gymerp.local` / `admin123`), starter plans, openGym workout splits, and pre-paired kiosk token on initial container startup.
 
 ### Launching the Local Appliance in 1 Command
 
@@ -578,7 +580,7 @@ GymERP uses 21 sequential PostgreSQL migrations located in `supabase/migrations/
 GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run full unit and integration test suite (48 test files, 366 tests)
+# Run full unit and integration test suite (51 test files, 409 tests)
 npm test
 
 # Run TypeScript compiler verification
@@ -589,9 +591,9 @@ npm run build
 ```
 
 ```
-Test Files  48 passed (48)
-     Tests  366 passed (366)
-  Duration  22.25s (48 test suites passed with 0 failures)
+Test Files  51 passed (51)
+     Tests  409 passed (409)
+  Duration  24.08s (51 test suites passed with 0 failures)
 ```
 
 ---

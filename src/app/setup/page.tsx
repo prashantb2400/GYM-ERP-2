@@ -162,7 +162,8 @@ export default function SetupWizardPage() {
       });
 
       const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      setKioskUrl(`${origin}/kiosk/agent?gymId=${data.gymId}`);
+      const tokenParam = data.kioskToken ? `&token=${encodeURIComponent(data.kioskToken)}` : '';
+      setKioskUrl(`${origin}/kiosk/agent?gymId=${data.gymId}${tokenParam}`);
       setSubmitting(false);
       setStep(4);
     } catch (err: any) {

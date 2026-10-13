@@ -1,0 +1,35 @@
+# =====================================================================
+# GymERP Local LAN Reverse Proxy & Automatic TLS Configuration
+# =====================================================================
+# Provides local HTTPS (port 443) and HTTP (port 80) reverse proxying
+# to the Next.js standalone application running on port 3000.
+# Enables camera (getUserMedia) and microphone (Web Speech) access
+# on mobile browsers across gym Wi-Fi via automatic internal CA certs.
+# =====================================================================
+
+{
+    admin off
+    auto_https disable_redirects
+}
+
+# 1. Plain HTTP on port 80 (Standard local network access)
+http://:80 {
+    reverse_proxy app:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto http
+    }
+}
+
+# 2. Local HTTPS on port 443 (Local TLS for camera & voice permissions)
+https://:443, https://gymerp.local, https://localhost {
+    tls internal
+
+    reverse_proxy app:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto https
+    }
+}

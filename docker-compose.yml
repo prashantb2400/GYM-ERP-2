@@ -97,6 +97,7 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder
       WHATSAPP_BRIDGE_URL: http://whatsapp-bridge:48291
       PGRST_JWT_SECRET: gymerp-offline-local-jwt-secret-minimum-32-chars-long
+      AUTO_SEED_DEMO_GYM: ${AUTO_SEED_DEMO_GYM:-false}
     depends_on:
       db:
         condition: service_healthy
@@ -105,8 +106,30 @@ services:
       postgrest:
         condition: service_started
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: gymerp-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_started
+    profiles:
+      - proxy
+      - full
+
 volumes:
   pgdata:
     driver: local
   whatsapp_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local

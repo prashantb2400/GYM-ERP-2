@@ -216,7 +216,16 @@ export default function SingleScreenVoiceKioskPage() {
   // 3. Check Device Pairing on Mount
   useEffect(() => {
     async function verifyPairing() {
-      const savedToken = typeof window !== 'undefined' ? localStorage.getItem(KIOSK_TOKEN_KEY) : null;
+      let savedToken = typeof window !== 'undefined' ? localStorage.getItem(KIOSK_TOKEN_KEY) : null;
+
+      if (!savedToken && typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('token');
+        if (urlToken) {
+          savedToken = urlToken.trim();
+          localStorage.setItem(KIOSK_TOKEN_KEY, savedToken);
+        }
+      }
 
       if (!savedToken) {
         initNewPairing();

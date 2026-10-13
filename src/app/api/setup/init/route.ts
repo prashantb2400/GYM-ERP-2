@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { hashPassword, signLocalToken } from '@/lib/server/local-auth';
+import { STARTER_ROUTINES } from '@/lib/workout/exercise-types';
 import crypto from 'crypto';
 
 export async function POST(request: Request) {
@@ -64,7 +65,30 @@ export async function POST(request: Request) {
 
     const gymId = createdGym.id;
 
-    // 3. Create Counter record
+    // 3. Create Default Primary Branch in public.branches
+    let branchId: string | null = null;
+    const { data: createdBranch, error: branchErr } = await supabaseAdmin
+      .from('branches')
+      .insert({
+        gym_id: gymId,
+        name: `${gym.name.trim()} Main Branch`,
+        phone: gym.phone?.trim() || '',
+        address: {
+          city: gym.city || '',
+          state: gym.state || '',
+        },
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (!branchErr && createdBranch) {
+      branchId = createdBranch.id;
+    } else if (branchErr) {
+      console.warn('Branch creation warning in setup init:', branchErr);
+    }
+
+    // 4. Create Counter record
     await supabaseAdmin
       .from('counters')
       .insert({
@@ -73,7 +97,7 @@ export async function POST(request: Request) {
         invoice_count: 0,
       });
 
-    // 4. Create Subscription record
+    // 5. Create Subscription record
     await supabaseAdmin
       .from('subscriptions')
       .insert({
@@ -83,7 +107,7 @@ export async function POST(request: Request) {
         is_active: true,
       });
 
-    // 5. Create auth.users compatibility row
+    // 6. Create auth.users compatibility row
     try {
       await supabaseAdmin
         .from('auth.users' as any)
@@ -97,12 +121,13 @@ export async function POST(request: Request) {
       console.warn('Note: auth.users insertion bypassed:', authErr);
     }
 
-    // 6. Create public.users row
+    // 7. Create public.users row with branch linkage
     const { error: userErr } = await supabaseAdmin
       .from('users')
       .insert({
         auth_id: authId,
         gym_id: gymId,
+        branch_id: branchId,
         name: owner.name?.trim() || 'Gym Owner',
         email: cleanEmail,
         phone: owner.phone?.trim() || gym.phone?.trim() || '',
@@ -122,7 +147,7 @@ export async function POST(request: Request) {
       .update({ owner_id: authId })
       .eq('id', gymId);
 
-    // 7. Create Membership Plans
+    // 8. Create Membership Plans
     const plansToInsert = Array.isArray(plans) && plans.length > 0
       ? plans.map((p: any, idx: number) => ({
           gym_id: gymId,
@@ -143,7 +168,52 @@ export async function POST(request: Request) {
       .from('plans')
       .insert(plansToInsert);
 
-    // 8. Sign JWT Session token
+    // 9. Seed Starter Workout Routines (openGym catalogue)
+    try {
+      const routinesToInsert = STARTER_ROUTINES.map((routine) => ({
+        gym_id: gymId,
+        branch_id: branchId,
+        created_by: authId,
+        name: routine.name,
+        split_type: routine.splitType,
+        days_per_week: routine.daysPerWeek,
+        description: routine.description,
+        schedule: routine.days,
+      }));
+
+      await supabaseAdmin
+        .from('workout_routines')
+        .insert(routinesToInsert);
+    } catch (routineErr) {
+      console.warn('Failed to seed starter workout routines in setup init:', routineErr);
+    }
+
+    // 10. Provision Default Active Kiosk Device
+    let kioskToken = `kiosk-${crypto.randomBytes(12).toString('hex')}`;
+    let pairingCode = Math.floor(100000 + Math.random() * 900000).toString();
+    try {
+      const { data: kioskDevice } = await supabaseAdmin
+        .from('kiosk_devices')
+        .insert({
+          gym_id: gymId,
+          branch_id: branchId,
+          device_name: 'Reception Tablet Kiosk',
+          device_token: kioskToken,
+          pairing_code: pairingCode,
+          status: 'active',
+          settings: { voice_enabled: true, language: 'en-IN', print_mode: 'thermal' },
+        })
+        .select()
+        .single();
+
+      if (kioskDevice?.device_token) {
+        kioskToken = kioskDevice.device_token;
+      }
+    } catch (kioskErr) {
+      console.warn('Failed to provision default kiosk device in setup init:', kioskErr);
+    }
+
+    // 11. Sign JWT Session token
     const token = await signLocalToken({
       id: authId,
       email: cleanEmail,
@@ -155,6 +225,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       gymId,
+      branchId,
+      kioskToken,
+      pairingCode,
       token,
       user: {
         id: authId,
@@ -162,6 +235,7 @@ export async function POST(request: Request) {
         name: owner.name?.trim() || 'Gym Owner',
         role: 'owner',
         gymId,
+        branchId,
       },
     });
   } catch (err: any) {
