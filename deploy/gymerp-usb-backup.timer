@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic Check for GymERP USB Flash Drive Backup
+After=gymerp.service
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

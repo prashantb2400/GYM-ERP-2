@@ -103,9 +103,22 @@ systemctl restart avahi-daemon
 echo "==> Step 7: Configuring systemd service for auto-boot..."
 sed -i "s/User=pi/User=$CURRENT_USER/g" "$APP_DIR/deploy/gymerp.service"
 cp "$APP_DIR/deploy/gymerp.service" /etc/systemd/system/gymerp.service
+
+echo "==> Step 8: Configuring automated USB flash drive backup daemon..."
+if [ -f "$REPO_DIR/deploy/gymerp-usb-backup.service" ]; then
+  cp "$REPO_DIR/deploy/gymerp-usb-backup.service" /etc/systemd/system/gymerp-usb-backup.service
+  cp "$REPO_DIR/deploy/gymerp-usb-backup.timer" /etc/systemd/system/gymerp-usb-backup.timer
+fi
+if [ -f "$REPO_DIR/deploy/99-gymerp-usb-backup.rules" ]; then
+  cp "$REPO_DIR/deploy/99-gymerp-usb-backup.rules" /etc/udev/rules.d/99-gymerp-usb-backup.rules
+  udevadm control --reload-rules 2>/dev/null || true
+fi
+
 systemctl daemon-reload
 systemctl enable gymerp
 systemctl restart gymerp
+systemctl enable gymerp-usb-backup.timer 2>/dev/null || true
+systemctl start gymerp-usb-backup.timer 2>/dev/null || true
 
 HOST_IP=$(hostname -I | awk '{print $1}')
 

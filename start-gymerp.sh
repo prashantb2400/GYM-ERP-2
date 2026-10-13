@@ -35,13 +35,15 @@ if command -v docker >/dev/null 2>&1; then
   echo "[INFO] Starting GymERP all-in-one offline stack..."
   echo ""
 
-  if docker compose -f docker-compose.offline.yml up -d; then
+  if docker compose -f docker-compose.offline.yml --profile proxy up -d 2>/dev/null || docker compose -f docker-compose.offline.yml up -d; then
     echo ""
     echo "=================================================================="
-    echo "  GymERP is now running in Docker!"
-    echo "  This Computer:     http://localhost:3000"
-    echo "  Lobby Tablets/LAN: http://${LOCAL_IP}:3000"
-    echo "  First-Run Setup:   http://localhost:3000/setup"
+    echo "  GymERP Local Appliance is LIVE in Docker!"
+    echo "  App Direct (Port 3000):   http://localhost:3000"
+    echo "  LAN Network Access:       http://${LOCAL_IP}:3000"
+    echo "  Caddy Reverse Proxy:      http://gymerp.local or http://${LOCAL_IP}"
+    echo "  Local HTTPS (Camera/Mic): https://gymerp.local or https://${LOCAL_IP}"
+    echo "  First-Run Setup Wizard:   http://localhost:3000/setup"
     echo "=================================================================="
     echo ""
 

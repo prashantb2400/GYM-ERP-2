@@ -1,0 +1,3 @@
+# GymERP Auto-Backup udev rule
+# Automatically triggers the GymERP USB backup service whenever a USB flash drive partition is mounted/detected
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z][0-9]", TAG+="systemd", ENV{SYSTEMD_WANTS}="gymerp-usb-backup.service"

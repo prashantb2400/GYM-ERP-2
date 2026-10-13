@@ -15,16 +15,18 @@ if %errorlevel% equ 0 (
     echo [INFO] Starting GymERP all-in-one offline stack...
     echo.
     
-    docker compose -f docker-compose.offline.yml up -d
+    docker compose -f docker-compose.offline.yml --profile proxy up -d 2>nul || docker compose -f docker-compose.offline.yml up -d
     
     if %errorlevel% equ 0 (
         echo.
         echo ==================================================================
-        echo   GymERP is now running in Docker!
-        echo   Local Dashboard:   http://localhost:3000
-        echo   First-Run Setup:   http://localhost:3000/setup
-        echo   PostgREST API:     http://localhost:54321
-        echo   WhatsApp Bridge:   http://localhost:48291
+        echo   GymERP Local Appliance is LIVE in Docker!
+        echo   App Direct (Port 3000):   http://localhost:3000
+        echo   Caddy Reverse Proxy:      http://gymerp.local
+        echo   Local HTTPS (Camera/Mic): https://gymerp.local
+        echo   First-Run Setup Wizard:   http://localhost:3000/setup
+        echo   PostgREST API Gateway:    http://localhost:54321
+        echo   WhatsApp Bridge Engine:   http://localhost:48291
         echo ==================================================================
         echo.
         echo Opening GymERP in your default browser...
