@@ -1,10 +1,22 @@
-import { MinutiaePoint, FingerprintTemplate, MatchScoreResult, RosterMemberFingerprint } from './types';
+import {
+  MinutiaePoint,
+  FingerprintTemplate,
+  MatchScoreResult,
+  RosterMemberFingerprint,
+  BiometricSensitivityMode,
+} from './types';
 
 // Constants for biometric verification (ISO/IEC 19794-2 alignment standards)
 const DISTANCE_TOLERANCE_PX = 14; // Max spatial Euclidean distance between aligned minutiae (pixels)
 const ANGLE_TOLERANCE_RAD = 0.35; // Max angular tolerance (~20 degrees)
 const MIN_MINUTIAE_THRESHOLD = 6;  // Minimum minutiae required for reliable matching
-const MATCH_ACCEPTANCE_SCORE = 55; // Minimum score (0-100) to accept genuine match
+export const MATCH_ACCEPTANCE_SCORE = 55; // Default score (0-100) to accept genuine match
+
+export interface MatcherOptions {
+  sensitivity?: BiometricSensitivityMode;
+  acceptanceThreshold?: number;
+  minMatchedPairs?: number;
+}
 
 /**
  * Normalizes an angle into the range [-PI, PI]
@@ -26,10 +38,12 @@ function angleDifference(a: number, b: number): number {
 /**
  * Compares two fingerprint templates and returns detailed matching metrics.
  * Uses translation- and rotation-invariant minutiae alignment.
+ * Supports callus-tolerant matching for lifters with knurling abrasion.
  */
 export function matchTemplates(
   probe: FingerprintTemplate,
-  candidate: FingerprintTemplate
+  candidate: FingerprintTemplate,
+  options?: MatcherOptions
 ): MatchScoreResult {
   const pMin = probe.minutiae || [];
   const cMin = candidate.minutiae || [];
@@ -45,11 +59,19 @@ export function matchTemplates(
     };
   }
 
+  const sensitivity = options?.sensitivity || 'normal';
+  const acceptanceScore = options?.acceptanceThreshold ?? (
+    sensitivity === 'strict' ? 65 : sensitivity === 'callus_adapted' ? 40 : MATCH_ACCEPTANCE_SCORE
+  );
+  const minRequiredPairs = options?.minMatchedPairs ?? (
+    sensitivity === 'strict' ? 12 : sensitivity === 'callus_adapted' ? 7 : 10
+  );
+
   let bestMatchedPairs = 0;
 
   // Select top quality minutiae to test as reference origin pairs
-  const probeRefs = [...pMin].sort((a, b) => (b.quality || 50) - (a.quality || 50)).slice(0, 8);
-  const candRefs = [...cMin].sort((a, b) => (b.quality || 50) - (a.quality || 50)).slice(0, 8);
+  const probeRefs = [...pMin].sort((a, b) => (b.quality || 50) - (a.quality || 50)).slice(0, 10);
+  const candRefs = [...cMin].sort((a, b) => (b.quality || 50) - (a.quality || 50)).slice(0, Math.min(cMin.length, 16));
 
   // Try aligning probe to candidate using reference pairs
   for (const pRef of probeRefs) {
@@ -123,7 +145,7 @@ export function matchTemplates(
   const rawScore = (bestMatchedPairs / totalMinutiae) * 100;
   const score = Math.min(100, Math.round(rawScore));
   const confidence = Math.min(99.9, Math.round((bestMatchedPairs / Math.max(1, pMin.length)) * 100 * 10) / 10);
-  const isMatch = score >= MATCH_ACCEPTANCE_SCORE && bestMatchedPairs >= 10;
+  const isMatch = score >= acceptanceScore && bestMatchedPairs >= minRequiredPairs;
 
   return {
     isMatch,
@@ -142,12 +164,20 @@ export function matchTemplates(
 export function identifyMemberFromRoster(
   probeTemplate: FingerprintTemplate,
   roster: RosterMemberFingerprint[],
-  acceptanceThreshold = MATCH_ACCEPTANCE_SCORE
+  options?: MatcherOptions | number
 ): {
   matched: boolean;
   member?: RosterMemberFingerprint;
   matchResult?: MatchScoreResult;
 } {
+  const opts: MatcherOptions = typeof options === 'number'
+    ? { acceptanceThreshold: options }
+    : options || {};
+
+  const effectiveThreshold = opts.acceptanceThreshold ?? (
+    opts.sensitivity === 'strict' ? 65 : opts.sensitivity === 'callus_adapted' ? 40 : MATCH_ACCEPTANCE_SCORE
+  );
+
   let bestMember: RosterMemberFingerprint | undefined;
   let highestScoreResult: MatchScoreResult = {
     isMatch: false,
@@ -163,11 +193,11 @@ export function identifyMemberFromRoster(
       continue;
     }
 
-    const result = matchTemplates(probeTemplate, member.fingerprint_template);
+    const result = matchTemplates(probeTemplate, member.fingerprint_template, opts);
 
     if (result.score > highestScoreResult.score) {
       highestScoreResult = result;
-      if (result.isMatch && result.score >= acceptanceThreshold) {
+      if (result.isMatch && result.score >= effectiveThreshold) {
         bestMember = member;
       }
     }

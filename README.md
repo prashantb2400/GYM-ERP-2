@@ -13,7 +13,7 @@
     <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
     <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Offline_Appliance_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
     <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge" alt="MCP Server" /></a>
-    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-52%2F52_Passing_(427_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
+    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-53%2F53_Passing_(439_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
   </p>
 
   <p align="center">
@@ -580,7 +580,7 @@ GymERP uses 21 sequential PostgreSQL migrations located in `supabase/migrations/
 GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run full unit and integration test suite (52 test files, 427 tests)
+# Run full unit and integration test suite (53 test files, 439 tests)
 npm test
 
 # Run TypeScript compiler verification
@@ -591,9 +591,9 @@ npm run build
 ```
 
 ```
-Test Files  52 passed (52)
-     Tests  427 passed (427)
-  Duration  23.65s (52 test suites passed with 0 failures)
+Test Files  53 passed (53)
+     Tests  439 passed (439)
+  Duration  23.22s (53 test suites passed with 0 failures)
 ```
 
 ---

@@ -312,6 +312,58 @@ export default function SingleScreenVoiceKioskPage() {
     }
   }, [matchedMember, matchedWorkout, fetchMemberWorkout]);
 
+  const handlePrintCheckInSlip = useCallback(async () => {
+    if (!matchedMember) return;
+    try {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+      const timeStr = now.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const slipPayload = {
+        gymName: gymConfig?.businessName || deviceInfo?.gymName || 'GymERP Fitness Club',
+        branchName: deviceInfo?.branchName || undefined,
+        gymPhone: gymConfig?.phone || undefined,
+        memberName: matchedMember.name,
+        memberCode: matchedMember.memberCode,
+        date: dateStr,
+        checkInTime: timeStr,
+        lockerNumber: matchedMember.lockerNumber || undefined,
+        daysRemaining: matchedMember.daysRemaining,
+        qrPassData: `GYMPASS:${matchedMember.id || matchedMember.memberCode}:${Date.now()}`,
+        workout: matchedWorkout
+          ? {
+              dayName: matchedWorkout.dayName,
+              exercises: (matchedWorkout.exercises || []).map((ex: any) => ({
+                name: ex.exerciseName || ex.name || 'Exercise',
+                sets: ex.sets,
+                reps: ex.reps,
+                targetWeightKg: ex.targetWeightKg,
+              })),
+            }
+          : undefined,
+        paperWidth: 80 as const,
+      };
+
+      const escPosData = kioskPrinter.generateEscPosCheckInSlip(slipPayload);
+      const bridgeSent = await kioskPrinter.sendToHardwareBridge(escPosData);
+      if (!bridgeSent) {
+        const usbSent = await kioskPrinter.directWebUsbPrint(escPosData);
+        if (!usbSent) {
+          kioskPrinter.printCheckInSlipA4(slipPayload);
+        }
+      }
+    } catch (err) {
+      console.warn('Check-in slip printing error:', err);
+    }
+  }, [matchedMember, matchedWorkout, gymConfig, deviceInfo]);
+
   const toggleSpeechListening = useCallback(() => {
     kioskAudio.playTap();
     if (!speechRecognizerRef.current) {
@@ -902,7 +954,20 @@ export default function SingleScreenVoiceKioskPage() {
                 )}
 
                 {/* Workout & Plate Voice Actions */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      kioskAudio.playTap();
+                      handlePrintCheckInSlip();
+                    }}
+                    className="bg-zinc-900 border-emerald-500/30 text-emerald-300 hover:text-white text-xs h-9 px-2"
+                  >
+                    <Printer className="size-3.5 mr-1 text-emerald-400" />
+                    Slip
+                  </Button>
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -918,10 +983,10 @@ export default function SingleScreenVoiceKioskPage() {
                         );
                       }
                     }}
-                    className="bg-zinc-900 border-indigo-500/30 text-indigo-300 hover:text-white text-xs h-9"
+                    className="bg-zinc-900 border-indigo-500/30 text-indigo-300 hover:text-white text-xs h-9 px-2"
                   >
                     <Volume2 className="size-3.5 mr-1 text-indigo-400" />
-                    Speak Routine
+                    Voice
                   </Button>
 
                   <Button
@@ -931,10 +996,10 @@ export default function SingleScreenVoiceKioskPage() {
                       kioskAudio.playTap();
                       setIsPlateModalOpen(true);
                     }}
-                    className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white text-xs h-9"
+                    className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white text-xs h-9 px-2"
                   >
                     <Dumbbell className="size-3.5 mr-1 text-zinc-400" />
-                    Plate Calc
+                    Plates
                   </Button>
                 </div>
 

@@ -23,28 +23,100 @@ export interface FingerprintScannerDriver {
  * Standard Indian biometric scanner (STQC & UIDAI certified)
  * Communicates with local Mantra RD Service on 127.0.0.1:11100-11105
  */
+/**
+ * Error lookup dictionaries for Indian STQC UIDAI (Mantra) and SecuGen sensors
+ */
+export const MANTRA_ERROR_DICTIONARY: Record<string, string> = {
+  '0': 'Success',
+  '-1140': 'Scanner device not connected or USB disconnected',
+  '-1141': 'Sensor touch timeout - finger was not placed within time limit',
+  '-1142': 'Finger contact too light - please press firmly with full finger pad',
+  '-1143': 'Finger placement too dry - please press flat with good contact',
+  '-1307': 'Mantra device initialization failed',
+  '-1314': 'Corrupted biometric template returned by sensor',
+  '1001': 'Capture cancelled by operator or user',
+  '700': 'Sensor surface dirty or optical condensation - wipe glass',
+  '701': 'Finger moved during capture - hold steady',
+};
+
+export const SECUGEN_ERROR_DICTIONARY: Record<number, string> = {
+  0: 'Success',
+  51: 'Touch timeout - finger not detected within capture window',
+  52: 'SecuGen USB scanner disconnected or driver offline',
+  53: 'Feature extraction failed - press finger flat onto prism',
+  54: 'Low quality minutiae image - wipe prism surface',
+  105: 'Biometric capture quality below threshold',
+  10001: 'Internal driver initialization error',
+};
+
+/**
+ * Evaluates fingerprint quality score and returns actionable operator feedback
+ */
+export function evaluateFingerprintQuality(quality: number, minutiaeCount?: number): {
+  acceptable: boolean;
+  feedback: string;
+  category: 'excellent' | 'good' | 'callus_adapted' | 'rejected';
+  issues: string[];
+} {
+  const issues: string[] = [];
+  if (minutiaeCount !== undefined && minutiaeCount < 15) {
+    issues.push('Low minutiae count (<15). Please place finger flat.');
+  }
+  if (quality < 50) {
+    issues.push('Poor sensor optical clarity. Clean sensor surface.');
+  }
+
+  if (quality >= 80 && issues.length === 0) {
+    return { acceptable: true, feedback: 'Crisp ridge clarity', category: 'excellent', issues };
+  }
+  if (quality >= 60 && issues.length === 0) {
+    return { acceptable: true, feedback: 'Good biometric impression', category: 'good', issues };
+  }
+  if (quality >= 45 && issues.length <= 1) {
+    return {
+      acceptable: issues.length === 0,
+      feedback: 'Acceptable with barbell callus tolerance',
+      category: 'callus_adapted',
+      issues,
+    };
+  }
+  return { acceptable: false, feedback: 'Poor scan. Clean sensor and press firmly', category: 'rejected', issues };
+}
+
+/**
+ * 1. MANTRA MFS100 / MFS110 RD SERVICE DRIVER
+ * Standard Indian biometric scanner (STQC & UIDAI certified)
+ * Communicates with local Mantra RD Service on 127.0.0.1:11100-11105
+ */
 export class MantraMfs100Driver implements FingerprintScannerDriver {
   id: ScannerDriverId = 'mantra';
   name = 'Mantra MFS100 / MFS110 (RD Service)';
   private activePort = 11100;
+  private activeProtocol: 'http' | 'https' = 'http';
 
   async isAvailable(): Promise<boolean> {
-    const ports = [11100, 11101, 11102];
-    for (const port of ports) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 800);
-        const res = await fetch(`http://127.0.0.1:${port}/`, {
-          method: 'RDSERVICE',
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        if (res.ok || res.status === 200 || res.status === 405) {
-          this.activePort = port;
-          return true;
+    const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    const protocols: Array<'https' | 'http'> = isHttpsPage ? ['https', 'http'] : ['http', 'https'];
+    const ports = [11100, 11101, 11102, 11103, 11104, 11105];
+
+    for (const proto of protocols) {
+      for (const port of ports) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 600);
+          const res = await fetch(`${proto}://127.0.0.1:${port}/`, {
+            method: 'RDSERVICE',
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (res.ok || res.status === 200 || res.status === 405) {
+            this.activePort = port;
+            this.activeProtocol = proto;
+            return true;
+          }
+        } catch {
+          // Continue probing next port
         }
-      } catch {
-        // Continue probing next port
       }
     }
     return false;
@@ -68,7 +140,7 @@ export class MantraMfs100Driver implements FingerprintScannerDriver {
 </PidOptions>`;
 
     try {
-      const res = await fetch(`http://127.0.0.1:${this.activePort}/rd/capture`, {
+      const res = await fetch(`${this.activeProtocol}://127.0.0.1:${this.activePort}/rd/capture`, {
         method: 'CAPTURE',
         headers: { 'Content-Type': 'application/xml' },
         body: pidOptionsXml,
@@ -80,12 +152,13 @@ export class MantraMfs100Driver implements FingerprintScannerDriver {
 
       const respNode = xmlDoc.getElementsByTagName('Resp')[0];
       const errCode = respNode?.getAttribute('errCode');
-      const errInfo = respNode?.getAttribute('errInfo') || 'Capture failed';
+      const rawErrInfo = respNode?.getAttribute('errInfo') || 'Capture failed';
+      const friendlyErrInfo = MANTRA_ERROR_DICTIONARY[errCode || ''] || rawErrInfo;
 
       if (errCode && errCode !== '0') {
         return {
           success: false,
-          error: `Mantra Scanner Error (${errCode}): ${errInfo}`,
+          error: `Mantra Scanner (${errCode}): ${friendlyErrInfo}`,
           quality: 0,
           driverId: this.id,
         };
@@ -147,18 +220,33 @@ export class SecuGenDriver implements FingerprintScannerDriver {
   private apiBase = 'https://localhost:8000';
 
   async isAvailable(): Promise<boolean> {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 800);
-      const res = await fetch(`${this.apiBase}/SGIFPCapture`, {
-        method: 'OPTIONS',
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      return res.ok || res.status === 200 || res.status === 404;
-    } catch {
-      return false;
+    const candidateBases = [
+      'https://localhost:8000',
+      'https://127.0.0.1:8000',
+      'http://127.0.0.1:8000',
+      'https://localhost:8443',
+      'https://127.0.0.1:8443',
+      'http://127.0.0.1:8080',
+    ];
+
+    for (const base of candidateBases) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 600);
+        const res = await fetch(`${base}/SGIFPCapture`, {
+          method: 'OPTIONS',
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (res.ok || res.status === 200 || res.status === 404) {
+          this.apiBase = base;
+          return true;
+        }
+      } catch {
+        // Continue probing next base
+      }
     }
+    return false;
   }
 
   async getDeviceInfo(): Promise<ScannerDeviceInfo> {
@@ -185,9 +273,10 @@ export class SecuGenDriver implements FingerprintScannerDriver {
 
       const data = await res.json();
       if (data.ErrorCode !== 0) {
+        const friendlyMsg = SECUGEN_ERROR_DICTIONARY[data.ErrorCode] || `Error Code ${data.ErrorCode}`;
         return {
           success: false,
-          error: `SecuGen capture error: Code ${data.ErrorCode}`,
+          error: `SecuGen capture: ${friendlyMsg}`,
           quality: 0,
           driverId: this.id,
         };
@@ -222,10 +311,10 @@ export class SecuGenDriver implements FingerprintScannerDriver {
         imageBase64: data.ImageBase64,
         driverId: this.id,
       };
-    } catch (err: unknown) {
+    } catch {
       return {
         success: false,
-        error: 'SecuGen WebAPI service not responding on localhost:8000',
+        error: `SecuGen WebAPI service not responding on ${this.apiBase}`,
         quality: 0,
         driverId: this.id,
       };

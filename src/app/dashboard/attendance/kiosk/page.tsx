@@ -27,6 +27,7 @@ import {
   ScanFace,
   QrCode,
   Cctv,
+  Printer,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
@@ -34,7 +35,14 @@ import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/utils/api-client';
 import { FingerprintScannerManager } from '@/lib/fingerprint/drivers';
 import { identifyMemberFromRoster } from '@/lib/fingerprint/matcher';
-import type { RosterMemberFingerprint, ScannerDeviceInfo, ScannerDriverId, FingerType } from '@/lib/fingerprint/types';
+import { kioskPrinter } from '@/lib/kiosk/printer-driver';
+import type {
+  RosterMemberFingerprint,
+  ScannerDeviceInfo,
+  ScannerDriverId,
+  FingerType,
+  BiometricSensitivityMode,
+} from '@/lib/fingerprint/types';
 
 type KioskResultState = 'idle' | 'scanning' | 'success' | 'already' | 'expired' | 'error';
 
@@ -65,6 +73,7 @@ export default function FingerprintKioskPage() {
   const [recentCheckins, setRecentCheckins] = useState<Array<{ name: string; time: string; photo?: string }>>([]);
   const [manualQuery, setManualQuery] = useState('');
   const [isManualProcessing, setIsManualProcessing] = useState(false);
+  const [sensitivity, setSensitivity] = useState<BiometricSensitivityMode>('normal');
 
   const scannerManager = FingerprintScannerManager.getInstance();
   const resultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -212,7 +221,7 @@ export default function FingerprintKioskPage() {
       }
 
       // 2. Perform high-speed 1:N minutiae matching against loaded roster
-      const match = identifyMemberFromRoster(capture.template, roster);
+      const match = identifyMemberFromRoster(capture.template, roster, { sensitivity });
 
       if (!match.matched || !match.member) {
         setKioskResult({
@@ -358,6 +367,44 @@ export default function FingerprintKioskPage() {
     }
   };
 
+  const handlePrintSlip = useCallback(async () => {
+    if (!kioskResult.memberName || !kioskResult.memberCode) return;
+    try {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+      const timeStr = kioskResult.time || now.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const slipPayload = {
+        gymName: (user as any)?.gymName || 'GymERP Fitness Club',
+        branchName: effectiveBranchId || undefined,
+        memberName: kioskResult.memberName,
+        memberCode: kioskResult.memberCode,
+        date: dateStr,
+        checkInTime: timeStr,
+        qrPassData: `GYMPASS:${kioskResult.memberCode}:${Date.now()}`,
+        paperWidth: 80 as const,
+      };
+
+      const escPosData = kioskPrinter.generateEscPosCheckInSlip(slipPayload);
+      const bridgeSent = await kioskPrinter.sendToHardwareBridge(escPosData);
+      if (!bridgeSent) {
+        const usbSent = await kioskPrinter.directWebUsbPrint(escPosData);
+        if (!usbSent) {
+          kioskPrinter.printCheckInSlipA4(slipPayload);
+        }
+      }
+    } catch (err) {
+      console.warn('Print slip error:', err);
+    }
+  }, [kioskResult, user, effectiveBranchId]);
+
   const filteredRoster = manualQuery.trim()
     ? roster.filter(
         (m) =>
@@ -457,6 +504,23 @@ export default function FingerprintKioskPage() {
                 <SelectItem value="secugen">SecuGen Pro 20</SelectItem>
                 <SelectItem value="bridge">Hardware Bridge</SelectItem>
                 <SelectItem value="virtual">Virtual Sensor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Sensitivity Selector (Desktop) */}
+          <div className="hidden lg:block">
+            <Select
+              value={sensitivity}
+              onValueChange={(val) => setSensitivity(val as BiometricSensitivityMode)}
+            >
+              <SelectTrigger className="h-7 text-xs border-zinc-800 bg-zinc-900 text-zinc-300 w-36">
+                <SelectValue placeholder="Sensitivity" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="callus_adapted">Callus-Adapted</SelectItem>
+                <SelectItem value="strict">Strict</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -591,7 +655,17 @@ export default function FingerprintKioskPage() {
                   ) : null}
                 </div>
               </div>
-              <CheckCircle2 className="h-9 w-9 text-green-400 shrink-0" />
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handlePrintSlip}
+                  title="Print Attendance Slip"
+                  className="p-2 rounded-xl bg-green-900/50 hover:bg-green-800/70 text-green-300 border border-green-700/60 transition-colors"
+                >
+                  <Printer className="h-5 w-5" />
+                </button>
+                <CheckCircle2 className="h-9 w-9 text-green-400" />
+              </div>
             </div>
           )}
 

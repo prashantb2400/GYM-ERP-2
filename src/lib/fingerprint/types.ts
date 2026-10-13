@@ -54,6 +54,8 @@ export interface CaptureResult {
   nfiqScore?: number; // NIST Fingerprint Image Quality (1=best, 5=worst)
 }
 
+export type BiometricSensitivityMode = 'strict' | 'normal' | 'callus_adapted';
+
 export interface MatchScoreResult {
   isMatch: boolean;
   score: number; // 0 to 100
