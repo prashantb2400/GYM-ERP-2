@@ -21,6 +21,26 @@ services:
       timeout: 5s
       retries: 5
 
+  db-migrate:
+    image: postgres:16-alpine
+    container_name: gymerp-db-migrate
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./deploy/init-db.sh:/init-db.sh:ro
+      - ./supabase/migrations:/migrations:ro
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: gymerp
+      POSTGRES_USER: postgres
+      POSTGRES_DB: gymerp
+    entrypoint: ["/bin/sh", "-c", "bash /init-db.sh"]
+
   postgrest:
     image: postgrest/postgrest:v12.2.0
     container_name: gymerp-postgrest
@@ -35,6 +55,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
 
   whatsapp-bridge:
     build:
@@ -49,6 +71,12 @@ services:
     environment:
       PORT: 48291
       NODE_ENV: production
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:48291/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   app:
     build:
@@ -61,14 +89,19 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      INTERNAL_POSTGREST_URL: http://postgrest:3000
+      INTERNAL_SUPABASE_URL: http://localhost:3000
       NEXT_PUBLIC_APP_URL: http://localhost:3000
-      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:3000
       NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder
       SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder
       WHATSAPP_BRIDGE_URL: http://whatsapp-bridge:48291
+      PGRST_JWT_SECRET: gymerp-offline-local-jwt-secret-minimum-32-chars-long
     depends_on:
       db:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       postgrest:
         condition: service_started
 

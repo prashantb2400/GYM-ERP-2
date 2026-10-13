@@ -64,6 +64,7 @@ if not exist .env.local (
     echo NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder>> .env.local
     echo SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder>> .env.local
     echo INTERNAL_POSTGREST_URL=http://localhost:54321>> .env.local
+    echo INTERNAL_SUPABASE_URL=http://localhost:3000>> .env.local
     echo PGRST_JWT_SECRET=gymerp-offline-local-jwt-secret-minimum-32-chars-long>> .env.local
     echo WHATSAPP_BRIDGE_URL=http://localhost:48291>> .env.local
 )

@@ -13,7 +13,7 @@
     <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
     <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Offline_Appliance_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
     <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge" alt="MCP Server" /></a>
-    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-49%2F49_Passing_(381_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
+    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-50%2F50_Passing_(394_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
   </p>
 
   <p align="center">
@@ -314,6 +314,7 @@ GymERP can run completely disconnected from the public internet on a local mini-
 4. **Pure Vector Offline Invoicing**: Generates 100% offline NPCI dynamic UPI QR codes using native vector SVG rendering with zero external network requests.
 5. **PostgREST LAN Gateway**: Automatically maps `/rest/v1/*` to PostgREST and dynamically binds client connections to local LAN hostnames (`192.168.x.x`).
 6. **1-Click Database Backup**: Download a complete JSON snapshot of all gym data directly from Dashboard Settings, or plug in a USB flash drive for automated daily backups.
+7. **Zero-Downtime Migration Synchronization**: Automatically applies idempotent migrations (`001` through `021`) via dedicated `db-migrate` orchestration service with mock storage compatibility before API startup, guaranteeing zero race conditions on cold boots.
 
 ### Launching the Local Appliance in 1 Command
 
