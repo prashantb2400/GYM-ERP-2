@@ -98,6 +98,16 @@ services:
       db:
         condition: service_healthy
 
+  opengym:
+    image: ghcr.io/duartesantos8/opengym-web:latest
+    container_name: gymerp-opengym
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    profiles:
+      - opengym
+      - full
+
 volumes:
   pgdata:
     driver: local

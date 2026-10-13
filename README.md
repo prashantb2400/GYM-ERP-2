@@ -13,7 +13,7 @@
     <a href="https://supabase.com/"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" /></a>
     <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Offline_Appliance_Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
     <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP_Server-Model_Context_Protocol-8A2BE2?style=for-the-badge" alt="MCP Server" /></a>
-    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-42%2F42_Passing_(321_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
+    <a href="https://vitest.dev/"><img src="https://img.shields.io/badge/Vitest-46%2F46_Passing_(353_Tests)-22c55e?style=for-the-badge&logo=vitest&logoColor=white" alt="Tests" /></a>
   </p>
 
   <p align="center">
@@ -21,6 +21,7 @@
     <a href="#-1-click-frictionless-setup">⚡ 1-Click Launchers</a> •
     <a href="#-platform-matrix">⚡ Platform Matrix</a> •
     <a href="#-system-architecture">🏛️ Architecture</a> •
+    <a href="#-exercise-science--personal-trainer-hub-opengym-integration">🏋️ Workout Hub</a> •
     <a href="#-attendance-ecosystem">🎯 4 Attendance Modalities</a> •
     <a href="#-zero-internet-appliance-gym-in-a-box">📦 Offline Appliance</a> •
     <a href="#-deployment-guide">🚀 Deployment Guide</a> •
@@ -144,18 +145,18 @@ Experience GymERP's purpose-built interfaces designed for front-desk staff, gym 
 ## ⚡ Platform Matrix
 
 ```
-+---------------------------------------------------------------------------------------------------------+
-|                                           GYMERP SYSTEM CAPABILITIES                                    |
-+--------------------------+--------------------------+---------------------------+-----------------------+
-| 🏢 Multi-Tenant SaaS     | 🤖 Autonomous AI Kiosk   | 📹 Attendance Ecosystem   | 📦 Offline Appliance  |
-+--------------------------+--------------------------+---------------------------+-----------------------+
-| - Tenant & Branch RLS    | - Living Water Halo UI   | - Live RTSP Camera Matrix | - Zero-Internet Ready |
-| - Platform Super Admin   | - 6-Digit Pairing PIN    | - CCTV Auto-Attendance    | - Embedded Auth Engine|
-| - GST Tax Invoicing      | - Speech-to-Speech LLM   | - WebGL Face Match (128d) | - PostgREST LAN Proxy |
-| - Razorpay Integration   | - KYC ID Document OCR    | - Mantra/SecuGen Scanner  | - Vector UPI QR Codes |
-| - Dual WhatsApp Engine   | - Thermal ESC/POS Print  | - Dynamic Member QR Pass  | - 4-Step Setup Wizard |
-| - Granular Role RBAC     | - Offline Auto-Pairing   | - Instant Station Switch  | - 1-Click USB Backup  |
-+--------------------------+--------------------------+---------------------------+-----------------------+
++-----------------------------------------------------------------------------------------------------------------------------+
+|                                                 GYMERP SYSTEM CAPABILITIES                                                  |
++--------------------------+--------------------------+---------------------------+-----------------------+-------------------+
+| 🏢 Multi-Tenant SaaS     | 🤖 Autonomous AI Kiosk   | 📹 Attendance Ecosystem   | 📦 Offline Appliance  | 🏋️ Exercise Science|
++--------------------------+--------------------------+---------------------------+-----------------------+-------------------+
+| - Tenant & Branch RLS    | - Living Water Halo UI   | - Live RTSP Camera Matrix | - Zero-Internet Ready | - Epley/Brzycki 1RM|
+| - Platform Super Admin   | - 6-Digit Pairing PIN    | - CCTV Auto-Attendance    | - Embedded Auth Engine| - Olympic Plate Math|
+| - GST Tax Invoicing      | - Speech-to-Speech LLM   | - WebGL Face Match (128d) | - PostgREST LAN Proxy | - PPL & 5x5 Routines|
+| - Razorpay Integration   | - KYC ID Document OCR    | - Mantra/SecuGen Scanner  | - Vector UPI QR Codes | - Overload Rules  |
+| - Dual WhatsApp Engine   | - Thermal ESC/POS Print  | - Dynamic Member QR Pass  | - 4-Step Setup Wizard | - WhatsApp Sharing|
+| - Granular Role RBAC     | - Offline Auto-Pairing   | - Instant Station Switch  | - 1-Click USB Backup  | - openGym Sidecar |
++--------------------------+--------------------------+---------------------------+-----------------------+-------------------+
 ```
 
 ---
@@ -175,8 +176,9 @@ flowchart TB
         NextProxy["Next.js Dynamic Origin Gateway<br/>(Port 3000 - Standalone or Container)"]
         LocalAuth["Embedded Auth Engine (/auth/v1/*)<br/>(HS256 JWT + PBKDF2 Password Vault)"]
         LocalPGRST["PostgREST 12.2 LAN Bridge<br/>(Zero-Lag Direct DB REST Engine)"]
-        LocalPG[("PostgreSQL 16 Alpine<br/>17 Sequential Migrations")]
+        LocalPG[("PostgreSQL 16 Alpine<br/>21 Sequential Migrations")]
         WABridge["WhatsApp Bridge (Port 48291)<br/>(Baileys Multi-Device Engine)"]
+        OpenGymApp["openGym Web Appliance (Port 8080)<br/>(Workout Engine & Exercise Catalog)"]
         BackupUtil["USB Flash Drive Backup Daemon<br/>(deploy/usb-backup.sh)"]
     end
 
@@ -198,6 +200,7 @@ flowchart TB
     LocalAuth --> LocalPG
     LocalPGRST --> LocalPG
     NextProxy --> WABridge
+    NextProxy -.-> OpenGymApp
     LocalPG -.-> BackupUtil
 
     NextProxy -.->|Optional Cloud Sync| CloudNext
@@ -206,6 +209,44 @@ flowchart TB
     CloudNext --> CloudRazorpay
     CloudNext --> CloudLLM
 ```
+
+---
+
+## 🏋️‍♂️ Exercise Science & Personal Trainer Hub (openGym Integration)
+
+GymERP integrates algorithms and workout paradigms from the open-source **[openGym](https://github.com/DuarteSantos8/openGym)** project, transforming the platform from administrative management into a complete 360-degree fitness operating system:
+
+```
++---------------------------------------------------------------------------------------------------------+
+|                                    OPENGYM EXERCISE SCIENCE SUBSYSTEM                                   |
++--------------------------+--------------------------+---------------------------+-----------------------+
+| 📐 1RM Power Formulas   | 🏋️ Olympic Barbell Math  | 📈 Progressive Overload   | 📲 WhatsApp Sharing   |
++--------------------------+--------------------------+---------------------------+-----------------------+
+| - Epley: W*(1 + R/30)    | - Olympic 20kg Barbell   | - Linear Progression (LP) | - 1-Click Send Routine|
+| - Brzycki: W*(36/(37-R)) | - Smith Machine (15kg)   | - Greyskull LP (AMRAP)    | - Formatted Exercises |
+| - Lander & Lombardi math | - EZ-Curl Bar (10kg)     | - Double Progression      | - Target Reps & RPE   |
+| - RPE / RIR adjustments  | - Greedy Plate Knapsack  | - Automated Deload (-10%) | - Trainer Notes       |
++--------------------------+--------------------------+---------------------------+-----------------------+
+```
+
+### Core Subsystems:
+1. **Native Exercise Science Engine (`src/lib/workout/`)**:
+   - **One-Rep Max Estimator (`one-rep-max.ts`)**: Implements Epley, Brzycki, Lander, and Lombardi formulas with RPE (Rating of Perceived Exertion) and RIR (Reps in Reserve) calibration.
+   - **Barbell Plate Calculator (`plate-calculator.ts`)**: Solves exact plate pair configurations for Olympic (20kg), Smith (15kg), and EZ-curl (10kg) bars using a greedy knapsack algorithm across standard metric plates (25, 20, 15, 10, 5, 2.5, 1.25 kg).
+   - **Progressive Overload Protocols (`progression.ts`)**: Encodes Linear Progression (adding 2.5kg upper / 5kg lower body), Greyskull LP with AMRAP final sets, Double Progression within target rep windows, and automatic 10% deload triggers after repeated session plateaus.
+   - **Exercise Taxonomy & Starter Templates (`exercise-types.ts`)**: Full anatomical muscle group taxonomies, equipment filters, and ready-to-train Push/Pull/Legs (PPL) and StrongLifts 5x5 routines.
+
+2. **Personal Trainer Dashboard (`/dashboard/workouts`)**:
+   - **Live Plate Visualizer**: Instant visual breakdown of plates needed per side on the bar.
+   - **Interactive 1RM Calculator**: Live estimation of maximum single-rep potential based on working sets.
+   - **1-Click WhatsApp Routine Dispatch**: Generates clean, formatted training plans and dispatches them directly to members via the WhatsApp engine.
+
+3. **Workout Logging API (`/api/workouts/log`)**:
+   - Logs completed member workout sessions (`workout_logs` table).
+   - Computes total training tonnage (volume in kg) and automatically updates estimated personal records (1RMs).
+
+4. **Self-Hosted openGym Appliance Sidecar (`docker-compose.offline.yml`)**:
+   - Bundles the openGym container image (`ghcr.io/duartesantos8/opengym-web:latest`) on port `8080` under the `opengym` profile for gyms desiring the full standalone workout tracker UI on their local network.
 
 ---
 
@@ -454,7 +495,7 @@ GymERP leverages open-source architectural patterns and tools dog-fooded by **Ze
 
 ## 🗄️ Database Migrations Reference
 
-GymERP uses 17 sequential PostgreSQL migrations located in `supabase/migrations/`:
+GymERP uses 21 sequential PostgreSQL migrations located in `supabase/migrations/`:
 
 | Migration | File | Core Tables & Architectural Impact |
 | :---: | :--- | :--- |
@@ -475,6 +516,10 @@ GymERP uses 17 sequential PostgreSQL migrations located in `supabase/migrations/
 | **015** | `015_staff_access_hardening.sql` | Granular permission arrays (`cctv.view`, `settings.manage`, etc.) |
 | **016** | `016_kiosk_device_pairings.sql` | 6-digit short codes, tablet device registry, heartbeat monitoring |
 | **017** | `017_cctv_and_vigilance.sql` | `cctv_cameras`, `vigilance_events`, RTSP parameters, triage feed |
+| **018** | `018_secure_kyc_storage.sql` | Private S3 storage buckets and signed URL authorization policies |
+| **019** | `019_scope_staff_rls.sql` | Branch-isolated RLS enforcement for staff accounts |
+| **020** | `020_whatsapp_multi_provider.sql` | Multi-provider WhatsApp bridge configuration and pairing states |
+| **021** | `021_workout_routines_and_logs.sql` | `workout_routines`, `member_assigned_routines`, `workout_logs` with 1RM and volume tracking |
 
 ---
 
@@ -514,7 +559,7 @@ GymERP uses 17 sequential PostgreSQL migrations located in `supabase/migrations/
 GymERP is backed by an automated test suite powered by **Vitest**:
 
 ```bash
-# Run full unit and integration test suite (44 test files, 336 tests)
+# Run full unit and integration test suite (46 test files, 353 tests)
 npm test
 
 # Run TypeScript compiler verification
@@ -525,9 +570,9 @@ npm run build
 ```
 
 ```
-Test Files  44 passed (44)
-     Tests  336 passed (336)
-  Duration  16.45s (44 test suites passed with 0 failures)
+Test Files  46 passed (46)
+     Tests  353 passed (353)
+  Duration  20.89s (46 test suites passed with 0 failures)
 ```
 
 ---
