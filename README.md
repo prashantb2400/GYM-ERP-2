@@ -1,7 +1,5 @@
 <div align="center">
 
-  <img src="public/gymerp_app_logo.jpg" alt="GymERP Logo" width="130" style="border-radius: 28px; box-shadow: 0 12px 36px rgba(124, 58, 237, 0.45); margin-bottom: 12px;" />
-
   # 🏋️‍♂️ GymERP v3.0
 
   ### **Autonomous Multi-Tenant Gym SaaS • 3D Tactile UI • AI Voice Kiosk • CCTV Vigilance Matrix • Zero-Internet Edge Appliance**
@@ -19,7 +17,6 @@
   </p>
 
   <p align="center">
-    <a href="#-visual-interface-tour">🖼️ Visual Tour</a> •
     <a href="#-quick-evaluation-credentials-for-vcs--investors">🔑 Quick Test Fills</a> •
     <a href="#-3d-perspective-tactile-ui--craft-polish">✨ 3D Tactile UI</a> •
     <a href="#-platform-matrix">⚡ Platform Matrix</a> •
@@ -29,16 +26,6 @@
     <a href="#-exercise-science--personal-trainer-hub-opengym-integration">🏋️ Workout Hub</a> •
     <a href="#-cross-platform-packaging--distribution">📱 Desktop & Mobile</a> •
     <a href="#-zero-internet-appliance-gym-in-a-box">📦 Offline Appliance</a>
-  </p>
-
-  <br />
-
-  <a href="#-visual-interface-tour">
-    <img src="public/showcase/landing-page-hero.png" alt="GymERP Modern Interface Showcase" width="96%" style="border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);" />
-  </a>
-
-  <p align="center">
-    <em>Modern dark-mode cockpit featuring real-time analytics, automated billing, and live biometric telemetry.</em>
   </p>
 
 </div>
@@ -120,63 +107,7 @@ GymERP combines Apple human interface design foundations with Emil Kowalski UI p
    - Custom cubic-bezier spring curves (`cubic-bezier(0.32, 0.72, 0, 1)`) on modals, sheets, and popovers.
    - Micro-interaction press compression (`scale-[0.98]` and `scale-[0.97]`) on all interactive buttons.
 
----
 
-## 📸 Visual Interface Tour
-
-Experience GymERP's purpose-built interfaces designed for front-desk staff, gym owners, members, and autonomous lobby hardware.
-
-### 1. Autonomous AI Voice Kiosk & Live Attendance Cockpit
-
-<table>
-  <tr>
-    <td width="50%" align="center">
-      <img src="public/showcase/voice-water-kiosk-live.png" alt="Autonomous AI Voice Kiosk with Living Water UI" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" />
-      <br />
-      <strong>🤖 Autonomous AI Voice Tablet Kiosk (<code>/kiosk/agent</code>)</strong>
-      <p align="left"><em>Living circular water halo orb responding in real time to speech, vision watchdog auto-checkin, voice onboarding, KYC camera OCR, and direct thermal ESC/POS receipt printing.</em></p>
-    </td>
-    <td width="50%" align="center">
-      <img src="public/showcase/attendance-cockpit-live.png" alt="Live Attendance Cockpit and Member Search" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" />
-      <br />
-      <strong>📊 Real-Time Attendance Cockpit (<code>/dashboard/attendance</code>)</strong>
-      <p align="left"><em>Live member counter, peak rush hour heatmap, multi-modality check-in feed, quick member lookup, and unified attendance logs with one-click status filters.</em></p>
-    </td>
-  </tr>
-</table>
-
-### 2. Multi-Feed CCTV Surveillance & Attendance Modalities
-
-<table>
-  <tr>
-    <td width="50%" align="center">
-      <img src="public/showcase/cctv-dashboard.png" alt="CCTV Matrix and Vigilance Triage Grid" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" />
-      <br />
-      <strong>📹 CCTV Surveillance Matrix (<code>/dashboard/cctv</code>)</strong>
-      <p align="left"><em>RTSP camera grid (1x1, 2x2, 3x3) with edge face detection fail-safe, un-badged visitor capture, and vigilance alert triage for overdue members.</em></p>
-    </td>
-    <td width="50%" align="center">
-      <img src="public/showcase/face-kiosk.png" alt="In-Browser WebGL Face Recognition Kiosk" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" />
-      <br />
-      <strong>👤 WebGL In-Browser Face Kiosk</strong>
-      <p align="left"><em>Zero-install, browser-based 128-d vector face matching running on client GPUs via TensorFlow.js with anti-spoof liveness detection and zero native software.</em></p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <img src="public/showcase/fingerprint-kiosk.png" alt="Optical Fingerprint Biometric Station" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" />
-      <br />
-      <strong>👆 Biometric Fingerprint Station</strong>
-      <p align="left"><em>USB HID driver abstraction for Mantra MFS100 and SecuGen Pro 20 optical scanners with ISO minutiae template matching and offline caching.</em></p>
-    </td>
-    <td width="50%" align="center">
-      <img src="public/showcase/qr-kiosk.png" alt="Dynamic Sound Wave QR Attendance Kiosk" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" />
-      <br />
-      <strong>📱 Dynamic Sound-Wave QR Station</strong>
-      <p align="left"><em>Rotating cryptographically signed member mobile QR passes with ultrasonic sound-wave verification and instant audio chime feedback.</em></p>
-    </td>
-  </tr>
-</table>
 
 ---
 
