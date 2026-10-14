@@ -88,7 +88,7 @@ export function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
                 GymERP
               </span>
               <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-                v2
+                v3.0
               </span>
             </div>
           </div>

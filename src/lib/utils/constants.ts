@@ -18,44 +18,49 @@ export interface SidebarGroup {
 
 export const SIDEBAR_GROUPS: SidebarGroup[] = [
   {
-    title: 'Operations',
+    title: 'Front Desk',
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard', permission: null },
-      { label: 'Members', href: '/dashboard/members', icon: 'Users', permission: 'members.view' },
-      { label: 'Attendance', href: '/dashboard/attendance', icon: 'CalendarCheck', permission: 'attendance.view' },
-      { label: 'CCTV & Vigilance', href: '/dashboard/cctv', icon: 'Cctv', permission: null },
-      { label: 'KYC Checks', href: '/dashboard/kyc', icon: 'FileCheck', permission: 'kyc.view' },
+      { label: 'Attendance Cockpit', href: '/dashboard/attendance', icon: 'CalendarCheck', permission: 'attendance.view' },
+      { label: 'Members Directory', href: '/dashboard/members', icon: 'Users', permission: 'members.view' },
+      { label: 'KYC Verification', href: '/dashboard/kyc', icon: 'FileCheck', permission: 'kyc.view' },
+      { label: 'CCTV Vigilance', href: '/dashboard/cctv', icon: 'Cctv', permission: null },
     ],
   },
   {
-    title: 'Finance',
+    title: 'Growth & CRM',
     items: [
-      { label: 'Invoices', href: '/dashboard/invoices', icon: 'Receipt', permission: 'invoices.view' },
-      { label: 'Due Collection', href: '/dashboard/due', icon: 'IndianRupee', permission: 'due.view' },
-      { label: 'Expenses', href: '/dashboard/expenses', icon: 'Wallet', permission: 'expenses.view' },
-      { label: 'Plans', href: '/dashboard/plans', icon: 'CreditCard', permission: 'plans.view' },
+      { label: 'Leads Pipeline', href: '/dashboard/leads', icon: 'Target', permission: 'leads.view' },
+      { label: 'Follow-up Queue', href: '/dashboard/followups', icon: 'PhoneCall', permission: 'followups.view' },
+      { label: 'WhatsApp Automation', href: '/dashboard/whatsapp', icon: 'MessageCircle', permission: 'whatsapp.send' },
+      { label: 'Membership Plans', href: '/dashboard/plans', icon: 'CreditCard', permission: 'plans.view' },
     ],
   },
   {
-    title: 'Engagement',
+    title: 'Finance & Retail',
     items: [
-      { label: 'Leads', href: '/dashboard/leads', icon: 'Target', permission: 'leads.view' },
-      { label: 'Follow-ups', href: '/dashboard/followups', icon: 'PhoneCall', permission: 'followups.view' },
-      { label: 'WhatsApp', href: '/dashboard/whatsapp', icon: 'MessageCircle', permission: 'whatsapp.send' },
-      { label: 'Diet Charts', href: '/dashboard/diet', icon: 'Apple', permission: 'diet.view' },
-      { label: 'Exercise Plans', href: '/dashboard/exercise', icon: 'Dumbbell', permission: 'exercise.view' },
+      { label: 'Invoices & Billing', href: '/dashboard/invoices', icon: 'Receipt', permission: 'invoices.view' },
+      { label: 'Due Collections', href: '/dashboard/due', icon: 'IndianRupee', permission: 'due.view' },
+      { label: 'Expenses Ledger', href: '/dashboard/expenses', icon: 'Wallet', permission: 'expenses.view' },
+      { label: 'Store Inventory', href: '/dashboard/inventory', icon: 'Package', permission: 'inventory.view' },
+    ],
+  },
+  {
+    title: 'Fitness & Training',
+    items: [
       { label: 'Workouts Hub', href: '/dashboard/workouts', icon: 'Flame', permission: 'exercise.view' },
+      { label: 'Exercise Routines', href: '/dashboard/exercise', icon: 'Dumbbell', permission: 'exercise.view' },
+      { label: 'Diet & Nutrition', href: '/dashboard/diet', icon: 'Apple', permission: 'diet.view' },
     ],
   },
   {
-    title: 'System',
+    title: 'Administration',
     items: [
-      { label: 'Branches', href: '/dashboard/branches', icon: 'Building2', permission: 'branches.view' },
-      { label: 'Staff', href: '/dashboard/staff', icon: 'UserCog', permission: 'staff.view' },
-      { label: 'Analytics', href: '/dashboard/analytics', icon: 'BarChart3', permission: 'analytics.view' },
-      { label: 'Inventory', href: '/dashboard/inventory', icon: 'Package', permission: 'inventory.view' },
-      { label: 'Cron Jobs', href: '/dashboard/cron', icon: 'Clock', permission: 'settings.manage' },
-      { label: 'Settings', href: '/dashboard/settings', icon: 'Settings', permission: 'settings.view' },
+      { label: 'Staff & Roles', href: '/dashboard/staff', icon: 'UserCog', permission: 'staff.view' },
+      { label: 'Branch Management', href: '/dashboard/branches', icon: 'Building2', permission: 'branches.view' },
+      { label: 'Business Analytics', href: '/dashboard/analytics', icon: 'BarChart3', permission: 'analytics.view' },
+      { label: 'System Settings', href: '/dashboard/settings', icon: 'Settings', permission: 'settings.view' },
+      { label: 'System Cron Jobs', href: '/dashboard/cron', icon: 'Clock', permission: 'settings.manage' },
     ],
   },
 ];
