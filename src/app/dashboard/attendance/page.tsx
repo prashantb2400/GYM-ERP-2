@@ -27,9 +27,11 @@ import {
   LayoutGrid,
   Monitor,
   ArrowUpRight,
+  IndianRupee,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { exportToExcel } from '@/lib/export/excel-export';
+import { QuickDueCollectModal, type DueMemberInfo } from '@/components/attendance/QuickDueCollectModal';
 
 const FaceEnrollmentModal = dynamic(
   () => import('@/components/attendance/FaceEnrollmentModal').then((mod) => mod.FaceEnrollmentModal),
@@ -88,6 +90,9 @@ export default function AttendancePage() {
   const [absentees, setAbsentees] = useState<Member[]>([]);
   const [loadingAbsent, setLoadingAbsent] = useState(false);
   const [activeTab, setActiveTab] = useState<'logs' | 'absentees'>('logs');
+  
+  const [collectDueMember, setCollectDueMember] = useState<DueMemberInfo | null>(null);
+  const [dueModalOpen, setDueModalOpen] = useState(false);
   
   const [stats, setStats] = useState({
     todayCount: 0,
@@ -764,15 +769,29 @@ export default function AttendancePage() {
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Quick check-in by member name, phone, or ID..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchResults.length === 1 && !checkingInId) {
+                      const first = searchResults[0];
+                      if (!checkedInMemberIds.has(first.id)) {
+                        e.preventDefault();
+                        handleCheckIn(first);
+                      }
+                    }
+                  }}
+                  placeholder="Quick check-in by member name, phone, or ID (Enter ↵ to check-in)..."
                   className="border-0 bg-transparent text-sm h-11 focus-visible:ring-0 placeholder:text-zinc-500 pl-3"
                 />
                 {isSearching && <Loader2 className="w-4 h-4 text-cyan-400 animate-spin mr-2" />}
+                {searchResults.length === 1 && !checkedInMemberIds.has(searchResults[0].id) && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-medium text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 px-2 py-0.5 rounded-md mr-1">
+                    Enter ↵
+                  </span>
+                )}
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 font-mono px-2"
+                    className="text-xs text-zinc-500 hover:text-zinc-300 font-mono px-2 cursor-pointer"
                   >
                     Clear
                   </button>
@@ -824,9 +843,26 @@ export default function AttendancePage() {
                                   {statusInfo.text}
                                 </Badge>
                                 {member.total_due > 0 && (
-                                  <span className="text-xs text-red-400 font-medium font-mono">
-                                    {formatCurrency(member.total_due)} due
-                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCollectDueMember({
+                                        id: member.id,
+                                        name: member.name,
+                                        phone: member.phone,
+                                        member_code: member.member_code,
+                                        total_due: member.total_due,
+                                        branch_id: member.branch_id,
+                                      });
+                                      setDueModalOpen(true);
+                                    }}
+                                    className="inline-flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 font-mono font-semibold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-md cursor-pointer transition-colors active:scale-95"
+                                    title="Clear pending fee via instant UPI QR or Cash"
+                                  >
+                                    <IndianRupee className="h-3 w-3" />
+                                    <span>{formatCurrency(member.total_due)} due • Clear</span>
+                                  </button>
                                 )}
                               </div>
                             </div>
@@ -1076,9 +1112,24 @@ export default function AttendancePage() {
                               </span>
                             )}
                             {(member.total_due || 0) > 0 && (
-                              <span className="text-[10px] text-red-400 font-mono block">
-                                {formatCurrency(member.total_due)} due
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCollectDueMember({
+                                    id: member.id,
+                                    name: member.name,
+                                    phone: member.phone,
+                                    member_code: member.member_code,
+                                    total_due: member.total_due,
+                                    branch_id: member.branch_id,
+                                  });
+                                  setDueModalOpen(true);
+                                }}
+                                className="text-[10px] text-amber-400 hover:text-amber-300 font-mono block underline cursor-pointer"
+                                title="Click to clear pending dues"
+                              >
+                                {formatCurrency(member.total_due)} due ⚡
+                              </button>
                             )}
                           </div>
                         </div>
@@ -1116,6 +1167,18 @@ export default function AttendancePage() {
           }}
         />
       )}
+
+      {/* Front-Desk Quick Due Settlement Modal */}
+      <QuickDueCollectModal
+        open={dueModalOpen}
+        onOpenChange={setDueModalOpen}
+        member={collectDueMember}
+        onSuccess={() => {
+          setDebouncedQuery(q => q + ' ');
+          setTimeout(() => setDebouncedQuery(q => q.trim()), 50);
+          loadAbsentees();
+        }}
+      />
     </div>
   );
 }

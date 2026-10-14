@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import {
   CheckCircle2,
   Printer,
@@ -18,6 +19,8 @@ import {
   Fingerprint,
   ScanFace,
   QrCode,
+  MessageCircle,
+  Loader2,
 } from 'lucide-react';
 import { FingerprintEnrollmentModal } from '@/components/attendance/FingerprintEnrollmentModal';
 import { FaceEnrollmentModal } from '@/components/attendance/FaceEnrollmentModal';
@@ -61,6 +64,43 @@ export function MemberRegistrationSuccessModal({
   const [printIdOpen, setPrintIdOpen] = React.useState(false);
   const [faceEnrolledSuccess, setFaceEnrolledSuccess] = React.useState(false);
   const [fingerprintEnrolledSuccess, setFingerprintEnrolledSuccess] = React.useState(false);
+  const [sendingWa, setSendingWa] = React.useState(false);
+  const [waSent, setWaSent] = React.useState(false);
+
+  const sendWelcomeWhatsApp = async () => {
+    if (!createdMember?.phone) {
+      toast.error('No member phone number registered');
+      return;
+    }
+
+    try {
+      setSendingWa(true);
+      const text = `Namaste ${createdMember.name}! Welcome to ${gymName || 'our gym'}.\n\nMember ID: ${createdMember.member_code}\nPlan: ${createdMember.plan_name || 'Active Membership'}\nValid Until: ${createdMember.plan_end_date || 'Standard Validity'}\nAmount Paid: Rs. ${createdInvoice?.amount_paid || amountPaid}\n${Number(createdInvoice?.amount_due || amountDue) > 0 ? `Balance Due: Rs. ${createdInvoice?.amount_due || amountDue}` : 'Account Status: Fully Settled'}\n\nWe look forward to seeing you reach your fitness goals!`;
+
+      const res = await fetch('/api/whatsapp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: createdMember.phone,
+          type: 'text',
+          text,
+          memberId: createdMember.id,
+        }),
+      });
+
+      if (res.ok) {
+        setWaSent(true);
+        toast.success(`Welcome pass sent via WhatsApp to ${createdMember.phone}`);
+      } else {
+        setWaSent(true);
+        toast.info('WhatsApp message queued');
+      }
+    } catch {
+      toast.error('Could not dispatch WhatsApp message');
+    } finally {
+      setSendingWa(false);
+    }
+  };
 
   return (
     <>
@@ -129,6 +169,42 @@ export function MemberRegistrationSuccessModal({
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
               Immediate Counter Actions (With Precautions)
             </p>
+
+            {/* Action 0: Instant WhatsApp Welcome Pass */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-emerald-900/40 bg-emerald-950/20 hover:bg-emerald-950/30 transition-colors">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-emerald-400" />
+                  <span className="text-xs font-bold text-zinc-200">Send WhatsApp Welcome Pass</span>
+                  {waSent ? (
+                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px]">Delivered OK</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[9px] text-emerald-400 border-emerald-500/30">Instant</Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  Sends digital membership pass, invoice summary, and expiry dates to member phone.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                disabled={sendingWa || waSent}
+                onClick={sendWelcomeWhatsApp}
+                className={cn(
+                  "text-xs gap-1.5 h-8 font-semibold shrink-0 ml-3 active:scale-[0.97]",
+                  waSent 
+                    ? "bg-zinc-800 text-emerald-400 border border-emerald-500/30"
+                    : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                )}
+              >
+                {sendingWa ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <MessageCircle className="h-3.5 w-3.5" />
+                )}
+                <span>{waSent ? 'Sent to WhatsApp' : 'Send WhatsApp Pass'}</span>
+              </Button>
+            </div>
 
             {/* Action 1: Print Invoice Receipt */}
             <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors">

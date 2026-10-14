@@ -67,6 +67,7 @@ export default function AddMemberPage() {
   const { branches, selectedBranchId, isOwner } = useBranch();
 
   const [step, setStep] = useState(1);
+  const [enrollmentMode, setEnrollmentMode] = useState<'express' | 'full'>('express');
   const [plans, setPlans] = useState<any[]>([]);
   const [trainers, setTrainers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -150,6 +151,7 @@ export default function AddMemberPage() {
     setCreatedExerciseChart(null);
     setSuccessModalOpen(false);
     setStep(1);
+    setEnrollmentMode('express');
   };
 
   useEffect(() => {
@@ -339,11 +341,15 @@ export default function AddMemberPage() {
   const handleStepClick = (targetStep: number) => {
     if (targetStep === step) return;
     if (targetStep > step) {
-      if (step === 1 && (!name.trim() || !phone.trim() || phone.length !== 10)) {
+      if (!name.trim() || !phone.trim() || phone.length !== 10) {
         toast.error('Please enter name and a valid 10-digit phone number first');
         return;
       }
-      if (step === 2 && targetStep > 2 && !selectedPlanId) {
+      if (enrollmentMode === 'express' && targetStep > 1 && !selectedPlanId) {
+        toast.error('Please select a membership plan first');
+        return;
+      }
+      if (enrollmentMode === 'full' && step === 2 && targetStep > 2 && !selectedPlanId) {
         toast.error('Please select a membership plan first');
         return;
       }
@@ -359,11 +365,11 @@ export default function AddMemberPage() {
     }
     if (!selectedPlanId) {
       toast.error('Please select a membership plan');
-      setStep(2);
+      if (enrollmentMode === 'full') setStep(2);
       return;
     }
-    setStep(5);
-    toast.info('Skipped optional steps to final review');
+    setStep(enrollmentMode === 'express' ? 3 : 5);
+    toast.info('Skipped to confirmation review');
   };
 
   const handleSetPaymentPreset = (preset: 'full' | 'half' | 'zero') => {
@@ -379,6 +385,25 @@ export default function AddMemberPage() {
   };
 
   const handleNext = () => {
+    if (enrollmentMode === 'express') {
+      if (step === 1) {
+        if (!name.trim() || !phone.trim() || phone.length !== 10) {
+          toast.error('Please enter name and a valid 10-digit phone number');
+          return;
+        }
+        if (!selectedPlanId) {
+          toast.error('Please select a membership plan');
+          return;
+        }
+        if (!paymentMode && Number(amountPaid) > 0) {
+          toast.error('Please select a payment mode');
+          return;
+        }
+      }
+      setStep(prev => prev + 1);
+      return;
+    }
+
     if (step === 1) {
       if (!name.trim() || !phone.trim() || phone.length !== 10) {
         toast.error('Please enter name and a valid 10-digit phone number');
@@ -722,39 +747,86 @@ export default function AddMemberPage() {
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Add New Member</h2>
             <Badge variant="outline" className="bg-purple-950/40 text-purple-300 border-purple-800/50 text-[10px] font-semibold flex items-center gap-1">
-              <Zap className="h-3 w-3 text-purple-400" /> Fast Onboarding
+              <Zap className="h-3 w-3 text-purple-400" />
+              <span>{enrollmentMode === 'express' ? 'Express 30s Mode' : 'Standard Full KYC'}</span>
             </Badge>
           </div>
           <p className="text-zinc-400 text-xs mt-1">
-            Frictionless 5-step front-desk enrollment wizard. Click any completed step to jump directly.
+            {enrollmentMode === 'express'
+              ? 'Rapid 3-step walk-in enrollment (30s mode). Instant plan assignment and WhatsApp pass.'
+              : 'Frictionless 5-step front-desk enrollment wizard. Click any completed step to jump directly.'}
           </p>
         </div>
 
-        {step < 5 && selectedPlanId && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleFastSkipToReview}
-            className="text-xs h-8 gap-1.5 border-purple-500/40 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40 hover:text-white"
-          >
-            <Zap className="h-3.5 w-3.5 text-purple-400" />
-            <span>Fast Walk-in: Jump to Review</span>
-            <ArrowRight className="h-3 w-3 ml-0.5" />
-          </Button>
-        )}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* Mode Switcher Pill */}
+          <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800/80 shadow-inner">
+            <button
+              type="button"
+              onClick={() => {
+                setEnrollmentMode('express');
+                if (step > 3) setStep(3);
+              }}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5',
+                enrollmentMode === 'express'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              <Zap className="h-3.5 w-3.5 text-amber-300" />
+              <span>⚡ Express (30s)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEnrollmentMode('full');
+              }}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5',
+                enrollmentMode === 'full'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              <ClipboardList className="h-3.5 w-3.5 text-zinc-400" />
+              <span>Full (5 Steps)</span>
+            </button>
+          </div>
+
+          {step < (enrollmentMode === 'express' ? 3 : 5) && selectedPlanId && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleFastSkipToReview}
+              className="text-xs h-8 gap-1.5 border-purple-500/40 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40 hover:text-white"
+            >
+              <Zap className="h-3.5 w-3.5 text-purple-400" />
+              <span>Skip to Review</span>
+              <ArrowRight className="h-3 w-3 ml-0.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Interactive Progress Indicators */}
       <div className="space-y-2">
-        <div className="grid grid-cols-5 gap-1 sm:gap-2">
-          {[
-            { label: 'Personal', icon: User, s: 1 },
-            { label: 'Plan & Payment', icon: CreditCard, s: 2 },
-            { label: 'Extras', icon: UserCheck, s: 3 },
-            { label: 'KYC Docs', icon: FileCheck, s: 4 },
-            { label: 'Confirm', icon: ClipboardList, s: 5 },
-          ].map((x) => {
+        <div className={cn('grid gap-1 sm:gap-2', enrollmentMode === 'express' ? 'grid-cols-3' : 'grid-cols-5')}>
+          {(enrollmentMode === 'express'
+            ? [
+                { label: 'Contact & Plan', icon: CreditCard, s: 1 },
+                { label: 'Photo Snapshot', icon: Camera, s: 2 },
+                { label: 'Confirm & Pass', icon: CheckCircle2, s: 3 },
+              ]
+            : [
+                { label: 'Personal', icon: User, s: 1 },
+                { label: 'Plan & Payment', icon: CreditCard, s: 2 },
+                { label: 'Extras', icon: UserCheck, s: 3 },
+                { label: 'KYC Docs', icon: FileCheck, s: 4 },
+                { label: 'Confirm', icon: ClipboardList, s: 5 },
+              ]
+          ).map((x) => {
             const IconComp = x.icon;
             const isActive = step === x.s;
             const isDone = step > x.s;
@@ -789,14 +861,393 @@ export default function AddMemberPage() {
             );
           })}
         </div>
-        <Progress value={(step / 5) * 100} className="h-1 bg-zinc-900" />
+        <Progress value={(step / (enrollmentMode === 'express' ? 3 : 5)) * 100} className="h-1 bg-zinc-900" />
       </div>
 
       {/* Steps Content */}
       <Card className="border-zinc-800 bg-zinc-900/40">
         <CardContent className="pt-6">
-          {/* STEP 1: Personal Info */}
-          {step === 1 && (
+          {/* EXPRESS STEP 1: Contact & Plan */}
+          {step === 1 && enrollmentMode === 'express' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left Column (5 cols): Member Contact */}
+                <div className="lg:col-span-5 space-y-4 bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80">
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-purple-400" />
+                      <span className="text-xs font-bold text-zinc-200">1. Member Contact</span>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-500/30">
+                      Step 1 of 3
+                    </Badge>
+                  </div>
+
+                  {branches.length > 1 && (
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="exp-branch" className="text-zinc-300 text-xs">Branch *</Label>
+                      <Select value={memberBranchId} onValueChange={setMemberBranchId} disabled={!isOwner}>
+                        <SelectTrigger id="exp-branch" className="border-zinc-800 bg-zinc-950 text-zinc-100 h-9 text-xs">
+                          <SelectValue placeholder="Select Branch" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                          {branches.map((b) => (
+                            <SelectItem key={b.id} value={b.id} className="text-xs">
+                              📍 {b.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="exp-name" className="text-zinc-300 text-xs">Full Name *</Label>
+                    <Input
+                      id="exp-name"
+                      placeholder="e.g. Vikram Malhotra"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="border-zinc-800 bg-zinc-950 text-zinc-100 h-9 text-xs focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="exp-phone" className="text-zinc-300 text-xs">Mobile Phone * (10 Digits)</Label>
+                    <Input
+                      id="exp-phone"
+                      maxLength={10}
+                      placeholder="98765 43210"
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      className="border-zinc-800 bg-zinc-950 text-zinc-100 h-9 text-xs font-mono focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="exp-wa" className="text-zinc-300 text-xs">WhatsApp Number (For Instant Pass)</Label>
+                    <Input
+                      id="exp-wa"
+                      maxLength={10}
+                      placeholder="Same as mobile"
+                      value={whatsappPhone}
+                      onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, ''))}
+                      className="border-zinc-800 bg-zinc-950 text-zinc-100 h-9 text-xs font-mono focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="exp-start" className="text-zinc-300 text-xs">Plan Start Date</Label>
+                    <Input
+                      id="exp-start"
+                      type="date"
+                      value={planStartDate}
+                      onChange={(e) => setPlanStartDate(e.target.value)}
+                      className="border-zinc-800 bg-zinc-950 text-zinc-100 h-9 text-xs focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column (7 cols): Visual Plan Selection & Payment */}
+                <div className="lg:col-span-7 space-y-4">
+                  {/* Plan Picker */}
+                  <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-3">
+                    <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-purple-400" />
+                        <span className="text-xs font-bold text-zinc-200">2. Select Membership Plan *</span>
+                      </div>
+                      <span className="text-[10px] text-zinc-500 font-mono">{plans.length} active plans</span>
+                    </div>
+
+                    {plans.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {plans.map((p) => {
+                          const isSelected = selectedPlanId === p.id;
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => setSelectedPlanId(p.id)}
+                              className={cn(
+                                'p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none relative',
+                                isSelected
+                                  ? 'border-purple-500 bg-purple-950/40 ring-1 ring-purple-500 shadow-md shadow-purple-950/50'
+                                  : 'border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 hover:bg-zinc-900'
+                              )}
+                            >
+                              <div>
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                  <span className={cn('text-xs font-bold truncate', isSelected ? 'text-purple-200' : 'text-zinc-200')}>
+                                    {p.name}
+                                  </span>
+                                  {isSelected && <Check className="h-3 w-3 text-purple-400 shrink-0" />}
+                                </div>
+                                <span className="text-[10px] text-zinc-500 font-mono block">
+                                  {p.duration_days} Days
+                                </span>
+                              </div>
+                              <div className="mt-2 pt-1 border-t border-zinc-800/50 flex justify-between items-baseline">
+                                <span className="text-[9px] text-zinc-500">Price</span>
+                                <span className="text-xs font-bold text-zinc-100">₹{p.price}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleSeedStarterPlans}
+                        disabled={seedingPlans}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-xs"
+                      >
+                        {seedingPlans ? 'Creating Standard Plans...' : 'Create Standard Gym Plans'}
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Payment & Auto-Tax Summary */}
+                  {selectedPlan && (
+                    <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-3">
+                      <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                        <span className="text-xs font-bold text-zinc-200">3. Payment & Settlement</span>
+                        <span className="text-xs font-mono font-bold text-emerald-400">Total: ₹{totalAmount}</span>
+                      </div>
+
+                      {/* Payment Presets */}
+                      <div className="space-y-1.5">
+                        <Label className="text-zinc-400 text-[11px]">Quick Amount Preset</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSetPaymentPreset('full')}
+                            className={cn(
+                              'py-1.5 px-2 rounded-lg border text-xs font-medium transition-all cursor-pointer',
+                              amountPaid === String(totalAmount) && totalAmount > 0
+                                ? 'border-emerald-500 bg-emerald-950/30 text-emerald-300 font-bold'
+                                : 'border-zinc-800 text-zinc-400 hover:bg-zinc-900'
+                            )}
+                          >
+                            Full (₹{totalAmount})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetPaymentPreset('half')}
+                            className={cn(
+                              'py-1.5 px-2 rounded-lg border text-xs font-medium transition-all cursor-pointer',
+                              amountPaid === String(Math.round(totalAmount / 2)) && totalAmount > 0
+                                ? 'border-amber-500 bg-amber-950/30 text-amber-300 font-bold'
+                                : 'border-zinc-800 text-zinc-400 hover:bg-zinc-900'
+                            )}
+                          >
+                            50% (₹{Math.round(totalAmount / 2)})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetPaymentPreset('zero')}
+                            className={cn(
+                              'py-1.5 px-2 rounded-lg border text-xs font-medium transition-all cursor-pointer',
+                              amountPaid === '0'
+                                ? 'border-purple-500 bg-purple-950/30 text-purple-300 font-bold'
+                                : 'border-zinc-800 text-zinc-400 hover:bg-zinc-900'
+                            )}
+                          >
+                            Pay Later (₹0)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Payment Mode Selector */}
+                      {Number(amountPaid) > 0 && (
+                        <div className="space-y-1.5">
+                          <Label className="text-zinc-400 text-[11px]">Payment Mode *</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { key: 'upi', label: 'UPI / QR' },
+                              { key: 'cash', label: 'Cash in Hand' },
+                              { key: 'card', label: 'Card POS' },
+                            ].map((m) => (
+                              <button
+                                key={m.key}
+                                type="button"
+                                onClick={() => setPaymentMode(m.key as any)}
+                                className={cn(
+                                  'py-1.5 px-2 rounded-lg border text-xs font-medium transition-all cursor-pointer',
+                                  paymentMode === m.key
+                                    ? 'border-purple-500 bg-purple-950/40 text-purple-300 font-bold'
+                                    : 'border-zinc-800 text-zinc-400 hover:bg-zinc-900'
+                                )}
+                              >
+                                {m.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Live Tax Computation Pill */}
+                      <div className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800/80 flex items-center justify-between text-xs font-mono">
+                        <span className="text-zinc-400">Subtotal: ₹{subtotal} | GST (18%): ₹{cgst + sgst}</span>
+                        <span className={amountDue > 0 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>
+                          {amountDue > 0 ? `Due: ₹${amountDue}` : 'Fully Settled ✓'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* EXPRESS STEP 2: Photo Snapshot */}
+          {step === 2 && enrollmentMode === 'express' && (
+            <div className="space-y-6">
+              <div className="max-w-md mx-auto flex flex-col items-center gap-4 bg-zinc-950/60 p-6 rounded-2xl border border-zinc-800/80 text-center">
+                <div className="h-10 w-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+                  <Camera className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-100">Member Profile Snapshot</h3>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Used for contactless Face ID attendance at front-desk kiosk.
+                  </p>
+                </div>
+
+                {/* Snapshot Avatar */}
+                <div className="relative h-36 w-36 rounded-2xl border-2 border-zinc-800 bg-zinc-950 flex items-center justify-center overflow-hidden shadow-xl">
+                  {photoPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+                  ) : (
+                    <User className="h-16 w-16 text-zinc-700" />
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => setCameraModalOpen(true)}
+                    className="bg-purple-600 hover:bg-purple-500 text-white text-xs h-9 px-4 gap-1.5 active:scale-95 cursor-pointer shadow-md"
+                  >
+                    <Camera className="h-4 w-4" />
+                    <span>Open Webcam</span>
+                  </Button>
+                  <Label
+                    htmlFor="exp-photo-upload"
+                    className="inline-flex items-center justify-center rounded-lg border border-zinc-700 bg-zinc-900 px-3 h-9 text-xs font-medium text-zinc-200 hover:bg-zinc-800 cursor-pointer gap-1.5 transition-colors active:scale-95"
+                  >
+                    <Upload className="h-3.5 w-3.5 text-zinc-400" />
+                    <span>Browse File</span>
+                  </Label>
+                  <input
+                    id="exp-photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                  />
+                </div>
+
+                {/* Optional quick details */}
+                <div className="w-full pt-4 border-t border-zinc-800/60 grid grid-cols-2 gap-3 text-left">
+                  <div className="grid gap-1">
+                    <Label className="text-zinc-400 text-[11px]">Gender (Optional)</Label>
+                    <Select value={gender} onValueChange={(v: any) => setGender(v)}>
+                      <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-100 h-8 text-xs">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                        {GENDER_OPTIONS.map((g) => (
+                          <SelectItem key={g} value={g} className="text-xs capitalize">
+                            {g}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1">
+                    <Label className="text-zinc-400 text-[11px]">Email Address (Optional)</Label>
+                    <Input
+                      type="email"
+                      placeholder="member@domain.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="border-zinc-800 bg-zinc-950 text-zinc-100 h-8 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* EXPRESS STEP 3: Confirm & Pass */}
+          {step === 3 && enrollmentMode === 'express' && (
+            <div className="space-y-6 max-w-lg mx-auto">
+              <div className="bg-zinc-950/60 p-5 rounded-2xl border border-zinc-800/80 space-y-4">
+                <div className="flex items-center gap-3 border-b border-zinc-800/60 pb-3">
+                  <div className="relative h-12 w-12 rounded-xl border border-zinc-800 bg-zinc-900 flex items-center justify-center overflow-hidden shrink-0">
+                    {photoPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-6 w-6 text-zinc-600" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">{name || 'Member Name'}</h3>
+                    <p className="text-xs text-zinc-400 font-mono">{phone}</p>
+                  </div>
+                  <Badge className="ml-auto bg-purple-950/40 text-purple-300 border-purple-800/50 text-[10px]">
+                    ⚡ Express Walk-in
+                  </Badge>
+                </div>
+
+                {/* Breakdown */}
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Membership Plan:</span>
+                    <span className="font-semibold text-zinc-200">{selectedPlan?.name} ({selectedPlan?.duration_days} Days)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Plan Validity:</span>
+                    <span className="font-mono text-zinc-300">{planStartDate} to {planEndDate}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-zinc-800/60 pt-2">
+                    <span className="text-zinc-400">Total Invoice Amount:</span>
+                    <span className="font-bold text-white">₹{totalAmount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Amount Received ({paymentMode ? paymentMode.toUpperCase() : 'Cash'}):</span>
+                    <span className="font-bold text-emerald-400">₹{amountPaid}</span>
+                  </div>
+                  {amountDue > 0 && (
+                    <div className="flex justify-between text-amber-400 font-semibold">
+                      <span>Balance Due:</span>
+                      <span>₹{amountDue}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Benefits automatically included */}
+                <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-800/30 text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 text-purple-300 font-semibold">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Automatic Benefits Included</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    • Instant NPCI UPI invoice and payment receipt.<br/>
+                    • Auto-tailored diet chart and workout plan generated.<br/>
+                    • 1-click welcome pass dispatch via WhatsApp.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 1: Personal Info (Full Mode) */}
+          {step === 1 && enrollmentMode === 'full' && (
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                 {/* Photo uploader */}
@@ -1033,8 +1484,8 @@ export default function AddMemberPage() {
             </div>
           )}
 
-          {/* STEP 2: Plan & Payment */}
-          {step === 2 && (
+          {/* STEP 2: Plan & Payment (Full Mode) */}
+          {step === 2 && enrollmentMode === 'full' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {/* Inputs */}
@@ -1121,7 +1572,7 @@ export default function AddMemberPage() {
                         <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
                           {plans.map(p => (
                             <SelectItem key={p.id} value={p.id} className="focus:bg-zinc-800 focus:text-white text-xs">
-                              {p.name} — ₹{p.price} ({p.duration_days} days)
+                              {p.name} - ₹{p.price} ({p.duration_days} days)
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1339,8 +1790,8 @@ export default function AddMemberPage() {
             </div>
           )}
 
-          {/* STEP 3: Extras & Fitness */}
-          {step === 3 && (
+          {/* STEP 3: Extras & Fitness (Full Mode) */}
+          {step === 3 && enrollmentMode === 'full' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -1579,8 +2030,8 @@ export default function AddMemberPage() {
             </div>
           )}
 
-          {/* STEP 4: KYC Uploads */}
-          {step === 4 && (
+          {/* STEP 4: KYC Uploads (Full Mode) */}
+          {step === 4 && enrollmentMode === 'full' && (
             <div className="space-y-6 max-w-xl mx-auto">
               <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-3.5 flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
@@ -1596,7 +2047,7 @@ export default function AddMemberPage() {
                   onClick={handleFastSkipToReview}
                   className="h-7 px-2.5 text-xs border-purple-500/30 text-purple-300 hover:bg-purple-950/30 shrink-0 ml-3"
                 >
-                  Skip KYC & Review →
+                  Skip KYC and Review &rarr;
                 </Button>
               </div>
 
@@ -1647,8 +2098,8 @@ export default function AddMemberPage() {
             </div>
           )}
 
-          {/* STEP 5: Confirm Review */}
-          {step === 5 && (
+          {/* STEP 5: Confirm Review (Full Mode) */}
+          {step === 5 && enrollmentMode === 'full' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                 {/* Profile Card */}
@@ -1826,7 +2277,7 @@ export default function AddMemberPage() {
               <div />
             )}
 
-            {step >= 2 && step < 5 && selectedPlanId && (
+            {step >= 2 && step < (enrollmentMode === 'express' ? 3 : 5) && selectedPlanId && (
               <Button
                 type="button"
                 variant="ghost"
@@ -1839,7 +2290,7 @@ export default function AddMemberPage() {
             )}
           </div>
 
-          {step < 5 ? (
+          {step < (enrollmentMode === 'express' ? 3 : 5) ? (
             <Button
               onClick={handleNext}
               className="bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-lg shadow-purple-600/15 h-9 text-xs px-4 w-full sm:w-auto"
