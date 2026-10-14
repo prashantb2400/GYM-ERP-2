@@ -6,6 +6,7 @@
 
 
   <p align="center">
+    <a href="FEATURES.md">🔬 Feature Taxonomy</a> •
     <a href="#-quick-evaluation-credentials-for-vcs--investors">🔑 Quick Test Fills</a> •
     <a href="#-3d-perspective-tactile-ui--craft-polish">✨ 3D Tactile UI</a> •
     <a href="#-platform-matrix">⚡ Platform Matrix</a> •
