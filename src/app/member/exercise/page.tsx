@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronUp,
   Plus,
+  Minus,
   Trash2,
   Loader2,
   Sparkles,
@@ -21,6 +22,9 @@ import {
   BarChart3,
   Calendar,
   Zap,
+  Maximize2,
+  Minimize2,
+  Smartphone,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,6 +109,12 @@ export default function MemberExercisePage() {
   const [savingLog, setSavingLog] = useState(false);
   const [completedSessionSummary, setCompletedSessionSummary] = useState<any>(null);
 
+  // Gym-Floor Mobile Ergonomics State
+  const [isFloorMode, setIsFloorMode] = useState(false);
+  const [activeExIdx, setActiveExIdx] = useState<number>(0);
+  const [activeSetIdx, setActiveSetIdx] = useState<number>(0);
+  const [isThumbBarCollapsed, setIsThumbBarCollapsed] = useState(false);
+
   // Rest Timer State
   const [restSecondsLeft, setRestSecondsLeft] = useState<number | null>(null);
   const [restInitialSeconds, setRestInitialSeconds] = useState(60);
@@ -128,8 +138,20 @@ export default function MemberExercisePage() {
   const sessionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const restTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Play subtle audio tone using Web Audio API
+  // Haptic feedback trigger for mobile gym floor devices
+  const vibrateDevice = (pattern: number | number[]) => {
+    try {
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(pattern);
+      }
+    } catch {
+      // Audio/vibration not allowed or unsupported
+    }
+  };
+
+  // Play subtle audio tone using Web Audio API + physical haptic pulse
   const playChime = () => {
+    vibrateDevice([150, 80, 200]);
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = ctx.createOscillator();
@@ -299,12 +321,16 @@ export default function MemberExercisePage() {
     setSessionDuration(0);
     setSessionNotes('');
     setCompletedSessionSummary(null);
+    setActiveExIdx(0);
+    setActiveSetIdx(0);
+    setIsThumbBarCollapsed(false);
     setIsLoggingActive(true);
     toast.success(`Workout session started: ${currentDay.name}`);
   };
 
   // Toggle set completion and update volume & estimated 1RM
   const toggleSetComplete = (exIdx: number, setIdx: number) => {
+    vibrateDevice(50);
     setSessionExercises((prev) => {
       const copy = [...prev];
       const exercise = { ...copy[exIdx] };
@@ -335,6 +361,89 @@ export default function MemberExercisePage() {
       copy[exIdx] = exercise;
       return copy;
     });
+  };
+
+  // Quick tactile weight stepper (+/- 2.5kg, +/- 5kg)
+  const stepWeight = (exIdx: number, setIdx: number, delta: number) => {
+    vibrateDevice(20);
+    setSessionExercises((prev) => {
+      const copy = [...prev];
+      if (!copy[exIdx] || !copy[exIdx].sets[setIdx]) return prev;
+      const exercise = { ...copy[exIdx] };
+      const setsCopy = [...exercise.sets];
+      const targetSet = { ...setsCopy[setIdx] };
+      const current = Number(targetSet.weight) || 0;
+      const nextWeight = Math.max(0, parseFloat((current + delta).toFixed(2)));
+      targetSet.weight = nextWeight;
+
+      if (targetSet.completed) {
+        const w = nextWeight;
+        const r = Number(targetSet.reps) || 0;
+        targetSet.volume = w * r;
+        if (w > 0 && r > 0) {
+          const calc = estimateOneRepMax(w, r, 'epley', targetSet.rpe);
+          targetSet.estimatedOneRm = calc.estimatedOneRm;
+        }
+      }
+
+      setsCopy[setIdx] = targetSet;
+      exercise.sets = setsCopy;
+      copy[exIdx] = exercise;
+      return copy;
+    });
+  };
+
+  // Quick tactile reps stepper (+/- 1 rep)
+  const stepReps = (exIdx: number, setIdx: number, delta: number) => {
+    vibrateDevice(20);
+    setSessionExercises((prev) => {
+      const copy = [...prev];
+      if (!copy[exIdx] || !copy[exIdx].sets[setIdx]) return prev;
+      const exercise = { ...copy[exIdx] };
+      const setsCopy = [...exercise.sets];
+      const targetSet = { ...setsCopy[setIdx] };
+      const current = Number(targetSet.reps) || 0;
+      const nextReps = Math.max(1, current + delta);
+      targetSet.reps = nextReps;
+
+      if (targetSet.completed) {
+        const w = Number(targetSet.weight) || 0;
+        const r = nextReps;
+        targetSet.volume = w * r;
+        if (w > 0 && r > 0) {
+          const calc = estimateOneRepMax(w, r, 'epley', targetSet.rpe);
+          targetSet.estimatedOneRm = calc.estimatedOneRm;
+        }
+      }
+
+      setsCopy[setIdx] = targetSet;
+      exercise.sets = setsCopy;
+      copy[exIdx] = exercise;
+      return copy;
+    });
+  };
+
+  // Complete currently active set in thumb-zone cockpit & auto-advance
+  const completeActiveSetAndRest = () => {
+    if (!sessionExercises[activeExIdx] || !sessionExercises[activeExIdx].sets[activeSetIdx]) return;
+    const currentSet = sessionExercises[activeExIdx].sets[activeSetIdx];
+
+    if (!currentSet.completed) {
+      toggleSetComplete(activeExIdx, activeSetIdx);
+    }
+    vibrateDevice([80, 40, 100]);
+
+    // Auto-advance to next set
+    const totalSetsInEx = sessionExercises[activeExIdx].sets.length;
+    if (activeSetIdx + 1 < totalSetsInEx) {
+      setActiveSetIdx(activeSetIdx + 1);
+    } else if (activeExIdx + 1 < sessionExercises.length) {
+      setActiveExIdx(activeExIdx + 1);
+      setActiveSetIdx(0);
+      toast.info(`Exercise finished! Next up: ${sessionExercises[activeExIdx + 1].name}`);
+    } else {
+      toast.success('All sets completed for this workout! Finish when ready.');
+    }
   };
 
   // Update set weight, reps, or rpe
@@ -525,12 +634,32 @@ export default function MemberExercisePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+    <div
+      className={`space-y-6 max-w-4xl mx-auto transition-colors duration-300 ${
+        isLoggingActive ? 'pb-52' : 'pb-12'
+      } ${
+        isFloorMode
+          ? 'bg-black text-white p-3.5 sm:p-5 rounded-3xl border-2 border-emerald-500/40 shadow-[0_0_50px_rgba(16,185,129,0.12)]'
+          : ''
+      }`}
+    >
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80">
+      <div
+        className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-4 rounded-2xl border transition-colors ${
+          isFloorMode
+            ? 'bg-black border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]'
+            : 'bg-zinc-900/60 border-zinc-800/80'
+        }`}
+      >
         <div>
           <div className="flex items-center gap-2">
-            <Badge className="bg-purple-950/80 text-purple-300 border border-purple-800/30 text-[10px] font-mono">
+            <Badge
+              className={`text-[10px] font-mono border ${
+                isFloorMode
+                  ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50'
+                  : 'bg-purple-950/80 text-purple-300 border-purple-800/30'
+              }`}
+            >
               openGym Fitness OS
             </Badge>
             {isLoggingActive && (
@@ -547,13 +676,43 @@ export default function MemberExercisePage() {
           </p>
         </div>
 
-        {/* Global Workout Duration Counter */}
-        {isLoggingActive && (
-          <div className="flex items-center gap-2 bg-zinc-950/80 px-3 py-2 rounded-xl border border-zinc-800 font-mono">
-            <Clock className="w-4 h-4 text-purple-400 animate-spin" />
-            <span className="text-sm font-extrabold text-zinc-100">{formatTimer(sessionDuration)}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
+          {/* OLED Floor Mode Toggle */}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              vibrateDevice(30);
+              setIsFloorMode(!isFloorMode);
+            }}
+            className={`text-xs h-9 px-3 rounded-xl border flex items-center gap-1.5 transition-colors ${
+              isFloorMode
+                ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                : 'bg-zinc-900/80 border-zinc-700 text-zinc-300 hover:text-white'
+            }`}
+            title="High-contrast OLED black theme for gym floor halogens"
+          >
+            <Zap className={`w-3.5 h-3.5 ${isFloorMode ? 'text-emerald-400 fill-emerald-400' : 'text-amber-400'}`} />
+            <span>Floor Mode</span>
+            <Badge className="ml-1 text-[9px] px-1 py-0 bg-zinc-800 text-zinc-300 border-0">
+              {isFloorMode ? 'ON' : 'OFF'}
+            </Badge>
+          </Button>
+
+          {/* Global Workout Duration Counter */}
+          {isLoggingActive && (
+            <div
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border font-mono ${
+                isFloorMode
+                  ? 'bg-black border-emerald-500/60 text-emerald-400'
+                  : 'bg-zinc-950/80 border-zinc-800 text-zinc-100'
+              }`}
+            >
+              <Clock className="w-4 h-4 text-purple-400 animate-spin" />
+              <span className="text-sm font-extrabold">{formatTimer(sessionDuration)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Navigation Tabs */}
@@ -609,22 +768,63 @@ export default function MemberExercisePage() {
 
       {/* Floating Rest Timer Notification */}
       {restSecondsLeft !== null && (
-        <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 bg-zinc-950/95 border border-purple-500/40 shadow-2xl shadow-purple-950/50 p-3.5 rounded-2xl flex items-center gap-3 backdrop-blur animate-in slide-in-from-bottom-4">
-          <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-purple-950/60 border border-purple-800/40 text-purple-300 font-mono font-black text-sm">
+        <div
+          className={`fixed bottom-24 sm:bottom-6 right-4 sm:right-6 z-50 p-3.5 rounded-2xl flex items-center gap-3 backdrop-blur shadow-2xl animate-in slide-in-from-bottom-4 ${
+            isFloorMode
+              ? 'bg-black/95 border-2 border-emerald-500 shadow-emerald-950/60'
+              : 'bg-zinc-950/95 border border-purple-500/40 shadow-purple-950/50'
+          }`}
+        >
+          <div
+            className={`relative flex items-center justify-center w-11 h-11 rounded-xl font-mono font-black text-sm ${
+              isFloorMode
+                ? 'bg-emerald-950/80 border border-emerald-500/60 text-emerald-300'
+                : 'bg-purple-950/60 border border-purple-800/40 text-purple-300'
+            }`}
+          >
             {restSecondsLeft}s
           </div>
           <div>
-            <div className="text-[11px] font-bold text-zinc-200">Rest Timer Active</div>
-            <div className="text-[9px] text-zinc-400">Catch your breath before the next set</div>
+            <div className="text-[11px] font-bold text-zinc-100">Rest Timer Active</div>
+            <div className="text-[9px] text-zinc-400">Catch breath before next set</div>
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setRestSecondsLeft(null)}
-            className="text-xs h-7 px-2 text-zinc-400 hover:text-white"
-          >
-            Skip
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                vibrateDevice(25);
+                setRestSecondsLeft((s) => Math.max(1, (s ?? 0) - 15));
+              }}
+              className="text-[10px] h-7 px-2 border-zinc-800 bg-zinc-900/80 text-zinc-300 hover:text-white font-mono"
+            >
+              -15s
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                vibrateDevice(25);
+                setRestSecondsLeft((s) => (s ?? 0) + 30);
+              }}
+              className={`text-[10px] h-7 px-2 border-zinc-800 bg-zinc-900/80 font-mono ${
+                isFloorMode ? 'text-emerald-400' : 'text-purple-300'
+              } hover:text-white`}
+            >
+              +30s
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                vibrateDevice(30);
+                setRestSecondsLeft(null);
+              }}
+              className="text-xs h-7 px-2 text-zinc-400 hover:text-white"
+            >
+              Skip
+            </Button>
+          </div>
         </div>
       )}
 
@@ -840,84 +1040,137 @@ export default function MemberExercisePage() {
                       </div>
 
                       {/* Sets Rows */}
-                      {ex.sets.map((set, setIdx) => (
-                        <div
-                          key={setIdx}
-                          className={`grid grid-cols-12 gap-2 items-center p-2 rounded-xl border transition-all ${
-                            set.completed
-                              ? 'bg-purple-950/20 border-purple-900/40 text-purple-100'
-                              : 'bg-zinc-950/50 border-zinc-800/60 text-zinc-200'
-                          }`}
-                        >
-                          <div className="col-span-2 flex items-center gap-1 font-mono text-xs font-bold">
-                            <span>#{set.setNumber}</span>
-                            {ex.sets.length > 1 && !set.completed && (
+                      {ex.sets.map((set, setIdx) => {
+                        const isActiveSet = exIdx === activeExIdx && setIdx === activeSetIdx;
+                        return (
+                          <div
+                            key={setIdx}
+                            onClick={() => {
+                              setActiveExIdx(exIdx);
+                              setActiveSetIdx(setIdx);
+                            }}
+                            className={`grid grid-cols-12 gap-1.5 sm:gap-2 items-center p-2 rounded-xl border transition-all cursor-pointer ${
+                              isActiveSet
+                                ? isFloorMode
+                                  ? 'bg-emerald-950/40 border-emerald-400 ring-2 ring-emerald-400/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                                  : 'bg-purple-950/40 border-purple-500 ring-2 ring-purple-500/80 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                                : set.completed
+                                ? isFloorMode
+                                  ? 'bg-zinc-950 border-emerald-900/50 text-emerald-300'
+                                  : 'bg-purple-950/20 border-purple-900/40 text-purple-100'
+                                : 'bg-zinc-950/50 border-zinc-800/60 text-zinc-200'
+                            }`}
+                          >
+                            <div className="col-span-2 flex items-center gap-1 font-mono text-xs font-bold">
+                              <span>#{set.setNumber}</span>
+                              {ex.sets.length > 1 && !set.completed && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeSetFromExercise(exIdx, setIdx);
+                                  }}
+                                  className="text-zinc-600 hover:text-red-400 p-0.5"
+                                  title="Remove set"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="col-span-3 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                               <button
-                                onClick={() => removeSetFromExercise(exIdx, setIdx)}
-                                className="text-zinc-600 hover:text-red-400 p-0.5"
-                                title="Remove set"
+                                type="button"
+                                onClick={() => stepWeight(exIdx, setIdx, -2.5)}
+                                className="h-8 w-5 sm:w-6 shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded text-[11px] font-mono font-bold flex items-center justify-center border border-zinc-700/60"
+                                title="-2.5 kg"
                               >
-                                <Trash2 className="w-3 h-3" />
+                                -
                               </button>
-                            )}
-                          </div>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.5}
+                                value={set.weight === 0 ? '' : set.weight}
+                                onChange={(e) =>
+                                  updateSetField(exIdx, setIdx, 'weight', parseFloat(e.target.value) || 0)
+                                }
+                                placeholder="0"
+                                className="h-8 text-xs font-mono bg-zinc-900 border-zinc-800 text-center px-1 min-w-0"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => stepWeight(exIdx, setIdx, 2.5)}
+                                className="h-8 w-5 sm:w-6 shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded text-[11px] font-mono font-bold flex items-center justify-center border border-zinc-700/60"
+                                title="+2.5 kg"
+                              >
+                                +
+                              </button>
+                            </div>
 
-                          <div className="col-span-3">
-                            <Input
-                              type="number"
-                              min={0}
-                              step={0.5}
-                              value={set.weight === 0 ? '' : set.weight}
-                              onChange={(e) =>
-                                updateSetField(exIdx, setIdx, 'weight', parseFloat(e.target.value) || 0)
-                              }
-                              placeholder="0"
-                              className="h-8 text-xs font-mono bg-zinc-900 border-zinc-800 text-center"
-                            />
-                          </div>
+                            <div className="col-span-3 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => stepReps(exIdx, setIdx, -1)}
+                                className="h-8 w-5 sm:w-6 shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded text-[11px] font-mono font-bold flex items-center justify-center border border-zinc-700/60"
+                                title="-1 rep"
+                              >
+                                -
+                              </button>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={set.reps === 0 ? '' : set.reps}
+                                onChange={(e) =>
+                                  updateSetField(exIdx, setIdx, 'reps', parseInt(e.target.value, 10) || 0)
+                                }
+                                placeholder="10"
+                                className="h-8 text-xs font-mono bg-zinc-900 border-zinc-800 text-center px-1 min-w-0"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => stepReps(exIdx, setIdx, 1)}
+                                className="h-8 w-5 sm:w-6 shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded text-[11px] font-mono font-bold flex items-center justify-center border border-zinc-700/60"
+                                title="+1 rep"
+                              >
+                                +
+                              </button>
+                            </div>
 
-                          <div className="col-span-3">
-                            <Input
-                              type="number"
-                              min={1}
-                              value={set.reps === 0 ? '' : set.reps}
-                              onChange={(e) =>
-                                updateSetField(exIdx, setIdx, 'reps', parseInt(e.target.value, 10) || 0)
-                              }
-                              placeholder="10"
-                              className="h-8 text-xs font-mono bg-zinc-900 border-zinc-800 text-center"
-                            />
-                          </div>
+                            <div className="col-span-2" onClick={(e) => e.stopPropagation()}>
+                              <select
+                                value={set.rpe || 8}
+                                onChange={(e) =>
+                                  updateSetField(exIdx, setIdx, 'rpe', parseInt(e.target.value, 10) || 8)
+                                }
+                                className="w-full h-8 bg-zinc-900 border border-zinc-800 text-zinc-200 text-[10px] rounded-md font-mono text-center focus:outline-none"
+                              >
+                                {[6, 7, 8, 9, 10].map((rpeVal) => (
+                                  <option key={rpeVal} value={rpeVal}>
+                                    @{rpeVal}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
 
-                          <div className="col-span-2">
-                            <select
-                              value={set.rpe || 8}
-                              onChange={(e) =>
-                                updateSetField(exIdx, setIdx, 'rpe', parseInt(e.target.value, 10) || 8)
-                              }
-                              className="w-full h-8 bg-zinc-900 border border-zinc-800 text-zinc-200 text-[10px] rounded-md font-mono text-center focus:outline-none"
-                            >
-                              {[6, 7, 8, 9, 10].map((rpeVal) => (
-                                <option key={rpeVal} value={rpeVal}>
-                                  @{rpeVal}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="col-span-2 flex justify-end">
-                            <Button
-                              size="sm"
-                              onClick={() => toggleSetComplete(exIdx, setIdx)}
-                              className={`h-8 w-8 p-0 rounded-lg ${
-                                set.completed
-                                  ? 'bg-purple-600 hover:bg-purple-500 text-white'
-                                  : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400'
-                              }`}
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
-                          </div>
+                            <div className="col-span-2 flex justify-end">
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSetComplete(exIdx, setIdx);
+                                }}
+                                className={`h-8 w-8 p-0 rounded-lg ${
+                                  set.completed
+                                    ? isFloorMode
+                                      ? 'bg-emerald-500 hover:bg-emerald-400 text-black font-bold'
+                                      : 'bg-purple-600 hover:bg-purple-500 text-white'
+                                    : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400'
+                                }`}
+                              >
+                                <Check className="w-4 h-4" />
+                              </Button>
+                            </div>
 
                           {/* Set Metrics pill when completed */}
                           {set.completed && set.volume > 0 && (
@@ -927,7 +1180,8 @@ export default function MemberExercisePage() {
                             </div>
                           )}
                         </div>
-                      ))}
+                      );
+                    })}
                     </CardContent>
                   </Card>
                 ))}
@@ -1313,6 +1567,175 @@ export default function MemberExercisePage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* PERSISTENT BOTTOM THUMB-ZONE QUICK SET LOGGER COCKPIT */}
+      {isLoggingActive && sessionExercises.length > 0 && sessionExercises[activeExIdx] && (
+        <div
+          className={`fixed bottom-0 left-0 right-0 z-40 backdrop-blur-lg border-t shadow-2xl transition-all ${
+            isFloorMode
+              ? 'bg-black/98 border-emerald-500/70 shadow-emerald-950/70'
+              : 'bg-zinc-950/98 border-purple-900/60 shadow-black'
+          }`}
+        >
+          <div className="max-w-4xl mx-auto px-3 py-2.5 sm:px-4 sm:py-3 space-y-2">
+            {/* Top Bar: Active Exercise & Set Indicator + Collapse Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <Badge
+                  className={`text-[10px] font-mono shrink-0 ${
+                    isFloorMode
+                      ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
+                      : 'bg-purple-950 text-purple-300 border-purple-800/40'
+                  }`}
+                >
+                  Set {(sessionExercises[activeExIdx]?.sets[activeSetIdx]?.setNumber || 1)} of {(sessionExercises[activeExIdx]?.sets.length || 1)}
+                </Badge>
+                <span className="text-xs font-black text-zinc-100 truncate">
+                  {sessionExercises[activeExIdx]?.name}
+                </span>
+                {sessionExercises[activeExIdx]?.sets[activeSetIdx]?.completed && (
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px]">
+                    Completed
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="text-[10px] font-mono text-zinc-400 hidden sm:block">
+                  Rest: {sessionExercises[activeExIdx]?.restSeconds || 90}s
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsThumbBarCollapsed(!isThumbBarCollapsed)}
+                  className="p-1 text-zinc-400 hover:text-zinc-200 rounded-lg hover:bg-zinc-900"
+                  title={isThumbBarCollapsed ? 'Expand thumb cockpit' : 'Minimize thumb cockpit'}
+                >
+                  {isThumbBarCollapsed ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Expanded Cockpit Controls */}
+            {!isThumbBarCollapsed && (
+              <div className="space-y-2 pt-1 animate-in slide-in-from-bottom-2">
+                {/* Dial Stepper Row */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Weight Dials */}
+                  <div className="bg-zinc-900/80 p-1.5 rounded-xl border border-zinc-800/90 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-zinc-400 font-mono ml-1 uppercase">Weight</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => stepWeight(activeExIdx, activeSetIdx, -5)}
+                        className="h-8 px-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-mono font-bold"
+                        title="-5 kg"
+                      >
+                        -5
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => stepWeight(activeExIdx, activeSetIdx, -2.5)}
+                        className="h-8 px-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-mono font-bold"
+                        title="-2.5 kg"
+                      >
+                        -2.5
+                      </button>
+                      <span className={`text-xs font-mono font-black px-1.5 min-w-[44px] text-center ${isFloorMode ? 'text-emerald-300' : 'text-purple-300'}`}>
+                        {sessionExercises[activeExIdx]?.sets[activeSetIdx]?.weight || 0}kg
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => stepWeight(activeExIdx, activeSetIdx, 2.5)}
+                        className="h-8 px-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-mono font-bold"
+                        title="+2.5 kg"
+                      >
+                        +2.5
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => stepWeight(activeExIdx, activeSetIdx, 5)}
+                        className="h-8 px-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-mono font-bold"
+                        title="+5 kg"
+                      >
+                        +5
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Reps Dials */}
+                  <div className="bg-zinc-900/80 p-1.5 rounded-xl border border-zinc-800/90 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-zinc-400 font-mono ml-1 uppercase">Reps</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => stepReps(activeExIdx, activeSetIdx, -1)}
+                        className="h-8 w-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-mono font-bold flex items-center justify-center"
+                        title="-1 rep"
+                      >
+                        -1
+                      </button>
+                      <span className={`text-xs font-mono font-black px-2 min-w-[36px] text-center ${isFloorMode ? 'text-emerald-300' : 'text-purple-300'}`}>
+                        {sessionExercises[activeExIdx]?.sets[activeSetIdx]?.reps || 10}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => stepReps(activeExIdx, activeSetIdx, 1)}
+                        className="h-8 w-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-mono font-bold flex items-center justify-center"
+                        title="+1 rep"
+                      >
+                        +1
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Row: Quick RPE Selector + Big Action Button */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-zinc-900/80 p-1 rounded-xl border border-zinc-800 shrink-0">
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase px-1 hidden sm:inline">RPE</span>
+                    {[7, 8, 9, 10].map((rpeVal) => (
+                      <button
+                        key={rpeVal}
+                        type="button"
+                        onClick={() => {
+                          vibrateDevice(20);
+                          updateSetField(activeExIdx, activeSetIdx, 'rpe', rpeVal);
+                        }}
+                        className={`h-7 px-2 rounded-lg text-[10px] font-mono font-bold transition-colors ${
+                          (sessionExercises[activeExIdx]?.sets[activeSetIdx]?.rpe || 8) === rpeVal
+                            ? isFloorMode
+                              ? 'bg-emerald-500 text-black'
+                              : 'bg-purple-600 text-white'
+                            : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                        }`}
+                      >
+                        @{rpeVal}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Primary Thumb Zone Button */}
+                  <Button
+                    onClick={completeActiveSetAndRest}
+                    className={`flex-1 h-10 font-bold text-xs rounded-xl shadow-lg transition-transform active:scale-[0.98] flex items-center justify-center gap-2 ${
+                      isFloorMode
+                        ? 'bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold shadow-emerald-950/50'
+                        : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-950/50'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>
+                      {sessionExercises[activeExIdx]?.sets[activeSetIdx]?.completed
+                        ? 'Next Set →'
+                        : `Complete Set & Rest (${sessionExercises[activeExIdx]?.restSeconds || 90}s)`}
+                    </span>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
