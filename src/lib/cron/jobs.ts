@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { whatsappClient } from '@/lib/whatsapp/client';
+import { getWhatsAppProvider } from '@/lib/whatsapp/factory';
 import { CronResult } from './types';
 
 // Helper to log job run
@@ -46,7 +47,18 @@ export async function runExpiryReminder7Day(supabase: SupabaseClient): Promise<C
 
     for (const member of members || []) {
       try {
-        await whatsappClient.sendTemplateMessage(member.phone, 'expiry_reminder_7day', { name: member.name });
+        const wa = member.gym_id ? await getWhatsAppProvider(member.gym_id) : whatsappClient;
+        await wa.sendTemplateMessage(
+          member.phone,
+          'expiry_reminder_7day',
+          {
+            member_name: member.name,
+            plan_name: 'Membership Plan',
+            gym_name: 'Gym'
+          },
+          member.gym_id,
+          member.id
+        );
         processed++;
       } catch (err) {
         errors++;
@@ -79,7 +91,18 @@ export async function runExpiryReminder1Day(supabase: SupabaseClient): Promise<C
 
     for (const member of members || []) {
       try {
-        await whatsappClient.sendTemplateMessage(member.phone, 'expiry_reminder_1day', { name: member.name });
+        const wa = member.gym_id ? await getWhatsAppProvider(member.gym_id) : whatsappClient;
+        await wa.sendTemplateMessage(
+          member.phone,
+          'expiry_reminder_1day',
+          {
+            member_name: member.name,
+            plan_name: 'Membership Plan',
+            gym_name: 'Gym'
+          },
+          member.gym_id,
+          member.id
+        );
         processed++;
       } catch (err) {
         errors++;
@@ -108,7 +131,19 @@ export async function runDueReminder(supabase: SupabaseClient): Promise<CronResu
 
     for (const member of members || []) {
       try {
-        await whatsappClient.sendTemplateMessage(member.phone, 'due_payment_reminder', { name: member.name, amount: member.total_due });
+        const wa = member.gym_id ? await getWhatsAppProvider(member.gym_id) : whatsappClient;
+        await wa.sendTemplateMessage(
+          member.phone,
+          'due_payment_reminder',
+          {
+            member_name: member.name,
+            amount: member.total_due,
+            due_date: member.plan_end_date || 'Today',
+            gym_name: 'Gym'
+          },
+          member.gym_id,
+          member.id
+        );
         processed++;
       } catch (err) {
         errors++;
@@ -148,7 +183,17 @@ export async function runBirthdayWishes(supabase: SupabaseClient): Promise<CronR
 
     for (const member of bdayMembers) {
       try {
-        await whatsappClient.sendTemplateMessage(member.phone, 'birthday_greeting', { name: member.name });
+        const wa = member.gym_id ? await getWhatsAppProvider(member.gym_id) : whatsappClient;
+        await wa.sendTemplateMessage(
+          member.phone,
+          'birthday_greeting',
+          {
+            member_name: member.name,
+            gym_name: 'Gym Family'
+          },
+          member.gym_id,
+          member.id
+        );
         await supabase.from('members').update({ birthday_notified_year: currentYear }).eq('id', member.id);
         processed++;
       } catch (err) {
@@ -191,9 +236,17 @@ export async function runAnniversaryWishes(supabase: SupabaseClient): Promise<Cr
 
     for (const member of anniversaryMembers) {
       try {
-        const admissionYear = parseInt(member.admission_date.split('-')[0], 10);
-        const years = currentYear - admissionYear;
-        await whatsappClient.sendTemplateMessage(member.phone, 'anniversary_greeting', { name: member.name, years });
+        const wa = member.gym_id ? await getWhatsAppProvider(member.gym_id) : whatsappClient;
+        await wa.sendTemplateMessage(
+          member.phone,
+          'anniversary_greeting',
+          {
+            member_name: member.name,
+            gym_name: 'Gym'
+          },
+          member.gym_id,
+          member.id
+        );
         await supabase.from('members').update({ anniversary_notified_year: currentYear }).eq('id', member.id);
         processed++;
       } catch (err) {
