@@ -30,6 +30,8 @@ export const viewport: Viewport = {
   ],
 };
 
+import { DemoTestingDock } from '@/components/shared/DemoTestingDock';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -50,6 +52,7 @@ export default function RootLayout({
         >
           <TooltipProvider>
             {children}
+            <DemoTestingDock />
             <Toaster richColors closeButton position="top-right" />
           </TooltipProvider>
         </ThemeProvider>

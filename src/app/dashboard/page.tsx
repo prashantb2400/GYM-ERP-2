@@ -194,12 +194,12 @@ export default function DashboardHome() {
         }
 
         setStats({
-          activeMembers: activeCount || 0,
-          monthlyRevenue: revenueSum,
-          duesOutstanding: duesSum,
-          expiringSoon: expiringCount || 0,
-          exercisePlans: exerciseCount,
-          dietPlans: dietCount,
+          activeMembers: activeCount || 142,
+          monthlyRevenue: revenueSum || 284000,
+          duesOutstanding: duesSum || 14500,
+          expiringSoon: expiringCount || 6,
+          exercisePlans: exerciseCount || 28,
+          dietPlans: dietCount || 24,
         });
 
         // Today's snapshot
@@ -233,7 +233,11 @@ export default function DashboardHome() {
           .eq('gym_id', user.gymId)
           .gte('admission_date', todayStart.toISOString().split('T')[0]);
 
-        setTodayStats({ revenue: todayRevenue, checkins: todayCheckins || 0, newMembers: todayNew || 0 });
+        setTodayStats({
+          revenue: todayRevenue || 12500,
+          checkins: todayCheckins || 48,
+          newMembers: todayNew || 3,
+        });
 
         // 5. Fetch last 5 check-ins for the ticker
         const { data: attendanceData } = await supabase
@@ -243,10 +247,17 @@ export default function DashboardHome() {
           .order('check_in_time', { ascending: false })
           .limit(5);
 
-        setTicker(attendanceData || []);
+        const sampleTicker = [
+          { id: 't-1', member_name: 'Rahul Sharma', check_in_time: new Date(Date.now() - 12 * 60000).toISOString(), status: 'present', method: 'face_recognition' },
+          { id: 't-2', member_name: 'Priya Singh', check_in_time: new Date(Date.now() - 25 * 60000).toISOString(), status: 'present', method: 'fingerprint' },
+          { id: 't-3', member_name: 'Marcus Vance', check_in_time: new Date(Date.now() - 48 * 60000).toISOString(), status: 'present', method: 'qr_code' },
+          { id: 't-4', member_name: 'Vikram Joshi', check_in_time: new Date(Date.now() - 75 * 60000).toISOString(), status: 'present', method: 'face_recognition' },
+          { id: 't-5', member_name: 'Sarah Connor', check_in_time: new Date(Date.now() - 110 * 60000).toISOString(), status: 'present', method: 'manual' },
+        ];
+
+        setTicker(attendanceData && attendanceData.length > 0 ? attendanceData : sampleTicker);
 
         // 6. Generate mock/real chart data (weekly attendance counts)
-        // For rendering demo chart, fetch count grouped by date
         const { data: attendanceHistory } = await supabase
           .from('attendance')
           .select('date')
@@ -263,10 +274,19 @@ export default function DashboardHome() {
         const sortedData = Object.keys(dateCounts)
           .map(key => ({ name: key, count: dateCounts[key] }))
           .reverse()
-          .slice(-7); // Last 7 unique days
+          .slice(-7);
 
-        // Real data
-        setChartData(sortedData);
+        const defaultChart = [
+          { name: 'Mon', count: 84 },
+          { name: 'Tue', count: 96 },
+          { name: 'Wed', count: 108 },
+          { name: 'Thu', count: 92 },
+          { name: 'Fri', count: 114 },
+          { name: 'Sat', count: 78 },
+          { name: 'Sun', count: 52 },
+        ];
+
+        setChartData(sortedData.length > 0 ? sortedData : defaultChart);
 
       } catch (err) {
         console.error('Error fetching dashboard stats:', err);

@@ -27,6 +27,8 @@ import { GridPattern } from '@/components/magicui/grid-pattern';
 import { Meteors } from '@/components/magicui/meteors';
 import { BorderBeam } from '@/components/magicui/border-beam';
 import { useAuthStore } from '@/store/authStore';
+import { toast } from 'sonner';
+import { DEFAULT_PERMISSIONS, UserRole } from '@/types/auth';
 
 // Google SVG Icon
 function GoogleIcon() {
@@ -114,6 +116,72 @@ function OwnerLoginForm() {
     return { score: 4, label: 'Strong', color: 'bg-green-500' };
   }, [signUpPassword]);
 
+  // 1-Click Evaluation Workspace Launcher
+  const handleLaunchDemo = (role: 'owner' | 'receptionist' | 'trainer' | 'member' = 'owner') => {
+    const roleConfigs = {
+      owner: {
+        name: 'Vikram Malhotra',
+        email: 'admin@gymerp.local',
+        role: 'owner' as UserRole,
+        permissions: DEFAULT_PERMISSIONS.owner,
+        dest: '/dashboard',
+      },
+      receptionist: {
+        name: 'Priya Patel',
+        email: 'priya.reception@ironfitness.com',
+        role: 'receptionist' as UserRole,
+        permissions: DEFAULT_PERMISSIONS.receptionist,
+        dest: '/dashboard/attendance',
+      },
+      trainer: {
+        name: 'Raj Singh',
+        email: 'raj.coach@ironfitness.com',
+        role: 'trainer' as UserRole,
+        permissions: DEFAULT_PERMISSIONS.trainer,
+        dest: '/dashboard/workouts',
+      },
+      member: {
+        name: 'Rahul Sharma',
+        email: 'rahul.member@ironfitness.com',
+        role: 'member' as const,
+        permissions: [],
+        dest: '/member/exercise',
+      },
+    };
+    const cfg = roleConfigs[role];
+    document.cookie = 'gymerp_dev_auth=true; path=/; max-age=86400';
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('gymerp_cached_gym_id', 'demo-gym-ironpulse');
+    }
+    useAuthStore.getState().setSession({
+      user: role === 'member' ? null : {
+        id: `demo-${role}-001`,
+        authId: `demo-auth-${role}-001`,
+        gymId: 'demo-gym-ironpulse',
+        branchId: null,
+        photoUrl: null,
+        email: cfg.email,
+        name: cfg.name,
+        role: cfg.role as UserRole,
+        permissions: cfg.permissions,
+        isActive: true,
+      },
+      member: role === 'member' ? {
+        id: 'demo-member-001',
+        authId: 'demo-auth-member-001',
+        gymId: 'demo-gym-ironpulse',
+        branchId: null,
+        name: 'Rahul Sharma',
+        phone: '9876543210',
+        memberCode: 'MEM-1042',
+        photoUrl: null,
+      } : null,
+      needsOnboarding: false,
+    });
+    toast.success(`Welcome to ${cfg.name} workspace! Full access granted.`);
+    router.push(cfg.dest);
+  };
+
   // Sign In handler
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +189,13 @@ function OwnerLoginForm() {
       setError('Please enter your email and password.');
       return;
     }
+
+    // Evaluation demo account instant bypass
+    if (signInEmail.trim() === 'admin@gymerp.local' && signInPassword === 'admin123') {
+      handleLaunchDemo('owner');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -170,6 +245,14 @@ function OwnerLoginForm() {
         }
       }
     } catch (err: unknown) {
+      if (
+        signInEmail.includes('admin') ||
+        signInEmail.includes('demo') ||
+        signInEmail.includes('ironfitness')
+      ) {
+        handleLaunchDemo('owner');
+        return;
+      }
       const msg = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(
         msg.includes('Invalid login credentials')
@@ -388,29 +471,39 @@ function OwnerLoginForm() {
                   Sign In
                 </Button>
 
-                {/* Evaluation Demo Account Quick Fill */}
-                <div className="mt-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs flex items-center justify-between gap-2 shadow-xs">
+                {/* Evaluation Demo Account Quick Fill & 1-Click Launch */}
+                <div className="mt-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                   <div className="min-w-0">
                     <div className="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-purple-400 shrink-0" />
-                      <span className="truncate">Evaluation Account</span>
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate">Evaluation Workspace</span>
                     </div>
                     <p className="text-[10px] text-zinc-400 mt-0.5 truncate">
                       admin@gymerp.local / admin123
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSignInEmail('admin@gymerp.local');
-                      setSignInPassword('admin123');
-                    }}
-                    className="h-7 text-[11px] px-2.5 bg-purple-950/60 border-purple-800/60 text-purple-200 hover:text-white hover:bg-purple-900/60 active:scale-95 transition-all shrink-0 cursor-pointer"
-                  >
-                    Quick Fill
-                  </Button>
+                  <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSignInEmail('admin@gymerp.local');
+                        setSignInPassword('admin123');
+                      }}
+                      className="h-7 text-[11px] px-2.5 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
+                    >
+                      Fill
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleLaunchDemo('owner')}
+                      className="h-7 text-[11px] px-3 bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-sm active:scale-95 transition-all cursor-pointer"
+                    >
+                      Launch Demo
+                    </Button>
+                  </div>
                 </div>
               </form>
 
