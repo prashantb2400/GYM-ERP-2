@@ -130,10 +130,10 @@ export function DemoTestingDock() {
   }
 
   return (
-    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 max-w-[95vw] sm:max-w-max">
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-2xl bg-zinc-950/90 border border-purple-500/30 backdrop-blur-xl shadow-2xl shadow-purple-950/50 text-xs text-zinc-200">
+    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 max-w-[95vw] sm:max-w-max pointer-events-none">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-2xl bg-zinc-950/90 border border-purple-500/30 backdrop-blur-xl shadow-2xl shadow-purple-950/50 text-xs text-zinc-200 pointer-events-auto">
         <div className="flex items-center gap-1.5 pr-2 border-r border-zinc-800">
-          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="font-bold text-purple-300 text-[11px] tracking-wide flex items-center gap-1">
             <Sparkles className="h-3 w-3 text-amber-400" />
             EVALUATION DOCK

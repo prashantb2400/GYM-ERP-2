@@ -6,6 +6,10 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/store/authStore';
 import { AuthUser, AuthMember, DEFAULT_PERMISSIONS } from '@/types/auth';
 
+// Global singleton guards so 40 concurrent hook consumers share a single listener
+let globalAuthSubscribed = false;
+let globalInitialCheckStarted = false;
+
 export function useAuth() {
   const supabase = createClient();
   const router = useRouter();
@@ -28,14 +32,14 @@ export function useAuth() {
     let isCancelled = false;
 
     // Synchronous immediate dev session restoration
-    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    if (typeof window !== 'undefined') {
       try {
         const raw = localStorage.getItem('gymerp_auth_session');
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed.state?.user?.gymId && !useAuthStore.getState().user) {
+          if ((parsed.state?.user?.gymId || parsed.state?.member?.gymId) && !useAuthStore.getState().user && !useAuthStore.getState().member) {
             useAuthStore.getState().setSession({
-              user: parsed.state.user,
+              user: parsed.state.user || null,
               member: parsed.state.member || null,
               needsOnboarding: false,
             });
@@ -46,12 +50,29 @@ export function useAuth() {
       }
     }
 
+    const currentStore = useAuthStore.getState();
+    if (currentStore.user || currentStore.member) {
+      if (currentStore.loading) setLoading(false);
+      if (globalInitialCheckStarted) return;
+    }
+
+    if (globalInitialCheckStarted) {
+      return;
+    }
+    globalInitialCheckStarted = true;
+
     const fetchSessionDetails = async (supabaseUser: any, forceRefresh = false) => {
       if (!supabaseUser) {
-        const currentStore = useAuthStore.getState();
+        const storeNow = useAuthStore.getState();
+        if (storeNow.user || storeNow.member) {
+          if (storeNow.loading) {
+            setLoading(false);
+          }
+          return;
+        }
         const cachedRaw = typeof window !== 'undefined' ? localStorage.getItem('gymerp_auth_session') : null;
-        if (process.env.NODE_ENV === 'development' && (currentStore.user?.gymId || cachedRaw?.includes('gymId'))) {
-          if (currentStore.loading) {
+        if (cachedRaw?.includes('gymId')) {
+          if (storeNow.loading) {
             setLoading(false);
           }
           return;
@@ -207,6 +228,11 @@ export function useAuth() {
           return;
         }
 
+        const finalStore = useAuthStore.getState();
+        if (finalStore.user || finalStore.member) {
+          if (finalStore.loading) setLoading(false);
+          return;
+        }
         if (!isCancelled) {
           setSession({ user: null, member: null, needsOnboarding: false });
         }
@@ -251,7 +277,11 @@ export function useAuth() {
           fetchSessionDetails(supabaseUser);
         }).catch(() => {
           const cur = useAuthStore.getState();
-          if (!cur.user && !cur.member) {
+          if (cur.user || cur.member) {
+            if (cur.loading) setLoading(false);
+            return;
+          }
+          if (!cur.user && !cur.member && !isCancelled) {
             setSession({ user: null, member: null, needsOnboarding: false });
           }
         });
@@ -261,26 +291,34 @@ export function useAuth() {
         fetchSessionDetails(supabaseUser);
       }).catch(() => {
         const cur = useAuthStore.getState();
-        if (!cur.user && !cur.member) {
+        if (cur.user || cur.member) {
+          if (cur.loading) setLoading(false);
+          return;
+        }
+        if (!cur.user && !cur.member && !isCancelled) {
           setSession({ user: null, member: null, needsOnboarding: false });
         }
       });
     });
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (
-          (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') &&
-          session?.user
-        ) {
-          fetchSessionDetails(session.user, event === 'TOKEN_REFRESHED');
-        } else if (event === 'SIGNED_OUT') {
-          logout();
-          router.push('/login');
+    // Listen for auth state changes once globally
+    if (!globalAuthSubscribed) {
+      globalAuthSubscribed = true;
+      supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (
+            (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') &&
+            session?.user
+          ) {
+            fetchSessionDetails(session.user, event === 'TOKEN_REFRESHED');
+          } else if (event === 'SIGNED_OUT') {
+            globalInitialCheckStarted = false;
+            logout();
+            router.push('/login');
+          }
         }
-      }
-    );
+      );
+    }
 
     // Watchdog timer
     const watchdogTimer = setTimeout(() => {
@@ -292,7 +330,6 @@ export function useAuth() {
     return () => {
       isCancelled = true;
       clearTimeout(watchdogTimer);
-      subscription.unsubscribe();
     };
   }, [setSession, setLoading, setError, logout, router]);
 

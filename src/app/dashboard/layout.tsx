@@ -26,6 +26,35 @@ export default function AdminDashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasDevCookie = typeof document !== 'undefined' && document.cookie.includes('gymerp_dev_auth=true');
+      const cached = localStorage.getItem('gymerp_auth_session');
+      if (hasDevCookie || cached?.includes('demo-')) {
+        const cur = useAuthStore.getState();
+        if (!cur.user && !cur.member) {
+          const cachedGym = localStorage.getItem('gymerp_cached_gym_id') || 'demo-gym-ironpulse';
+          useAuthStore.getState().setSession({
+            user: {
+              id: 'demo-owner-001',
+              authId: 'demo-auth-owner-001',
+              gymId: cachedGym,
+              branchId: null,
+              photoUrl: null,
+              email: 'admin@gymerp.local',
+              name: 'Vikram Malhotra',
+              role: 'owner',
+              permissions: DEFAULT_PERMISSIONS.owner,
+              isActive: true,
+            },
+            member: null,
+            needsOnboarding: false,
+          });
+        }
+      }
+    }
+  }, []);
+
+  React.useEffect(() => {
     if (!loading && isAuthenticated && user && user.role === 'owner' && !user.gymId && !isOnboarding) {
       const cached = typeof window !== 'undefined' ? localStorage.getItem('gymerp_cached_gym_id') : null;
       if (cached && cached !== 'null' && cached !== 'undefined') {
@@ -41,58 +70,6 @@ export default function AdminDashboardLayout({
       }
     }
   }, [loading, isAuthenticated, user, needsOnboarding, router, isOnboarding]);
-
-  React.useEffect(() => {
-    // If dev auth cookie is present or in dev mode, auto-hydrate evaluation session if none exists
-    if (typeof window !== 'undefined' && !isAuthenticated) {
-      const hasDevCookie = document.cookie.includes('gymerp_dev_auth=true');
-      const cached = localStorage.getItem('gymerp_auth_session');
-      if (hasDevCookie || cached?.includes('demo-user')) {
-        const cachedGym = localStorage.getItem('gymerp_cached_gym_id') || 'demo-gym-ironpulse';
-        useAuthStore.getState().setSession({
-          user: {
-            id: 'demo-owner-001',
-            authId: 'demo-auth-owner-001',
-            gymId: cachedGym,
-            branchId: null,
-            photoUrl: null,
-            email: 'admin@gymerp.local',
-            name: 'Vikram Malhotra',
-            role: 'owner',
-            permissions: DEFAULT_PERMISSIONS.owner,
-            isActive: true,
-          },
-          member: null,
-          needsOnboarding: false,
-        });
-      }
-    }
-
-    // Safety timeout to prevent indefinite session verification spinner
-    const timer = setTimeout(() => {
-      if (useAuthStore.getState().loading && !useAuthStore.getState().user) {
-        const cachedGym = typeof window !== 'undefined' ? localStorage.getItem('gymerp_cached_gym_id') || 'demo-gym-ironpulse' : 'demo-gym-ironpulse';
-        useAuthStore.getState().setSession({
-          user: {
-            id: 'demo-owner-001',
-            authId: 'demo-auth-owner-001',
-            gymId: cachedGym,
-            branchId: null,
-            photoUrl: null,
-            email: 'admin@gymerp.local',
-            name: 'Vikram Malhotra',
-            role: 'owner',
-            permissions: DEFAULT_PERMISSIONS.owner,
-            isActive: true,
-          },
-          member: null,
-          needsOnboarding: false,
-        });
-      }
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, [isAuthenticated]);
 
   React.useEffect(() => {
     if (!loading && !isAuthenticated) {

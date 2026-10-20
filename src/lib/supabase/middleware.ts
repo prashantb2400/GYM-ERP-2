@@ -117,9 +117,12 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  const isDevBypass = process.env.NODE_ENV === 'development' && request.cookies.get('gymerp_dev_auth')?.value === 'true';
+  const isDevBypass = process.env.NODE_ENV === 'development';
 
   if (isDevBypass) {
+    if (request.cookies.get('gymerp_dev_auth')?.value !== 'true') {
+      supabaseResponse.cookies.set('gymerp_dev_auth', 'true', { path: '/', maxAge: 86400 });
+    }
     return supabaseResponse;
   }
 

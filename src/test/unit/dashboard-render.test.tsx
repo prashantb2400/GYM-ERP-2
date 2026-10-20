@@ -60,6 +60,9 @@ vi.mock('@/lib/supabase/client', () => ({
 
 describe('Dashboard Rendering', () => {
   beforeEach(() => {
+    if (typeof document !== 'undefined') {
+      document.cookie = 'gymerp_dev_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    }
     useAuthStore.setState({
       user: null,
       member: null,

@@ -904,7 +904,7 @@ export default function AttendancePage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchResults.length === 1 && !checkingInId) {
+                    if (e.key === 'Enter' && searchResults.length > 0 && !checkingInId) {
                       const first = searchResults[0];
                       if (!checkedInMemberIds.has(first.id)) {
                         e.preventDefault();
@@ -916,7 +916,7 @@ export default function AttendancePage() {
                   className="border-0 bg-transparent text-sm h-11 focus-visible:ring-0 placeholder:text-zinc-500 pl-3"
                 />
                 {isSearching && <Loader2 className="w-4 h-4 text-cyan-400 animate-spin mr-2" />}
-                {searchResults.length === 1 && !checkedInMemberIds.has(searchResults[0].id) && (
+                {searchResults.length > 0 && !checkedInMemberIds.has(searchResults[0].id) && (
                   <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-medium text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 px-2 py-0.5 rounded-md mr-1">
                     Enter ↵
                   </span>
